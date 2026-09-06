@@ -447,6 +447,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .data-table tbody tr.row-blocked:hover{background:var(--red-light);}
 .col-num{font-family:var(--font-mono);direction:ltr;white-space:nowrap;}
 .cell-wrap{white-space:normal;max-width:230px;text-align:right;}
+.cell-addr{max-width:300px;min-width:180px;font-size:12px;color:var(--text-secondary);}
 .empty-row td{padding:40px;text-align:center;color:var(--text-muted);font-size:13px;}
 .row-cb{width:16px;height:16px;cursor:pointer;accent-color:var(--accent);}
 
@@ -488,6 +489,10 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .dp-item:hover{background:var(--accent-light);}
 .dp-item.chosen{background:var(--accent-light);color:var(--accent-dark);font-weight:700;}
 .dp-zone{font-size:11px;color:var(--text-muted);}
+.dp-state{font-size:12px;font-weight:600;line-height:1.7;padding:8px 10px;margin-bottom:10px;
+          border:1px solid var(--border);border-radius:var(--radius-sm);
+          background:var(--surface-2);color:var(--text-secondary);}
+.dp-state.ok{border-color:var(--green);background:var(--green-light);color:var(--green);}
 .dup-list{max-height:300px;overflow-y:auto;font-size:12.5px;line-height:1.9;}
 .loading-spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);
   border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
@@ -577,6 +582,21 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <span class="cl-ver-date">06-09-2026</span>
         </div>
         <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>عمودين جداد في الجدول: <b>تليفون إضافي</b> و<b>العنوان كامل</b>.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تحسين</span><span>اتشالت أعمدة التحصيل وقيمة البضاعة والقطع والوقت من الجدول — لسه كلها في تصدير XLSX.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تحسين</span><span>عمود <b>الحالة</b> بقى اسمه <b>حالة S1</b>.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>زرار «↺ رجّع للمطابقة التلقائية» كان بيثبّت الصف على المحافظة بدل ما يشيل الاختيار اليدوي، وكان شكله إنه مش بيعمل حاجة. دلوقتي بيشيل الاختيار فعلًا ومعاه رسالة، وفيه زرار منفصل <b>🏙️ ارفع على المحافظة بس</b> للتثبيت الصريح.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>سطر «الحالي» جوه نافذة اختيار المنطقة + شرح على كل زرار منطقة في الجدول — بيوضّح الفرق بين المنطقة المطابَقة والمحافظة بس.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>الترتيب بعمود التاريخ وحالة الرفع كان بيقرأ حقول مش موجودة على الصف فما كانش بيرتّب أصلًا.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge">v1.0.0</span>
+          <span class="cl-ver-date">06-09-2026</span>
+        </div>
+        <ul class="cl-items">
           <li class="cl-item"><span class="cl-tag new">جديد</span><span>إطلاق الأداة — رفع جماعي للأوردرات المؤهَّلة على بوسطة بنداءات فردية.</span></li>
           <li class="cl-item"><span class="cl-tag new">جديد</span><span>اختيار شكل العنوان لكل أوردر لوحده: المنطقة لما المطابقة تنجح، والمحافظة لما تفشل — مع رجوع تلقائي لو بوسطة رفضت المنطقة.</span></li>
           <li class="cl-item"><span class="cl-tag new">جديد</span><span>اختيار المنطقة يدويًا للأوردرات اللي مطابقتها غامضة أو مالهاش مطابقة.</span></li>
@@ -616,7 +636,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <ol>
             <li>الموظف يدخل بالـ PIN، والأداة بتستعلم من شوبيفاي لحظيًا (مفيش عدد محفوظ — الرقم بيتحرك خلال اليوم).</li>
             <li>لكل أوردر: المحافظة بتتحوّل لمدينة بوسطة بجدول حتمي مقفول، وبعدين الأداة بتحاول تطابق المنطقة من نص العنوان الحر (عربي وإنجليزي) على كتالوج بوسطة.</li>
-            <li>الصفوف اللي مطابقتها غامضة أو مالهاش مطابقة بتظهر بزرار <em>اختر المنطقة</em> — اختياري، والرفع شغّال من غيره على مستوى المحافظة.</li>
+            <li>عمود <strong>المنطقة</strong> بيقول بالظبط هيتبعت إيه: <code>📍 اسم منطقة</code> = المطابقة نجحت والشحنة هتترفع بالمنطقة · <code>🗺️ اسم زون</code> = محافظة اتلغت إداريًا وبتتبعت كزون · <code>❓ N احتمالات</code> = المطابقة غامضة · <code>🏙️ المحافظة بس</code> = مفيش مطابقة، الشحنة بتترفع على المحافظة وبتدخل مسار العناوين غير الواضحة عند بوسطة (<strong>مش فشل</strong>). الشرح كامل على الـ hover.</li>
+            <li>أي صف ينفع يتفتح بزرار <em>اختر المنطقة</em> — والنافذة فيها <strong>↺ رجّع للمطابقة التلقائية</strong> (بتشيل التدخّل اليدوي) و<strong>🏙️ ارفع على المحافظة بس</strong> (بتثبّت الصف على المحافظة حتى لو المطابقة نجحت وقت الرفع). الاختيار كله اختياري، والرفع شغّال من غيره.</li>
             <li>الموظف يحدد الأوردرات ويضغط <strong>رفع المحدد</strong>. الأوردر المرفوع قبل كده بيطلب تأكيد صريح.</li>
             <li>الرفع بيحصل على دفعات، وكل صف بيجيب نتيجته الخاصة ومعاه رقم تتبعه.</li>
             <li>بعد كل نجاح: <code>custom.courier = Bosta</code> · <code>custom.bosta_tracking_number</code> · تاج <code>Bosta_Uploaded_S1</code>.</li>
@@ -697,6 +718,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
     </div>
     <div class="eco-modal-body">
       <div style="font-size:12px;color:var(--text-secondary);line-height:1.8;margin-bottom:10px;" id="dpContext"></div>
+      <div class="dp-state" id="dpState"></div>
       <div class="search-wrap" style="max-width:none;margin-bottom:10px;">
         <input type="text" class="search-input" id="dpSearch" oninput="renderDistrictList(); toggleSearchActiveState(this);" />
         <span class="search-icon">🔍</span>
@@ -704,7 +726,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="dp-list" id="dpList"></div>
     </div>
     <div class="eco-modal-ftr">
-      <button class="btn-ghost" onclick="clearDistrictChoice()">↺ رجّع للمطابقة التلقائية</button>
+      <button class="btn-ghost" onclick="resetDistrictToAuto()">↺ رجّع للمطابقة التلقائية</button>
+      <button class="btn-ghost" onclick="pinDistrictToProvince()">🏙️ ارفع على المحافظة بس</button>
       <button class="btn-modal-save" onclick="closeDistrictPicker()">تم</button>
     </div>
   </div>
@@ -1050,16 +1073,14 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <th class="sortable-th" data-sort-key="orderNumber" onclick="toggleSort('orderNumber')">رقم الأوردر<span class="sort-icon" data-sort-key="orderNumber"></span></th>
             <th class="sortable-th" data-sort-key="customer"    onclick="toggleSort('customer')">العميل<span class="sort-icon" data-sort-key="customer"></span></th>
             <th class="sortable-th" data-sort-key="phone"       onclick="toggleSort('phone')">التليفون<span class="sort-icon" data-sort-key="phone"></span></th>
+            <th class="sortable-th" data-sort-key="secondPhone" onclick="toggleSort('secondPhone')">تليفون إضافي<span class="sort-icon" data-sort-key="secondPhone"></span></th>
+            <th class="sortable-th" data-sort-key="address"     onclick="toggleSort('address')">العنوان كامل<span class="sort-icon" data-sort-key="address"></span></th>
             <th class="sortable-th" data-sort-key="province"    onclick="toggleSort('province')">المحافظة<span class="sort-icon" data-sort-key="province"></span></th>
             <th class="sortable-th" data-sort-key="cityName"    onclick="toggleSort('cityName')">مدينة بوسطة<span class="sort-icon" data-sort-key="cityName"></span></th>
             <th>المنطقة</th>
-            <th class="sortable-th" data-sort-key="cod"         onclick="toggleSort('cod')">التحصيل<span class="sort-icon" data-sort-key="cod"></span></th>
-            <th class="sortable-th" data-sort-key="goodsValue"  onclick="toggleSort('goodsValue')">قيمة البضاعة<span class="sort-icon" data-sort-key="goodsValue"></span></th>
-            <th class="sortable-th" data-sort-key="itemsCount"  onclick="toggleSort('itemsCount')">القطع<span class="sort-icon" data-sort-key="itemsCount"></span></th>
-            <th class="sortable-th" data-sort-key="s1"          onclick="toggleSort('s1')">الحالة<span class="sort-icon" data-sort-key="s1"></span></th>
+            <th class="sortable-th" data-sort-key="s1"          onclick="toggleSort('s1')">حالة S1<span class="sort-icon" data-sort-key="s1"></span></th>
             <th class="sortable-th" data-sort-key="upLabel"     onclick="toggleSort('upLabel')">حالة الرفع<span class="sort-icon" data-sort-key="upLabel"></span></th>
             <th class="sortable-th" data-sort-key="date"        onclick="toggleSort('date')">التاريخ<span class="sort-icon" data-sort-key="date"></span></th>
-            <th class="sortable-th" data-sort-key="time"        onclick="toggleSort('time')">الوقت<span class="sort-icon" data-sort-key="time"></span></th>
           </tr></thead>
           <tbody id="tblBody"></tbody>
         </table>
@@ -1261,7 +1282,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v1.0.0';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v1.1.0';   // مصدر واحد لرقم نسخة الواجهة
 const MIN_WORKER_VERSION = '1.0.0';    // أقل نسخة Worker الواجهة دي بتشتغل معاها — مالهاش علاقة بـ TOOL_VERSION
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
@@ -2224,11 +2245,15 @@ function clearAllFilters() {
 }
 
 // الترتيب — مستقل تمامًا عن الفلاتر، وبيفضل شغال بعد "مسح كل الفلاتر"
+// ⚠️ المفتاح اللي مالوش حقل بنفس الاسم على الصف لازم يجيب قيمته بـ get —
+//    من غيرها بيقرأ undefined وعمود كامل بيبقى "بيترتّب" من غير ما يتحرك.
 const sortConfig = {
   orderNumber: { type: 'string' }, customer: { type: 'string' }, phone: { type: 'string' },
+  secondPhone: { type: 'string' },
+  address: { type: 'string', get: r => fullAddressText(r) },
   province: { type: 'string' }, cityName: { type: 'string' }, s1: { type: 'string' },
-  upLabel: { type: 'string' }, cod: { type: 'number' }, goodsValue: { type: 'number' },
-  itemsCount: { type: 'number' }, date: { type: 'date' }, time: { type: 'date' },
+  upLabel: { type: 'string', get: r => rowUpLabel(r) },
+  date: { type: 'date', get: r => r.createdAt },
 };
 let sortState = { key: null, dir: null };
 function toggleSort(key) {
@@ -2253,7 +2278,8 @@ function applySort(rows) {
   const cfg = sortConfig[sortState.key];
   const dir = sortState.dir === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {   // نسخة جديدة — .sort() بتعدّل المصفوفة الأصلية
-    let av = a[sortState.key], bv = b[sortState.key];
+    const read = cfg.get || (row => row[sortState.key]);
+    const av = read(a), bv = read(b);
     if (cfg.type === 'date')   return (new Date(av).getTime() - new Date(bv).getTime()) * dir;
     if (cfg.type === 'string') return String(av ?? '').localeCompare(String(bv ?? '')) * dir;
     return ((Number(av) || 0) - (Number(bv) || 0)) * dir;
@@ -2274,6 +2300,10 @@ function rowAddrMode(r) {
 }
 function rowUpLabel(r) {
   return { ready: 'جاهز', uploaded: 'مرفوع قبل كده', blocked: 'موقوف' }[rowUpState(r)];
+}
+// نفس النص في الجدول والتصدير ونافذة اختيار المنطقة — مصدر واحد
+function fullAddressText(r) {
+  return [r.address1, r.address2, r.addressCity].filter(Boolean).join(' — ');
 }
 
 function applyFilters() {
@@ -2299,23 +2329,33 @@ function applyFilters() {
   updateSelectionUI();
 }
 
-function districtCell(r) {
+// شرح كل شكل عنوان — نفس النص في الخلية (hover) وفي سطر الحالة جوه النافذة
+function addrModeInfo(r) {
   const ov = districtOverride[r.orderId];
-  let label, cls = 'mini-btn';
+  if (ov?.districtId)   return { label: `📍 ${ov.districtName}`, set: true,
+    hint: 'منطقة متحدّدة يدويًا — الشحنة هتترفع بـ districtId عليها' };
+  if (ov?.forceProvince) return { label: '🏙️ المحافظة بس · مثبّت', set: false,
+    hint: 'متثبّت يدويًا على مستوى المحافظة — مش هتتبعت منطقة حتى لو المطابقة نجحت وقت الرفع' };
+  if (r.mode === 'district') return { label: `📍 ${r.districtName}`, set: true,
+    hint: 'المطابقة التلقائية لقت منطقة واحدة في كتالوج بوسطة — الشحنة هتترفع بالمنطقة دي' };
+  if (r.mode === 'zoneName') return { label: `🗺️ ${r.districtName}`, set: true,
+    hint: 'محافظة اتلغت إداريًا — بتتبعت كزون جوه مدينة بوسطة التابعة ليها' };
+  if (r.ambiguous) return { label: `❓ ${r.candidates.length} احتمالات`, set: false,
+    hint: `نص العنوان طابق ${r.candidates.length} مناطق — من غير اختيار يدوي الشحنة هتترفع على المحافظة بس` };
+  return { label: '🏙️ المحافظة بس', set: false,
+    hint: 'مفيش مطابقة منطقة في نص العنوان — الشحنة بتترفع على المحافظة وبتدخل مسار العناوين غير الواضحة عند بوسطة (مش فشل)' };
+}
+function districtCell(r) {
   if (!r.addressOk) return `<span class="badge badge-danger">محافظة مش معروفة</span>`;
-  if (ov?.districtId)      { label = `📍 ${ov.districtName}`; cls += ' set'; }
-  else if (ov?.forceProvince) label = '🏙️ المحافظة بس';
-  else if (r.mode === 'district') { label = `📍 ${r.districtName}`; cls += ' set'; }
-  else if (r.mode === 'zoneName') { label = `🗺️ ${r.districtName}`; cls += ' set'; }
-  else if (r.ambiguous)    label = `❓ ${r.candidates.length} احتمالات`;
-  else                     label = '🏙️ المحافظة بس';
-  return `<button class="${cls}" onclick="openDistrictPicker('${jsq(r.orderId)}')">${esc(label)}</button>`;
+  const info = addrModeInfo(r);
+  return `<button class="mini-btn${info.set ? ' set' : ''}" title="${esc(info.hint)}"
+                  onclick="openDistrictPicker('${jsq(r.orderId)}')">${esc(info.label)}</button>`;
 }
 
 function renderTable(rows) {
   const body = document.getElementById('tblBody');
   if (!rows.length) {
-    body.innerHTML = `<tr class="empty-row"><td colspan="14">لا توجد أوردرات مطابقة</td></tr>`;
+    body.innerHTML = `<tr class="empty-row"><td colspan="12">لا توجد أوردرات مطابقة</td></tr>`;
     document.getElementById('selectAllRows').checked = false;
     return;
   }
@@ -2336,17 +2376,15 @@ function renderTable(rows) {
       <td>${orderLink(r.orderNumber, r.orderId)}</td>
       <td class="cell-wrap">${esc(r.customer || '—')}
           ${blocked ? `<span class="problem-text">${esc(r.problems.join(' · '))}</span>` : ''}</td>
-      <td class="col-num">${esc(r.phone || '—')}${r.secondPhone ? `<br><span style="font-size:10.5px;color:var(--text-muted)">${esc(r.secondPhone)}</span>` : ''}</td>
+      <td class="col-num">${esc(r.phone || '—')}</td>
+      <td class="col-num">${esc(r.secondPhone || '—')}</td>
+      <td class="cell-wrap cell-addr">${esc(fullAddressText(r) || '—')}</td>
       <td>${esc(r.province || '—')}</td>
       <td>${esc(r.cityName || '—')}</td>
       <td>${districtCell(r)}</td>
-      <td class="col-num">${fmtNum(r.cod)}</td>
-      <td class="col-num">${fmtNum(r.goodsValue)}</td>
-      <td class="col-num">${fmtNum(r.itemsCount)}</td>
       <td>${s1Badge}</td>
       <td>${upBadge}</td>
       <td class="col-num">${formatDate(r.createdAt)}</td>
-      <td class="col-num">${formatTimeOnly(r.createdAt)}</td>
     </tr>`;
   }).join('');
   const selectableIds = rows.filter(r => r.uploadable).map(r => r.orderId);
@@ -2380,7 +2418,7 @@ async function loadOrders(force) {
   const banner = document.getElementById('loadErrorBanner');
   banner.style.display = 'none';
   document.getElementById('tblBody').innerHTML =
-    `<tr class="empty-row"><td colspan="14"><span class="loading-spinner"></span></td></tr>`;
+    `<tr class="empty-row"><td colspan="12"><span class="loading-spinner"></span></td></tr>`;
   try {
     const d = await apiGet('get_orders', force ? { refresh: '1' } : {});
     allRows = d.rows || [];
@@ -2437,7 +2475,7 @@ async function openDistrictPicker(orderId) {
   dpOrderId = orderId;
   document.getElementById('dpTitle').textContent = `📍 اختر المنطقة — ${r.orderNumber}`;
   document.getElementById('dpContext').innerHTML =
-    `<b>مدينة بوسطة:</b> ${esc(r.cityName)} · <b>عنوان شوبيفاي:</b> ${esc([r.addressCity, r.address1, r.address2].filter(Boolean).join(' — ')) || '—'}` +
+    `<b>مدينة بوسطة:</b> ${esc(r.cityName)} · <b>عنوان شوبيفاي:</b> ${esc(fullAddressText(r)) || '—'}` +
     (r.candidates?.length ? `<br><b>المطابقات المحتملة:</b> ${esc(r.candidates.map(c => c.name).join(' · '))}` : '');
   document.getElementById('dpSearch').value = '';
   toggleSearchActiveState(document.getElementById('dpSearch'));
@@ -2456,7 +2494,16 @@ async function openDistrictPicker(orderId) {
   dpLoading = false;
   renderDistrictList();
 }
+function renderDistrictState() {
+  const el = document.getElementById('dpState');
+  const r  = allRows.find(x => x.orderId === dpOrderId);
+  if (!el || !r) return;
+  const info = addrModeInfo(r);
+  el.className = `dp-state ${info.set ? 'ok' : ''}`;
+  el.innerHTML = `<b>الحالي:</b> ${esc(info.label)} — ${esc(info.hint)}`;
+}
 function renderDistrictList() {
+  renderDistrictState();
   if (dpLoading) return;
   const q = (document.getElementById('dpSearch').value || '').trim().toLowerCase();
   const list = q ? dpDistricts.filter(d => `${d.name} ${d.nameAr} ${d.zone}`.toLowerCase().includes(q)) : dpDistricts;
@@ -2476,13 +2523,27 @@ function chooseDistrict(id, name) {
   applyFilters();
   showToast(`اتحددت المنطقة: ${name}`, 'success');
 }
-function clearDistrictChoice() {
+// ↺ = شيل أي تدخّل يدوي وبس. الزرار ده كان بيثبّت الصف على المحافظة —
+//    عكس اسمه بالظبط، وعلى صف مالوش مطابقة كان شكله إنه مش بيعمل حاجة.
+function resetDistrictToAuto() {
   const r = allRows.find(x => x.orderId === dpOrderId);
-  // "رجّع للمطابقة التلقائية" على صف مالوش مطابقة = ثبّته على مسار المحافظة
-  if (r && r.mode === 'province' && !r.ambiguous) districtOverride[dpOrderId] = { forceProvince: true };
-  else delete districtOverride[dpOrderId];
+  if (!r) return;
+  const had = !!districtOverride[dpOrderId];
+  delete districtOverride[dpOrderId];
   renderDistrictList();
   applyFilters();
+  const now = addrModeInfo(r).label;
+  showToast(had ? `رجع للمطابقة التلقائية: ${now}` : `الأوردر ده أصلاً على المطابقة التلقائية: ${now}`,
+            had ? 'success' : 'info');
+}
+// تثبيت صريح على المحافظة — بيمنع أي منطقة تتبعت حتى لو الكتالوج طابق وقت الرفع
+function pinDistrictToProvince() {
+  const r = allRows.find(x => x.orderId === dpOrderId);
+  if (!r) return;
+  districtOverride[dpOrderId] = { forceProvince: true };
+  renderDistrictList();
+  applyFilters();
+  showToast('اتثبّت على المحافظة بس — مش هتتبعت منطقة', 'success');
 }
 function closeDistrictPicker() {
   document.getElementById('districtOverlay').classList.remove('open');
@@ -2690,7 +2751,7 @@ async function exportOrdersXLSX() {
     { header: 'التحصيل', key: 'cod', width: 12 },
     { header: 'قيمة البضاعة', key: 'goodsValue', width: 14 },
     { header: 'القطع', key: 'itemsCount', width: 8 },
-    { header: 'الحالة', key: 's1', width: 16 },
+    { header: 'حالة S1', key: 's1', width: 16 },
     { header: 'حالة الرفع', key: 'upLabel', width: 16 },
     { header: 'رقم تتبع سابق', key: 'previousTracking', width: 16 },
     { header: 'التاريخ', key: 'date', width: 14 },
@@ -2703,7 +2764,7 @@ async function exportOrdersXLSX() {
       province: r.province, cityName: r.cityName,
       district: ov?.districtName || r.districtName || '',
       addrMode: rowAddrMode(r),
-      address: [r.addressCity, r.address1, r.address2].filter(Boolean).join(' — '),
+      address: fullAddressText(r),
       cod: r.cod, goodsValue: r.goodsValue, itemsCount: r.itemsCount,
       s1: r.s1, upLabel: rowUpLabel(r), previousTracking: r.previousTracking || '',
       date: formatDateForExport(r.createdAt), time: formatTimeForExport(r.createdAt),
@@ -2834,7 +2895,9 @@ function parseLogRow(e) {
 const LOG_TYPE_LABEL = Object.fromEntries(LOG_TYPE_ITEMS.map(i => [i.value, i.label]));
 
 // ترتيب السجل — على الصفحة المحمّلة (الفلترة والترقيم server-side)
-const logSortConfig = { date: { type: 'date' }, time: { type: 'date' }, employee: { type: 'string' },
+// نفس فخ sortConfig فوق — صف السجل فيه ts مش date/time
+const logSortConfig = { date: { type: 'date', get: r => r.ts }, time: { type: 'date', get: r => r.ts },
+                        employee: { type: 'string' },
                         type: { type: 'string' }, orderName: { type: 'string' } };
 let logSortState = { key: null, dir: null };
 function toggleLogSort(key) {
@@ -2859,7 +2922,8 @@ function applyLogSort(rows) {
   const cfg = logSortConfig[logSortState.key];
   const dir = logSortState.dir === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
-    const av = a[logSortState.key], bv = b[logSortState.key];
+    const read = cfg.get || (row => row[logSortState.key]);
+    const av = read(a), bv = read(b);
     if (cfg.type === 'date') return (new Date(av).getTime() - new Date(bv).getTime()) * dir;
     return String(av ?? '').localeCompare(String(bv ?? '')) * dir;
   });
