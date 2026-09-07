@@ -496,7 +496,14 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .dp-item:last-child{border-bottom:none;}
 .dp-item:hover{background:var(--accent-light);}
 .dp-item.chosen{background:var(--accent-light);color:var(--accent-dark);font-weight:700;}
-.dp-zone{font-size:11px;color:var(--text-muted);}
+/* الزون = المستوى فوق المنطقة عند بوسطة (مدينة ← زون ← منطقة).
+   بيتعرض للتشخيص — لسه **مش** داخل في المطابقة. */
+.dp-zone{font-size:11px;font-weight:700;color:var(--text-secondary);background:var(--surface-2);
+  border:1px solid var(--border);border-radius:20px;padding:2px 9px;white-space:nowrap;
+  max-width:150px;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
+/* 🔴 «بلا زون» تتكتب صراحةً — الفراغ بيخلط بين «المنطقة دي بلا زون» و«الكتالوج
+   مابيرجّعش الحقل أصلًا»، وده بالظبط نوع الغموض اللي بيوقف التشخيص. */
+.dp-zone.none{color:var(--text-muted);background:transparent;border-style:dashed;font-weight:600;}
 .dp-state{font-size:12px;font-weight:600;line-height:1.7;padding:8px 10px;margin-bottom:10px;
           border:1px solid var(--border);border-radius:var(--radius-sm);
           background:var(--surface-2);color:var(--text-secondary);}
@@ -521,6 +528,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
   border:1px solid var(--border-strong);background:var(--surface);color:var(--text-primary);
   font-family:var(--font-body);font-size:12.5px;font-weight:600;cursor:pointer;}
 .dp-city-select.changed{border-color:var(--amber);background:var(--amber-light);color:var(--amber);}
+.dp-note{font-size:11.5px;font-weight:600;color:var(--text-muted);line-height:1.7;margin-bottom:10px;}
+.dp-note b{color:var(--text-secondary);}
 .mini-btn.doubt{border-color:var(--amber);color:var(--amber);background:var(--amber-light);}
 .dup-list{max-height:300px;overflow-y:auto;font-size:12.5px;line-height:1.9;}
 .loading-spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);
@@ -611,6 +620,19 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <span class="cl-ver-date">07-09-2026</span>
         </div>
         <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>الزون بقى ظاهر في نافذة اختيار المنطقة</b> — شبشة 🗺️ جنب كل منطقة بالاسمين (إنجليزي وعربي)، و<b>البحث بيشمله</b> فكتابة «العبور» بتجيب كل مناطق زون العبور. الزون هو المستوى فوق المنطقة عند بوسطة (مدينة ← زون ← منطقة).</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>المنطقة اللي مالهاش زون بتتكتب <b>«بلا زون»</b> صراحةً بدل خانة فاضية — الفراغ كان بيخلط بين «المنطقة دي بلا زون» و«الكتالوج مابيرجّعش الحقل أصلًا»، وسطر جديد في النافذة بيقول كام منطقة من كام ليها زون.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>الفحص الذاتي (🩺) بقى فيه بند <b>تغطية الزون في الكتالوج</b> — عدد المناطق اللي ليها زون وعدد الزونات وعيّنة منها.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>⚠️ الزون <b>لسه مش داخل في المطابقة التلقائية</b> — العرض ده للتشخيص، وهو اللي هيحدد إزاي نعالج حالة العبور.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v1.2.0</span>
+          <span class="cl-ver-date">07-09-2026</span>
+        </div>
+        <ul class="cl-items">
           <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>مطابقة المنطقة كانت بتختار غلط في صمت.</b> القاعدة القديمة «الأطول يكسب» كانت بتفضّل اسم المحافظة على المركز لما العميل يكتب الاتنين — <code>كفر الشيخ مركز قلين</code> كانت بتترفع على <b>Kafr ElSheikh</b> بدل <b>Qalin</b>، وبعلامة خضرا ✅. الترجيح دلوقتي: المنطقة اللي اسمها اسم المحافظة بتتأخّر · خانة <b>المدينة</b> تغلب خانة العنوان · التطابق الكامل يغلب الجزئي · والطول بيفصل <b>بس</b> لو الأقصر جوّه الأطول (مدينة نصر / نصر).</span></li>
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span>مطابقتين منفصلتين في نفس الخانة (زي <code>المنصورة / اجا</code>) بقت <b>غامضة</b> بدل ما الأطول يكسب — ضغطة زيادة من الموظف أرخص من شحنة في فرع غلط.</span></li>
           <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>الاحتمالات بقت مثبّتة فوق القايمة وقابلة للضغط</b>، ومكتوب جنب كل واحدة <b>طابقت إيه ومن أنهي خانة</b>. قبل كده كانت نص رمادي في سطر السياق والموظف لازم يدوّر عليها وسط ٤٠٠ منطقة.</span></li>
@@ -682,6 +704,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li>لكل أوردر: المحافظة بتتحوّل لمدينة بوسطة بجدول حتمي مقفول، وبعدين الأداة بتحاول تطابق المنطقة من نص العنوان الحر (عربي وإنجليزي) على كتالوج بوسطة.</li>
             <li>عمود <strong>المنطقة</strong> بيقول بالظبط هيتبعت إيه: <code>📍 اسم منطقة</code> = المطابقة نجحت والشحنة هتترفع بالمنطقة · <code>🗺️ اسم زون</code> = محافظة اتلغت إداريًا وبتتبعت كزون · <code>❓ N احتمالات</code> = المطابقة غامضة والاحتمالات مثبّتة فوق قايمة النافذة · <code>🟠 المدينة مشكوك فيها</code> = مفيش مطابقة جوه مدينة الجدول والعنوان طابق منطقة في <strong>مدينة تانية</strong> · <code>🏙️ المحافظة بس</code> = مفيش مطابقة، الشحنة بتترفع على المحافظة وبتدخل مسار العناوين غير الواضحة عند بوسطة (<strong>مش فشل</strong>). الشرح كامل على الـ hover.</li>
             <li>🟠 <strong>«المدينة مشكوك فيها» حالة مختلفة عن «المحافظة بس»، ومش أقل خطورة منها.</strong> «المحافظة بس» = المدينة صح والمنطقة ناقصة. «المدينة مشكوك فيها» = <strong>المدينة نفسها على الأرجح غلط</strong> — والمدينة بتحدد الفرع والتسعيرة، مش بس دقة العنوان. بيحصل لسببين: تصنيف بوسطة مش التقسيم الإداري (<strong>العبور</strong> إداريًا القليوبية وعند بوسطة تحت <strong>القاهرة</strong>)، أو العميل غلط في اختيار المحافظة. الصفوف دي <strong>مستثناة من «تحديد الكل»</strong> وليها فلتر خاص — تتراجع وتتحدد بالإيد.</li>
+            <li>🗺️ <strong>الزون</strong> ظاهر جنب كل منطقة في النافذة. بوسطة هرمها <strong>مدينة ← زون ← منطقة</strong>، والزون هو المستوى الأوسط. البحث بيشمله (كتابة «العبور» بتجيب كل مناطق زون العبور)، والمنطقة اللي مالهاش زون بتتكتب <strong>«بلا زون»</strong> صراحةً. ⚠️ الزون <strong>مش داخل في المطابقة التلقائية</strong> — العرض ده للتشخيص.</li>
             <li>جوّه نافذة المنطقة فيه <strong>منتقي مدينة</strong>. لو غيّرت المدينة، الرفع بيتبعت عليها هي — وعمود «مدينة بوسطة» في الجدول بيوريها بعلامة ✎ والمدينة الأصلية على الـ hover. اقتراحات المدن التانية بتتحط فوق القايمة، والضغط عليها بيغيّر المدينة والمنطقة مع بعض.</li>
             <li>أي صف ينفع يتفتح بزرار <em>اختر المنطقة</em> — والنافذة فيها <strong>↺ رجّع للمطابقة التلقائية</strong> (بتشيل التدخّل اليدوي) و<strong>🏙️ ارفع على المحافظة بس</strong> (بتثبّت الصف على المحافظة حتى لو المطابقة نجحت وقت الرفع). الاختيار كله اختياري، والرفع شغّال من غيره.</li>
             <li>الموظف يحدد الأوردرات ويضغط <strong>رفع المحدد</strong>. الأوردر المرفوع قبل كده بيطلب تأكيد صريح.</li>
@@ -722,7 +745,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li><code>§TOOL-JS::filters</code> — سجل الـ multi-select الموحّد للجدولين (<code>owner</code> بيوجّه التغيير للجدول الصح)</li>
             <li><code>§TOOL-JS::dateFilter</code> — مصنع فلتر التاريخ (نسخة للجدول الرئيسي وواحدة للسجل، بنفس السلوك)</li>
             <li><code>§TOOL-JS::table</code> — الفلترة والترتيب والعرض والتحديد</li>
-            <li><code>§TOOL-JS::district</code> — نافذة اختيار المنطقة والمدينة يدويًا · الاحتمالات المثبّتة · اقتراحات المدن التانية (<code>effCity</code> · <code>chooseCity</code> · <code>chooseCrossCity</code>)</li>
+            <li><code>§TOOL-JS::district</code> — نافذة اختيار المنطقة والمدينة يدويًا · الاحتمالات المثبّتة · اقتراحات المدن التانية · عرض الزون (<code>effCity</code> · <code>chooseCity</code> · <code>chooseCrossCity</code> · <code>zoneLabel</code> · <code>renderZoneNote</code>)</li>
             <li><code>§TOOL-JS::upload</code> — التأكيد على المكرر · الرفع على دفعات · لوحة النتائج</li>
             <li><code>§LOG-JS</code> — <code>logParams</code> · pagination · تصدير XLSX + بانر التقصّ</li>
           </ul>
@@ -747,6 +770,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li>«النتائج» في الجدول الرئيسي بتتحسب على البيانات المحمّلة، وفي تاب السجل بتيجي من السيرفر (الفلترة كلها server-side).</li>
             <li><strong>الترتيب في تاب السجل على الصفحة المعروضة بس</strong> (١٠٠ صف) — الفلترة والترقيم server-side، فترتيب عمود بيرتّب الصفحة الحالية مش كل السجل.</li>
             <li><strong>ترجيح المطابقة مش «الأطول يكسب».</strong> الترتيب: المنطقة اللي اسمها اسم المحافظة بتتأخّر (العميل بيكتب محافظته كعادة) ← خانة <code>city</code> تغلب <code>address1</code> ← التطابق الكامل يغلب الجزئي ← الطول بيفصل <strong>بس</strong> عند الاحتواء (مدينة نصر / نصر). مطابقتين منفصلتين = <strong>غموض معلَن</strong>، مش اختيار بالطول.</li>
+            <li>🗺️ <strong>الزون بيتعرض ومش بيتطابق.</strong> المطابقة بتسأل «هل نص العنوان فيه اسم المنطقة؟» — فبتنجح لما اسم المنطقة اسم مكان بسيط (<code>مدينة السادات</code> · <code>قلين</code>) وبتفشل لما يكون تسمية مركّبة محدش بيكتبها (<code>العبور - المنطقة 05</code>). عشان كده أوردرات العبور بتقع على «المحافظة بس». الزون معروض دلوقتي عشان نقرر إزاي نعالجها.</li>
             <li><strong>اقتراح المدينة التانية اقتراح — مش قرار.</strong> أسماء المناطق بتتكرر بين المحافظات، فالتطبيق التلقائي هيكون نفس الفخ اللي جدول المحافظات المقفول اتكتب عشان يمنعه. الاقتراح بيتعرض، والموظف بيضغط.</li>
             <li><strong>لو الموظف اختار منطقة والـ Worker مالقهاش في المدينة المختارة، الصف بيوقف بخطأ</strong> — مش بيرجع للمطابقة التلقائية بصمت. الرفع على حاجة تانية غير اللي الموظف وافق عليه = شحنة بفلوس على عنوان مش المقصود.</li>
             <li>الرفع بيتقسّم دفعات من <code>UPLOAD_CHUNK</code> صف. لو دفعة كاملة ما وصلتش للـ Worker، صفوفها بتتعرض بحالة «فشل» مع رسالة صريحة إن حالتها <strong>مش معروفة</strong> ولازم تتراجع على بوسطة قبل إعادة المحاولة.</li>
@@ -772,6 +796,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
         <label for="dpCity">مدينة بوسطة:</label>
         <select class="dp-city-select" id="dpCity" onchange="chooseCity(this.value)"></select>
       </div>
+      <div class="dp-note" id="dpZoneNote"></div>
       <div class="search-wrap" style="max-width:none;margin-bottom:10px;">
         <input type="text" class="search-input" id="dpSearch" oninput="renderDistrictList(); toggleSearchActiveState(this);" />
         <span class="search-icon">🔍</span>
@@ -1335,7 +1360,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v1.2.0';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v1.2.1';   // مصدر واحد لرقم نسخة الواجهة
 const MIN_WORKER_VERSION = '1.1.0';    // أقل نسخة Worker الواجهة دي بتشتغل معاها — مالهاش علاقة بـ TOOL_VERSION
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
@@ -2644,18 +2669,41 @@ function renderDistrictState() {
 }
 
 // صف منطقة واحد — `why` سطر بيقول ده طابق إيه ومن أنهي خانة
+// نص الزون المعروض — الاسمين لو الاتنين موجودين، و«بلا زون» صريحة لو مفيش
+function zoneLabel(d) {
+  const en = (d.zone || '').trim(), ar = (d.zoneAr || '').trim();
+  if (!en && !ar) return { text: 'بلا زون', none: true };
+  if (en && ar && en !== ar) return { text: `${en} — ${ar}`, none: false };
+  return { text: en || ar, none: false };
+}
 function dpRow(d, cls, chosen, why) {
+  const z = zoneLabel(d);
   return `<div class="dp-item ${cls}${chosen ? ' chosen' : ''}"
       onclick="chooseDistrict('${jsq(d.id)}','${jsq(d.name)}')">
       <span class="dp-main"><span>${esc(d.name)}${d.nameAr ? ` — ${esc(d.nameAr)}` : ''}</span>
       ${why ? `<span class="dp-why">${esc(why)}</span>` : ''}</span>
-      <span class="dp-zone">${esc(d.zone || '')}</span>
+      <span class="dp-zone${z.none ? ' none' : ''}" title="${esc(`الزون: ${z.text}`)}">🗺️ ${esc(z.text)}</span>
     </div>`;
 }
 
+// عدّاد تغطية الزون للمدينة المعروضة. الرقم ده هو اللي بيفرّق بين
+// «المنطقة دي بلا زون» و«الكتالوج مابيرجّعش الحقل أصلًا» — من غيره الشبشة
+// الفاضية غامضة، والغموض بيوقف التشخيص.
+function renderZoneNote() {
+  const el = document.getElementById('dpZoneNote');
+  if (!el) return;
+  const withZone = dpDistricts.filter(d => (d.zone || d.zoneAr || '').trim()).length;
+  const total = dpDistricts.length;
+  el.innerHTML = total
+    ? `🗺️ <b>الزون</b> = المستوى فوق المنطقة عند بوسطة (مدينة ← زون ← منطقة). ` +
+      `<b>${fmtNum(withZone)}</b> من <b>${fmtNum(total)}</b> منطقة هنا ليها زون. ` +
+      `بيتعرض للتشخيص و<b>البحث بيشمله</b> — لكنه لسه <b>مش داخل في المطابقة التلقائية</b>.`
+    : '';
+}
 function renderDistrictList() {
   renderDistrictState();
   if (dpLoading) return;
+  renderZoneNote();
   const r  = allRows.find(x => x.orderId === dpOrderId);
   const q  = (document.getElementById('dpSearch').value || '').trim().toLowerCase();
   const el = document.getElementById('dpList');
@@ -2689,7 +2737,9 @@ function renderDistrictList() {
     if (head) head += `<div class="dp-group-hdr">كل مناطق ${esc(dpCities.find(c => c.cityId === dpCityId)?.cityName || r.cityName)}</div>`;
   }
 
-  const list = q ? dpDistricts.filter(d => `${d.name} ${d.nameAr} ${d.zone}`.toLowerCase().includes(q)) : dpDistricts;
+  // البحث بيشمل الزون بالاسمين — كتابة "العبور" بتلاقي كل مناطق زون العبور
+  const list = q ? dpDistricts.filter(d =>
+    `${d.name} ${d.nameAr} ${d.zone || ''} ${d.zoneAr || ''}`.toLowerCase().includes(q)) : dpDistricts;
   if (!list.length && !head) { el.innerHTML = '<div class="ms-empty">مفيش مناطق مطابقة</div>'; return; }
   el.innerHTML = head + list.slice(0, 400).map(d => dpRow(d, '', d.id === chosen, '')).join('');
 }

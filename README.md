@@ -2,7 +2,7 @@
 
 # 🚚 رفع أوردرات بوسطة — Bosta Orders Upload
 
-![version](https://img.shields.io/badge/version-v1.2.0-blue)
+![version](https://img.shields.io/badge/version-v1.2.1-blue)
 
 بديل زرار **Send to Bosta** بتاع بلجن بوسطة على شوبيفاي. الأداة بتعرض الأوردرات
 المؤهَّلة للشحن عبر بوسطة، والموظف بيرفعها **جماعيًا** بضغطة واحدة، والأداة بتكتب
@@ -37,7 +37,8 @@ AND custom.manual_status ∈ { Confirmed , Confirmed + Edit }
 3. الصفوف الغامضة أو اللي مالهاش مطابقة بتظهر بزرار **اختر المنطقة** — اختياري،
    والرفع شغّال من غيره على مستوى المحافظة (نفس سلوك البلجن بالظبط). النافذة
    بتثبّت الاحتمالات فوق القايمة ومكتوب جنب كل واحدة **طابقت إيه ومن أنهي خانة**،
-   وفيها **منتقي مدينة** كمان.
+   وفيها **منتقي مدينة** و**عرض الزون** كمان (بوسطة هرمها مدينة ← زون ← منطقة —
+   والبحث بيشمل الزون، لكنه لسه مش داخل في المطابقة التلقائية).
 4. الموظف يحدد ويضغط **رفع المحدد**. الأوردر المرفوع قبل كده بيطلب **تأكيد صريح**.
 5. الرفع بيحصل على دفعات، وكل صف بيجيب نتيجته الخاصة ومعاه رقم تتبعه.
 6. بعد كل نجاح: `custom.courier = Bosta` · `custom.bosta_tracking_number` ·
@@ -106,10 +107,11 @@ AND custom.manual_status ∈ { Confirmed , Confirmed + Edit }
 ```
 node tests/address-matching.test.cjs
 node tests/row-state.test.cjs
+node tests/zone-label.test.cjs
 ```
 
 النشر أوتوماتيك على `main` عبر Cloudflare Workers Builds. الواجهة على GitHub Pages.
 
-آخر تحديث: 07-09-2026 — 14:00
+آخر تحديث: 07-09-2026 — 17:00
 
 </div>
