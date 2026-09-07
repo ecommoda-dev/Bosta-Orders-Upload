@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════════
-// EcomModa — Bosta-Orders-Upload (v1.0.0)
+// EcomModa — Bosta-Orders-Upload (v1.1.0)
 // skills: worker-builder v2.1.0 · constants v1.10.0 · bosta-api-helper v1.1.0 ·
-//         shopify-graphql-helper v1.1.0 · order-lifecycle v1.3.0 — 06-09-2026
+//         shopify-graphql-helper v1.1.0 · order-lifecycle v1.3.0 — 07-09-2026
 //
 // بديل زرار "Send to Bosta" بتاع بلجن بوسطة على شوبيفاي.
 // بيعرض الأوردرات المؤهَّلة، بيرفعها جماعيًا على بوسطة بنداءات فردية،
@@ -14,7 +14,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'bosta_orders_upload';   // ecommoda-constants §7 — لازم يتسجّل قبل أول writeLog
-const WORKER_VERSION = '1.0.0';
+const WORKER_VERSION = '1.1.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::bosta ───
@@ -674,40 +674,153 @@ function availableDistricts(city) {
   return { list, fieldMissing };
 }
 
-// ─── §BOSTA::matchDistrict ───
-// مطابقة المنطقة من نص العنوان الحر على كتالوج بوسطة.
-// النص عربي غالبًا (shippingAddress.city = "البحيرة") فالمطابقة بتشمل الاسم العربي.
-function matchDistrict(city, addressText, zoneOnly) {
+// ─── §BOSTA::ensureNormalized ───
+// الأسماء المطبَّعة بتتحسب مرة واحدة على الكتالوج بدل مرة لكل أوردر. الكتالوج
+// بييجي أحيانًا من كاش قديم اتكتب قبل الحقول دي — فالتعبئة كسولة، مش مفترضة.
+function ensureNormalized(catalog) {
+  if (!catalog || catalog._normalized) return catalog;
+  for (const c of catalog.cities) {
+    c.cityNameN = normText(c.cityName);
+    c.cityArN   = normText(c.cityAr);
+    for (const d of c.districts) {
+      d.nameN   = normText(d.name);
+      d.nameArN = normText(d.nameAr);
+      // 🔴 «عامّة» = اسم المنطقة هو اسم المدينة/المحافظة نفسها. العميل بيكتب اسم
+      //    محافظته في العنوان كعادة، فالمطابقة دي بتحمل معلومة شبه صفرية —
+      //    وهي اللي كانت بتكسب بالطول وتبعت الشحنة لفرع غلط (#53834 · #53818).
+      d.generic = (!!d.nameN   && (d.nameN   === c.cityNameN || d.nameN   === c.cityArN))
+               || (!!d.nameArN && (d.nameArN === c.cityNameN || d.nameArN === c.cityArN));
+    }
+  }
+  catalog._normalized = true;
+  return catalog;
+}
+
+// ─── §BOSTA::addressFields ───
+// خانات العنوان **منفصلة ومرتّبة بالأخصّية** — مش نص واحد ملزوق.
+// 🔴 اللزق كان بيلغي المعلومة اللي بتحسم المطابقة: `city` = "سيدي سالم" أخصّ
+//    بمراحل من ذكر "كفر الشيخ" وسط `address1`. من غير الترتيب ده الترجيح
+//    بيرجع للطول، والطول بيكسب للمحافظة على المركز.
+function addressFields(sa) {
+  // ⚠️ `textN` بتتحسب هنا مرة واحدة عن قصد — `findCrossCity` بيلف على ٢٨ مدينة،
+  //    وتطبيع النص جوّه اللفة كان بيتكرر ٢٨ مرة لكل أوردر بلا داعي.
+  return [
+    { key: 'city',     label: 'مدينة شوبيفاي', text: sa.city     || '' },
+    { key: 'address1', label: 'العنوان',        text: sa.address1 || '' },
+    { key: 'address2', label: 'العنوان ٢',      text: sa.address2 || '' },
+  ].filter(f => f.text).map((f, i) => ({ ...f, tier: i, textN: normText(f.text) }));
+}
+
+// ─── §BOSTA::rankHits ───
+// ترتيب الأولوية (الأقوى أولًا) — كل بند اتكتب لأنه صحّح حالة حقيقية:
+//   ① غير عامّة تغلب العامّة  — "مصر الجديدة" تغلب "القاهرة"
+//   ② الخانة الأخصّ تغلب      — `city` تغلب `address1` تغلب `address2`
+//   ③ التطابق الكامل يغلب الجزئي داخل نفس الخانة
+//   ④ الأطول يغلب **بس لو الأقصر جوّه الأطول** — "مدينة نصر" تغلب "نصر"
+// ⚠️ الطول لوحده **مش** فاصل: "المنصورة" و"اجا" في نفس العنوان مطابقتين
+//    منفصلتين، والأطول فيهم مش الأصح. الحالة دي بترجع **غامضة** عمدًا —
+//    ضغطة زيادة من الموظف أرخص من شحنة في فرع غلط.
+const HIT_KEY = h => [h.generic ? 1 : 0, h.tier, h.exact ? 0 : 1];
+
+function betterHit(a, b) {
+  const ka = HIT_KEY(a), kb = HIT_KEY(b);
+  for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i] - kb[i];
+  return b.matched.length - a.matched.length;   // الأطول أولًا داخل نفس الطبقة
+}
+// b مهزومة حسمًا قدام a؟ (مش مجرد أقل ترتيبًا — لازم فرق في طبقة، أو احتواء)
+function dominates(a, b) {
+  const ka = HIT_KEY(a), kb = HIT_KEY(b);
+  for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i] < kb[i];
+  // الأقصر **جوّه** الأطول = احتواء. الشرط على الطول مقصود: اسمين متطابقين
+  // لمنطقتين مختلفتين غموض حقيقي، مش حسم عشوائي لأول واحدة في الترتيب.
+  return a.matched.length > b.matched.length && a.matched.includes(b.matched);
+}
+
+// ─── §BOSTA::matchDistrictsIn ───
+// مطابقة مناطق مدينة واحدة على خانات العنوان. بترجّع كل الإصابات مرتّبة.
+function matchDistrictsIn(city, fields, zoneOnly) {
   const { list, fieldMissing } = availableDistricts(city);
-  const text = normText(addressText);
-  if (!text || !list.length) return { matches: [], fieldMissing };
+  if (!list.length || !fields.length) return { hits: [], fieldMissing };
 
   let pool = list;
   if (zoneOnly) {
     const zEn = normText(zoneOnly.en), zAr = normText(zoneOnly.ar);
-    const inZone = list.filter(d => {
+    pool = list.filter(d => {
       const dz = normText(d.zone), dza = normText(d.zoneAr);
       return (zEn && (dz === zEn || dza === zEn)) || (zAr && (dz === zAr || dza === zAr));
     });
-    pool = inZone.length ? inZone : [];
   }
 
-  const hits = [];
-  for (const d of pool) {
-    for (const cand of [d.name, d.nameAr]) {
-      const n = normText(cand);
-      if (n.length < 3) continue;
-      if (text.includes(n)) { hits.push({ d, len: n.length, matched: cand }); break; }
+  const best = new Map();   // districtId → أحسن إصابة ليها
+  for (const f of fields) {
+    const ftext = f.textN;
+    if (!ftext) continue;
+    for (const d of pool) {
+      for (const n of [d.nameN, d.nameArN]) {
+        if (!n || n.length < 3 || !ftext.includes(n)) continue;
+        const hit = {
+          id: d.id, name: d.name, nameAr: d.nameAr, zone: d.zone,
+          tier: f.tier, field: f.key, fieldLabel: f.label,
+          matched: n, matchedText: n === d.nameArN ? d.nameAr : d.name,
+          exact: ftext === n, generic: !!d.generic,
+        };
+        const prev = best.get(d.id);
+        if (!prev || betterHit(hit, prev) < 0) best.set(d.id, hit);
+        break;
+      }
     }
   }
-  if (!hits.length) return { matches: [], fieldMissing };
+  return { hits: [...best.values()].sort(betterHit), fieldMissing };
+}
 
-  // الأطول أدق — "مدينة نصر" أولى من "نصر"
-  const max = Math.max(...hits.map(h => h.len));
-  const best = hits.filter(h => h.len === max);
-  const uniq = [];
-  for (const h of best) if (!uniq.some(u => u.d.id === h.d.id)) uniq.push(h);
-  return { matches: uniq.map(h => ({ id: h.d.id, name: h.d.name, nameAr: h.d.nameAr, zone: h.d.zone })), fieldMissing };
+// ─── §BOSTA::matchDistrict ───
+// بترجّع المرشحين المتنافسين: واحد = حسم · أكتر من واحد = غموض معلَن.
+function matchDistrict(city, fields, zoneOnly) {
+  const { hits, fieldMissing } = matchDistrictsIn(city, fields, zoneOnly);
+  if (!hits.length) return { matches: [], fieldMissing };
+  const top = hits[0];
+  const matches = hits.filter(h => h === top || !dominates(top, h));
+  return { matches, fieldMissing };
+}
+
+// ─── §BOSTA::findCrossCity ───
+// 🟠 كاشف «المدينة مشكوك فيها» — بيشتغل **بس** لما مفيش مطابقة جوّه المدينة
+//    المحسوبة من الجدول. بيدوّر على اسم المنطقة في كتالوج بوسطة كله.
+//
+// ليه أصلًا: تصنيف بوسطة مش التقسيم الإداري (العبور إداريًا القليوبية وعند
+// بوسطة تحت القاهرة)، وكمان العميل بيغلط في اختيار المحافظة (شبين الكوم على
+// الغربية · دمياط الجديدة على القاهرة). الحالتين بيدّوا نفس العرض، والنتيجة
+// **مش** «منطقة ناقصة» — دي **مدينة غلط**، يعني فرع وتسعيرة غلط.
+//
+// 🔴 اقتراح بس — **ممنوع** التطبيق التلقائي. أسماء المناطق بتتكرر بين
+//    المحافظات، وتحويل مدينة الشحنة تلقائيًا على مطابقة نصية = نفس الفخ اللي
+//    جدول المحافظات المقفول اتكتب عشان يمنعه.
+const CROSS_MIN_LEN      = 4;   // أقصر من كده بيلقّط ضوضاء
+const CROSS_MAX_HITS     = 8;
+const CROSS_MAX_PER_CITY = 3;   // ٨ اقتراحات كلها من مدينة واحدة ضوضاء مش مساعدة
+
+function findCrossCity(catalog, fields, skipCityId) {
+  const out = [];
+  for (const c of catalog.cities) {
+    if (c.cityId === skipCityId) continue;
+    const { hits } = matchDistrictsIn(c, fields, null);
+    let taken = 0;
+    for (const h of hits) {
+      if (h.matched.length < CROSS_MIN_LEN || h.generic) continue;
+      if (++taken > CROSS_MAX_PER_CITY) break;
+      out.push({
+        cityId: c.cityId, cityName: c.cityName,
+        districtId: h.id, districtName: h.name, districtNameAr: h.nameAr, zone: h.zone,
+        matchedText: h.matchedText, fieldLabel: h.fieldLabel,
+        _rank: [h.tier, h.exact ? 0 : 1, -h.matched.length],
+      });
+    }
+  }
+  out.sort((a, b) => {
+    for (let i = 0; i < 3; i++) if (a._rank[i] !== b._rank[i]) return a._rank[i] - b._rank[i];
+    return 0;
+  });
+  return out.slice(0, CROSS_MAX_HITS).map(({ _rank, ...rest }) => rest);
 }
 
 // ─── §BOSTA::resolveAddress ───
@@ -717,6 +830,7 @@ function matchDistrict(city, addressText, zoneOnly) {
 //   محافظة خاصة بلا مطابقة → الشكل (ب): { city, cityId, districtName, … }   · موثّق
 //   أكتر من مطابقة أو مفيش → الشكل (ج): { city, firstLine }                 · غير موثّق
 function resolveAddress(order, catalog) {
+  ensureNormalized(catalog);
   const sa = order.shippingAddress || {};
   const provinceRaw = sa.province || '';
   const codeRaw     = sa.provinceCode || '';
@@ -725,10 +839,10 @@ function resolveAddress(order, catalog) {
          || PROVINCE_BY_NAME.get(String(provinceRaw).toLowerCase())
          || null;
 
-  const addressText = [sa.city, sa.address1, sa.address2].filter(Boolean).join(' ');
+  const fields = addressFields(sa);
 
   // North Coast — مدينة بوسطة مالهاش مقابل في شوبيفاي
-  const normAddr = normText(addressText);
+  const normAddr = fields.map(f => f.textN).join(' ');
   const isNorthCoast = NORTH_COAST.hints.some(h => normAddr.includes(normText(h)));
   if (isNorthCoast && (row?.province === 'Matrouh' || row?.province === 'Alexandria')) {
     row = { province: row.province, code: row.code, cityId: NORTH_COAST.cityId, cityName: NORTH_COAST.cityName };
@@ -743,7 +857,7 @@ function resolveAddress(order, catalog) {
   }
 
   const city = catalog.cities.find(c => c.cityId === row.cityId) || null;
-  const { matches, fieldMissing } = matchDistrict(city, addressText, row.zoneOnly);
+  const { matches, fieldMissing } = matchDistrict(city, fields, row.zoneOnly);
 
   const base = {
     ok: true,
@@ -751,7 +865,11 @@ function resolveAddress(order, catalog) {
     cityId: row.cityId,
     cityName: row.cityName,
     catalogWarning: fieldMissing ? 'dropOffAvailability غايب من كتالوج بوسطة — المطابقة اتعطّلت' : null,
-    candidates: matches,
+    candidates: matches.map(m => ({
+      id: m.id, name: m.name, nameAr: m.nameAr, zone: m.zone,
+      matchedText: m.matchedText, fieldLabel: m.fieldLabel,
+    })),
+    crossCity: [],
   };
 
   if (matches.length === 1) {
@@ -761,7 +879,12 @@ function resolveAddress(order, catalog) {
     // §٥.٥ — محافظة اتلغت إداريًا، بتتبعت كزون جوه مدينة تانية
     return { ...base, mode: 'zoneName', districtName: row.zoneOnly.en };
   }
-  return { ...base, mode: 'province', ambiguous: matches.length > 1 };
+  if (matches.length === 0) {
+    // مفيش مطابقة جوّه المدينة — هنا بس بندوّر بره (اقتراح، مش تطبيق)
+    const crossCity = findCrossCity(catalog, fields, row.cityId);
+    return { ...base, mode: 'province', ambiguous: false, crossCity, cityDoubt: crossCity.length > 0 };
+  }
+  return { ...base, mode: 'province', ambiguous: true };
 }
 
 // ─── §BOSTA::buildDeliveryPayload ───
@@ -934,6 +1057,10 @@ function buildRow(order, catalog) {
     districtName: plan.ok ? (plan.districtName || null) : null,
     ambiguous:   plan.ok ? !!plan.ambiguous : false,
     candidates:  plan.ok ? (plan.candidates || []) : [],
+    // 🟠 المدينة مشكوك فيها — العنوان طابق منطقة في **مدينة تانية** غير اللي
+    //    الجدول وصل لها. اقتراح للموظف، مش قرار: ممنوع التطبيق التلقائي.
+    cityDoubt:   plan.ok ? !!plan.cityDoubt : false,
+    crossCity:   plan.ok ? (plan.crossCity || []) : [],
     catalogWarning: plan.ok ? plan.catalogWarning : null,
     problems,
     uploadable:  problems.length === 0,
@@ -956,6 +1083,8 @@ async function uploadOne(env, token, order, catalog, override) {
     contractUsed: null,
     districtSent: null,
     citySent: null,
+    cityAuto: null,          // المدينة اللي المطابقة التلقائية وصلت لها
+    cityOverridden: false,   // الموظف غيّر المدينة يدويًا؟
     error: null,
     warnings: [],
     logged: true,
@@ -969,15 +1098,52 @@ async function uploadOne(env, token, order, catalog, override) {
     return row;
   }
 
-  // تعديل الموظف اليدوي للمنطقة — بيغلب المطابقة التلقائية
+  // ─── تعديل الموظف اليدوي — بيغلب المطابقة التلقائية ───
+  // 🔴 التعديل ممكن يشمل **المدينة** كمان مش المنطقة بس. تصنيف بوسطة مش
+  //    التقسيم الإداري (العبور إداريًا القليوبية وعند بوسطة تحت القاهرة)،
+  //    وكمان العميل بيغلط في اختيار المحافظة. من غير ده الحالة دي مالهاش حل
+  //    يدوي أصلًا — الشحنة بتروح فرع غلط، وده مش fallback محايد زي المنطقة
+  //    الناقصة: المدينة بتحدد الفرع والتسعيرة.
+  // ⚠️ التعديل بيتكتب في `planUsed` نفسه عن قصد — كل اللي بعده (بناء الـ
+  //    payload · `row.citySent` · **ورجوع 3003 لمسار المحافظة**) بيقرا منه،
+  //    فالرجوع بيفضل ماسك المدينة المعدّلة. لو اتكتب في متغير جنبي، الرجوع
+  //    كان هيبعت المدينة الأصلية الغلط في صمت.
   let mode = plan.mode;
   let planUsed = { ...plan };
+
+  const ovCityId = override?.cityId || null;
+  if (ovCityId && ovCityId !== plan.cityId) {
+    const ovCity = catalog.cities.find(c => c.cityId === ovCityId);
+    if (!ovCity) {
+      row.status = 'error';
+      row.error  = `المدينة المختارة يدويًا (${ovCityId}) مش موجودة في كتالوج بوسطة — ` +
+                   `الرفع اتوقف بدل ما يتبعت على المدينة الأصلية`;
+      return row;
+    }
+    planUsed.cityId   = ovCity.cityId;
+    planUsed.cityName = ovCity.cityName;
+    row.cityOverridden = true;
+  }
+
   if (override?.districtId) {
-    const city = catalog.cities.find(c => c.cityId === plan.cityId);
+    const city = catalog.cities.find(c => c.cityId === planUsed.cityId);
     const { list } = availableDistricts(city);
     const d = list.find(x => x.id === override.districtId);
-    if (d) { mode = 'district'; planUsed.districtId = d.id; planUsed.districtName = d.name; }
-  } else if (override?.forceProvince) {
+    // 🔴 مش لاقيينها = **وقف**، مش رجوع صامت للمطابقة التلقائية. الموظف اختار
+    //    منطقة صراحةً؛ الرفع على حاجة تانية من غير ما يعرف = شحنة بفلوس على
+    //    عنوان مش اللي وافق عليه.
+    if (!d) {
+      row.status = 'error';
+      row.error  = `المنطقة المختارة يدويًا مش موجودة (أو مش متاحة للتسليم) في ` +
+                   `مدينة ${planUsed.cityName} عند بوسطة — الرفع اتوقف. افتح النافذة واختر من الأول.`;
+      return row;
+    }
+    mode = 'district';
+    planUsed.districtId = d.id;
+    planUsed.districtName = d.name;
+  } else if (override?.forceProvince || row.cityOverridden) {
+    // مدينة متعدّلة من غير منطقة = رفع على مستوى المدينة الجديدة (أفضل بكتير
+    // من المدينة الغلط، وبيدخل مسار العناوين غير الواضحة عند بوسطة عادي)
     mode = 'province';
   }
 
@@ -986,6 +1152,7 @@ async function uploadOne(env, token, order, catalog, override) {
   let res = await createDelivery(env, payload, documented);
   row.contractUsed = documented ? 'documented' : 'undocumented';
   row.citySent     = planUsed.cityName;
+  row.cityAuto     = plan.cityName;
   row.districtSent = mode === 'district' ? planUsed.districtName : (mode === 'zoneName' ? planUsed.districtName : null);
 
   // 🔴 errorCode نص مش رقم — المقارنة بالرقم معناها إن الرجوع التلقائي عمره ما هيشتغل
@@ -1051,6 +1218,10 @@ async function logRow(env, row, employee) {
         bosta_id:        row.bostaId,
         district_sent:   row.districtSent,
         city_sent:       row.citySent,
+        // تدخّل المدينة يتسجّل عشان نقيس تكراره — الحالات اللي بتتكرر هي
+        // المرشحة تتحوّل لصف في جدول المحافظات بدل تدخّل يدوي كل مرة
+        city_auto:       row.cityAuto,
+        city_overridden: !!row.cityOverridden,
         actions:         row.actions,
         warnings:        row.warnings,
       },
@@ -1248,13 +1419,21 @@ export default {
         assertEnv(env, 'bosta');
         const cityId = url.searchParams.get('cityId') || '';
         const cat = await getCatalog(env, { force: url.searchParams.get('refresh') === '1' });
+        // من غير cityId = قايمة المدن — بتغذّي منتقي المدينة جوّه نافذة الاختيار،
+        // اللي هو الحل اليدوي الوحيد لحالة «المدينة مشكوك فيها»
         if (!cityId) {
-          return json({ ok: true, cities: cat.cities.map(c => ({ cityId: c.cityId, cityName: c.cityName })) }, 200, request);
+          return json({
+            ok: true,
+            cities: cat.cities.map(c => ({
+              cityId: c.cityId, cityName: c.cityName, cityAr: c.cityAr || '',
+              districtCount: availableDistricts(c).list.length,
+            })).sort((a, b) => a.cityName.localeCompare(b.cityName)),
+          }, 200, request);
         }
         const city = cat.cities.find(c => c.cityId === cityId);
         const { list, fieldMissing } = availableDistricts(city);
         return json({
-          ok: true, cityId, cityName: city?.cityName || '',
+          ok: true, cityId, cityName: city?.cityName || '', cityAr: city?.cityAr || '',
           fieldMissing,
           districts: list.map(d => ({ id: d.id, name: d.name, nameAr: d.nameAr, zone: d.zone })),
         }, 200, request);
