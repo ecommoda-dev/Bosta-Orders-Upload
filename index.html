@@ -515,6 +515,10 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
   background:var(--surface-2);color:var(--text-secondary);border-bottom:1px solid var(--border);}
 .dp-group-hdr.pick{background:var(--accent-light);color:var(--accent-dark);}
 .dp-group-hdr.cross{background:var(--amber-light);color:var(--amber);}
+.dp-group-hdr.pick{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.dp-clear-zone{border:1px solid var(--accent-border);background:var(--surface);color:var(--accent);
+  border-radius:6px;padding:2px 8px;font-family:var(--font-body);font-size:11px;font-weight:700;cursor:pointer;}
+.dp-clear-zone:hover{background:var(--accent-light);border-color:var(--accent);}
 .dp-item{align-items:flex-start;}
 .dp-item.suggested{background:var(--accent-light);}
 .dp-item.suggested:hover{background:var(--accent-border);}
@@ -620,6 +624,21 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <span class="cl-ver-date">07-09-2026</span>
         </div>
         <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>🎯 <b>المطابقة بقت تشوف الزون — وده اللي بيحلّ العبور.</b> اسم المنطقة عند بوسطة تسمية إدارية مركّبة (<code>المنطقة 01 (العبور)</code>) محدش بيكتبها، لكن <b>الزون اسمه «العبور»</b> وهو اللي العميل كاتبه. دلوقتي أوردرات العبور بتطلع <b>🟠 Cairo؟</b> ومعاها <b>اقتراح جاهز بضغطة واحدة</b> بدل «المحافظة بس» صامتة.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>الضغط على اقتراح الزون <b>بيظبّط المدينة ويقصّر القايمة على مناطق الزون بس</b> — ٦ مناطق بدل ٥٩٠. مفيش بحث يدوي.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>بادج الجدول بقى بيسمّي <b>المدينة المقترحة</b> (<code>🟠 Cairo؟</code>) بدل «المدينة مشكوك فيها» العامة — تعرف من الجدول من غير ما تفتح.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>لو العنوان طابق زون في <b>نفس</b> المدينة (المدينة صح والمنطقة ناقصة)، الزون بيتعرض كاختصار برضه — ضغطة تقصّر القايمة.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>⚠️ اقتراح الزون <b>بيحسم المدينة بس، مش المنطقة</b> — الزون فيه مناطق كتير واختيار واحدة منها تخمين. الموظف بيختار من القايمة المقصورة.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>الضغط على اقتراح والنافذة أصلًا واقفة على المدينة المقترحة كان <b>مش بيسجّل المدينة على الصف</b> — والرفع كان هيمشي على مدينة الجدول الغلط في صمت. المقارنة بقت بمدينة الصف مش بالمعروضة في النافذة.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v1.2.1</span>
+          <span class="cl-ver-date">07-09-2026</span>
+        </div>
+        <ul class="cl-items">
           <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>الزون بقى ظاهر في نافذة اختيار المنطقة</b> — شبشة 🗺️ جنب كل منطقة بالاسمين (إنجليزي وعربي)، و<b>البحث بيشمله</b> فكتابة «العبور» بتجيب كل مناطق زون العبور. الزون هو المستوى فوق المنطقة عند بوسطة (مدينة ← زون ← منطقة).</span></li>
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span>المنطقة اللي مالهاش زون بتتكتب <b>«بلا زون»</b> صراحةً بدل خانة فاضية — الفراغ كان بيخلط بين «المنطقة دي بلا زون» و«الكتالوج مابيرجّعش الحقل أصلًا»، وسطر جديد في النافذة بيقول كام منطقة من كام ليها زون.</span></li>
           <li class="cl-item"><span class="cl-tag new">جديد</span><span>الفحص الذاتي (🩺) بقى فيه بند <b>تغطية الزون في الكتالوج</b> — عدد المناطق اللي ليها زون وعدد الزونات وعيّنة منها.</span></li>
@@ -704,6 +723,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li>لكل أوردر: المحافظة بتتحوّل لمدينة بوسطة بجدول حتمي مقفول، وبعدين الأداة بتحاول تطابق المنطقة من نص العنوان الحر (عربي وإنجليزي) على كتالوج بوسطة.</li>
             <li>عمود <strong>المنطقة</strong> بيقول بالظبط هيتبعت إيه: <code>📍 اسم منطقة</code> = المطابقة نجحت والشحنة هتترفع بالمنطقة · <code>🗺️ اسم زون</code> = محافظة اتلغت إداريًا وبتتبعت كزون · <code>❓ N احتمالات</code> = المطابقة غامضة والاحتمالات مثبّتة فوق قايمة النافذة · <code>🟠 المدينة مشكوك فيها</code> = مفيش مطابقة جوه مدينة الجدول والعنوان طابق منطقة في <strong>مدينة تانية</strong> · <code>🏙️ المحافظة بس</code> = مفيش مطابقة، الشحنة بتترفع على المحافظة وبتدخل مسار العناوين غير الواضحة عند بوسطة (<strong>مش فشل</strong>). الشرح كامل على الـ hover.</li>
             <li>🟠 <strong>«المدينة مشكوك فيها» حالة مختلفة عن «المحافظة بس»، ومش أقل خطورة منها.</strong> «المحافظة بس» = المدينة صح والمنطقة ناقصة. «المدينة مشكوك فيها» = <strong>المدينة نفسها على الأرجح غلط</strong> — والمدينة بتحدد الفرع والتسعيرة، مش بس دقة العنوان. بيحصل لسببين: تصنيف بوسطة مش التقسيم الإداري (<strong>العبور</strong> إداريًا القليوبية وعند بوسطة تحت <strong>القاهرة</strong>)، أو العميل غلط في اختيار المحافظة. الصفوف دي <strong>مستثناة من «تحديد الكل»</strong> وليها فلتر خاص — تتراجع وتتحدد بالإيد.</li>
+            <li>🎯 <strong>الزون داخل في المطابقة دلوقتي.</strong> لما نص العنوان مايطابقش أي منطقة، الأداة بتدوّر على <strong>اسم الزون</strong> — وده اللي بيلقط <strong>العبور</strong>: اسم المنطقة عند بوسطة <code>المنطقة 01 (العبور)</code> محدش بيكتبها، لكن الزون اسمه «العبور». الاقتراح بيطلع جاهز، والضغطة <strong>بتظبّط المدينة وتقصّر القايمة على مناطق الزون بس</strong>. ⚠️ الزون <strong>بيحسم المدينة مش المنطقة</strong> — فيه مناطق كتير واختيار واحدة تخمين.</li>
             <li>🗺️ <strong>الزون</strong> ظاهر جنب كل منطقة في النافذة. بوسطة هرمها <strong>مدينة ← زون ← منطقة</strong>، والزون هو المستوى الأوسط. البحث بيشمله (كتابة «العبور» بتجيب كل مناطق زون العبور)، والمنطقة اللي مالهاش زون بتتكتب <strong>«بلا زون»</strong> صراحةً. ⚠️ الزون <strong>مش داخل في المطابقة التلقائية</strong> — العرض ده للتشخيص.</li>
             <li>جوّه نافذة المنطقة فيه <strong>منتقي مدينة</strong>. لو غيّرت المدينة، الرفع بيتبعت عليها هي — وعمود «مدينة بوسطة» في الجدول بيوريها بعلامة ✎ والمدينة الأصلية على الـ hover. اقتراحات المدن التانية بتتحط فوق القايمة، والضغط عليها بيغيّر المدينة والمنطقة مع بعض.</li>
             <li>أي صف ينفع يتفتح بزرار <em>اختر المنطقة</em> — والنافذة فيها <strong>↺ رجّع للمطابقة التلقائية</strong> (بتشيل التدخّل اليدوي) و<strong>🏙️ ارفع على المحافظة بس</strong> (بتثبّت الصف على المحافظة حتى لو المطابقة نجحت وقت الرفع). الاختيار كله اختياري، والرفع شغّال من غيره.</li>
@@ -745,7 +765,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li><code>§TOOL-JS::filters</code> — سجل الـ multi-select الموحّد للجدولين (<code>owner</code> بيوجّه التغيير للجدول الصح)</li>
             <li><code>§TOOL-JS::dateFilter</code> — مصنع فلتر التاريخ (نسخة للجدول الرئيسي وواحدة للسجل، بنفس السلوك)</li>
             <li><code>§TOOL-JS::table</code> — الفلترة والترتيب والعرض والتحديد</li>
-            <li><code>§TOOL-JS::district</code> — نافذة اختيار المنطقة والمدينة يدويًا · الاحتمالات المثبّتة · اقتراحات المدن التانية · عرض الزون (<code>effCity</code> · <code>chooseCity</code> · <code>chooseCrossCity</code> · <code>zoneLabel</code> · <code>renderZoneNote</code>)</li>
+            <li><code>§TOOL-JS::district</code> — نافذة اختيار المنطقة والمدينة يدويًا · الاحتمالات المثبّتة · اقتراحات المدن والزونات · قصر القايمة على زون (<code>effCity</code> · <code>chooseCity</code> · <code>chooseCrossCity</code> · <code>chooseZone</code> · <code>zoneSuggestRow</code> · <code>dpZoneFilter</code>)</li>
             <li><code>§TOOL-JS::upload</code> — التأكيد على المكرر · الرفع على دفعات · لوحة النتائج</li>
             <li><code>§LOG-JS</code> — <code>logParams</code> · pagination · تصدير XLSX + بانر التقصّ</li>
           </ul>
@@ -770,7 +790,9 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li>«النتائج» في الجدول الرئيسي بتتحسب على البيانات المحمّلة، وفي تاب السجل بتيجي من السيرفر (الفلترة كلها server-side).</li>
             <li><strong>الترتيب في تاب السجل على الصفحة المعروضة بس</strong> (١٠٠ صف) — الفلترة والترقيم server-side، فترتيب عمود بيرتّب الصفحة الحالية مش كل السجل.</li>
             <li><strong>ترجيح المطابقة مش «الأطول يكسب».</strong> الترتيب: المنطقة اللي اسمها اسم المحافظة بتتأخّر (العميل بيكتب محافظته كعادة) ← خانة <code>city</code> تغلب <code>address1</code> ← التطابق الكامل يغلب الجزئي ← الطول بيفصل <strong>بس</strong> عند الاحتواء (مدينة نصر / نصر). مطابقتين منفصلتين = <strong>غموض معلَن</strong>، مش اختيار بالطول.</li>
-            <li>🗺️ <strong>الزون بيتعرض ومش بيتطابق.</strong> المطابقة بتسأل «هل نص العنوان فيه اسم المنطقة؟» — فبتنجح لما اسم المنطقة اسم مكان بسيط (<code>مدينة السادات</code> · <code>قلين</code>) وبتفشل لما يكون تسمية مركّبة محدش بيكتبها (<code>العبور - المنطقة 05</code>). عشان كده أوردرات العبور بتقع على «المحافظة بس». الزون معروض دلوقتي عشان نقرر إزاي نعالجها.</li>
+            <li><strong>اقتراح الزون بيحسم المدينة مش المنطقة.</strong> زون واحد فيه مناطق كتير (زون العبور فيه ٦)، فاختيار منطقة منه تلقائيًا تخمين. الضغطة بتظبّط المدينة وتقصّر القايمة، والموظف بيختار.</li>
+            <li><strong>اختيار زون بيمسح أي منطقة كانت متختارة قبله.</strong> اختيار زون = إعادة تحديد نطاق، ومنطقة من مدينة قديمة مع اسم مدينة جديد = شحنة في المكان الغلط.</li>
+            <li>🗺️ <strong>الزون كان بيتعرض ومش بيتطابق (v1.2.x) — بقى بيتطابق في v1.3.0.</strong> المطابقة بتسأل «هل نص العنوان فيه اسم المنطقة؟» — فبتنجح لما اسم المنطقة اسم مكان بسيط (<code>مدينة السادات</code> · <code>قلين</code>) وبتفشل لما يكون تسمية مركّبة محدش بيكتبها (<code>العبور - المنطقة 05</code>). عشان كده أوردرات العبور بتقع على «المحافظة بس». الزون معروض دلوقتي عشان نقرر إزاي نعالجها.</li>
             <li><strong>اقتراح المدينة التانية اقتراح — مش قرار.</strong> أسماء المناطق بتتكرر بين المحافظات، فالتطبيق التلقائي هيكون نفس الفخ اللي جدول المحافظات المقفول اتكتب عشان يمنعه. الاقتراح بيتعرض، والموظف بيضغط.</li>
             <li><strong>لو الموظف اختار منطقة والـ Worker مالقهاش في المدينة المختارة، الصف بيوقف بخطأ</strong> — مش بيرجع للمطابقة التلقائية بصمت. الرفع على حاجة تانية غير اللي الموظف وافق عليه = شحنة بفلوس على عنوان مش المقصود.</li>
             <li>الرفع بيتقسّم دفعات من <code>UPLOAD_CHUNK</code> صف. لو دفعة كاملة ما وصلتش للـ Worker، صفوفها بتتعرض بحالة «فشل» مع رسالة صريحة إن حالتها <strong>مش معروفة</strong> ولازم تتراجع على بوسطة قبل إعادة المحاولة.</li>
@@ -1360,8 +1382,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v1.2.1';   // مصدر واحد لرقم نسخة الواجهة
-const MIN_WORKER_VERSION = '1.1.0';    // أقل نسخة Worker الواجهة دي بتشتغل معاها — مالهاش علاقة بـ TOOL_VERSION
+const TOOL_VERSION       = 'v1.3.0';   // مصدر واحد لرقم نسخة الواجهة
+const MIN_WORKER_VERSION = '1.3.0';    // أقل نسخة Worker الواجهة دي بتشتغل معاها — مالهاش علاقة بـ TOOL_VERSION
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -2433,14 +2455,21 @@ function addrModeInfo(r) {
   if (r.ambiguous) return { label: `❓ ${r.candidates.length} احتمالات`, set: false,
     hint: `نص العنوان طابق ${r.candidates.length} مناطق — من غير اختيار يدوي الشحنة هتترفع على المحافظة بس` };
   if (r.cityDoubt) {
-    const first = r.crossCity?.[0];
-    return { label: `🟠 المدينة مشكوك فيها`, set: false,
-      hint: `مفيش مطابقة جوّه ${r.cityName}، بس العنوان طابق منطقة في مدينة تانية` +
-            (first ? ` (${first.cityName} ← ${first.districtName})` : '') +
-            ` — راجع المدينة قبل الرفع. الرفع على مدينة غلط بيودّي الشحنة فرع وتسعيرة غلط.` };
+    // اسم المدينة المقترحة في البادج نفسه — الموظف يعرف من الجدول من غير ما
+    // يفتح النافذة، والضغطة بتوديه على الاقتراح جاهز
+    const f = r.crossCity?.[0];
+    const what = f ? (f.kind === 'zone' ? `زون ${f.zone}` : f.districtName) : '';
+    return { label: f ? `🟠 ${f.cityName}؟` : '🟠 المدينة مشكوك فيها', set: false,
+      hint: `مفيش مطابقة جوّه ${r.cityName}، بس العنوان طابق في مدينة تانية` +
+            (f ? ` — ${f.cityName} ← ${what} (طابق "${f.matchedText}")` : '') +
+            `. افتح واضغط على الاقتراح: بيظبّط المدينة` +
+            (f?.kind === 'zone' ? ` ويقصّر القايمة على ${fmtNum(f.districtCount || 0)} منطقة` : ' والمنطقة') +
+            `. الرفع على مدينة غلط بيودّي الشحنة فرع وتسعيرة غلط.` };
   }
+  const lz = r.localZones?.[0];
   return { label: '🏙️ المحافظة بس', set: false,
-    hint: 'مفيش مطابقة منطقة في نص العنوان — الشحنة بتترفع على المحافظة وبتدخل مسار العناوين غير الواضحة عند بوسطة (مش فشل)' };
+    hint: 'مفيش مطابقة منطقة في نص العنوان — الشحنة بتترفع على المحافظة وبتدخل مسار العناوين غير الواضحة عند بوسطة (مش فشل)' +
+      (lz ? ` · 🗺️ بس العنوان طابق زون ${lz.zone} في نفس المدينة — افتح واضغط عليه تشوف ${fmtNum(lz.districtCount || 0)} منطقة بس.` : '') };
 }
 // المدينة المعروضة = اللي هتتبعت فعلًا. لو الموظف عدّلها، الأصلية بتفضل
 // مكتوبة في الـ tooltip — عشان مراجعة الصف تفضل ممكنة.
@@ -2580,6 +2609,7 @@ async function loadOrders(force) {
 let dpOrderId = null, dpDistricts = [], dpLoading = false;
 let dpCities  = [];      // كل مدن بوسطة — بتتحمّل مرة واحدة وبتتكاش
 let dpCityId  = null;    // المدينة المعروضة دلوقتي في النافذة
+let dpZoneFilter = null; // اسم الزون اللي القايمة مقصورة عليه (٦ مناطق بدل ٥٩٠)
 
 // المدينة السارية على الصف: التعديل اليدوي أولًا، وإلا اللي الجدول وصل له
 function effCity(r) {
@@ -2615,6 +2645,7 @@ async function openDistrictPicker(orderId) {
 // تحميل مناطق مدينة معيّنة جوّه النافذة
 async function loadDpCity(cityId) {
   dpCityId = cityId;
+  dpZoneFilter = null;   // القصر تبع مدينة معيّنة — مايعديش معاها
   renderDpCitySelect();
   document.getElementById('dpList').innerHTML =
     '<div style="padding:20px;text-align:center;"><span class="loading-spinner"></span></div>';
@@ -2700,6 +2731,39 @@ function renderZoneNote() {
       `بيتعرض للتشخيص و<b>البحث بيشمله</b> — لكنه لسه <b>مش داخل في المطابقة التلقائية</b>.`
     : '';
 }
+// صف اقتراح زون. 🔴 مابيختارش منطقة — الزون فيه مناطق كتير، واختيار واحدة
+// منها تخمين. بيظبّط المدينة ويقصّر القايمة، والموظف يختار المنطقة من ٦ بدل ٥٩٠.
+function zoneSuggestRow(z, cls) {
+  const n = z.districtCount || 0;
+  return `<div class="dp-item ${cls}" onclick="chooseZone('${jsq(z.cityId)}','${jsq(z.cityName)}','${jsq(z.zone)}')">
+      <span class="dp-main"><span>🗺️ <b>${esc(z.cityName)}</b> ← زون <b>${esc(z.zone)}</b>${z.zoneAr ? ` — ${esc(z.zoneAr)}` : ''}</span>
+      <span class="dp-why">طابق "${esc(z.matchedText)}" في ${esc(z.fieldLabel || 'العنوان')} · اضغط تشوف ${fmtNum(n)} منطقة</span></span>
+      <span class="dp-zone">${fmtNum(n)} منطقة</span>
+    </div>`;
+}
+
+// ظبّط المدينة (لو مختلفة) واقصر القايمة على الزون. المدينة بتتسجّل كتدخّل
+// يدوي فورًا — لأن المدينة الغلط لوحدها بتودّي الشحنة فرع وتسعيرة غلط.
+async function chooseZone(cityId, cityName, zone) {
+  const r = allRows.find(x => x.orderId === dpOrderId);
+  if (!r) return;
+  // 🔴 المدينة بتتقارن بمدينة **الصف** مش بالمدينة المعروضة في النافذة.
+  //    ربطها بـ dpCityId كان بيسيب الصف من غير تسجيل لو النافذة أصلًا واقفة
+  //    على المدينة المقترحة — فالرفع كان هيمشي على مدينة الجدول الغلط في صمت.
+  if (cityId !== r.cityId) districtOverride[dpOrderId] = { cityId, cityName };
+  else                     delete districtOverride[dpOrderId];
+  // ⚠️ مفيش منطقة بتتحمل من اختيار سابق — اختيار زون معناه إعادة تحديد النطاق،
+  //    ومنطقة من مدينة تانية مع اسم مدينة جديد = شحنة في المكان الغلط.
+  applyFilters();
+  if (cityId !== dpCityId) await loadDpCity(cityId);
+  dpZoneFilter = zone;
+  document.getElementById('dpSearch').value = '';
+  toggleSearchActiveState(document.getElementById('dpSearch'));
+  renderDistrictList();
+  showToast(`المدينة ${cityName} · القايمة مقصورة على زون ${zone} — اختر المنطقة`, 'success', 5000);
+}
+function clearZoneFilter() { dpZoneFilter = null; renderDistrictList(); }
+
 function renderDistrictList() {
   renderDistrictState();
   if (dpLoading) return;
@@ -2712,7 +2776,12 @@ function renderDistrictList() {
   const sameCity = r && dpCityId === r.cityId;
 
   let head = '';
-  if (!q && sameCity) {
+  // 🗺️ قصر القايمة على زون واحد — ده اللي بيحوّل ٥٩٠ منطقة لـ٦
+  if (dpZoneFilter) {
+    head += `<div class="dp-group-hdr pick">🗺️ مقصورة على زون <b>${esc(dpZoneFilter)}</b>
+      <button class="dp-clear-zone" onclick="event.stopPropagation();clearZoneFilter()">✕ شيل القصر</button></div>`;
+  }
+  if (!q && sameCity && !dpZoneFilter) {
     // ① الاحتمالات — مثبّتة فوق وقابلة للضغط، مش نص في سطر السياق
     const cands = (r.candidates || []).filter(c => dpDistricts.some(d => d.id === c.id));
     if (cands.length > 1) {
@@ -2723,23 +2792,36 @@ function renderDistrictList() {
           c.matchedText ? `طابق "${c.matchedText}" في ${c.fieldLabel || 'العنوان'}` : '');
       }).join('');
     }
-    // ② اقتراح مدينة تانية — 🔴 اقتراح بس، الضغط بيغيّر المدينة والمنطقة مع بعض
+    // ② اقتراح مدينة تانية — 🔴 اقتراح بس، الضغط بيغيّر المدينة (والمنطقة لو
+    //    الاقتراح منطقة). اقتراح الزون بيغيّر المدينة ويقصّر القايمة على الزون —
+    //    مابيختارش منطقة، لأن الزون فيه مناطق كتير واختيار واحدة تخمين.
     const cross = r.crossCity || [];
     if (cross.length) {
-      head += `<div class="dp-group-hdr cross">🟠 العنوان طابق مناطق في مدن تانية — راجع قبل ما تختار</div>`;
-      head += cross.map(c => `
+      head += `<div class="dp-group-hdr cross">🟠 العنوان طابق في مدن تانية — ضغطة واحدة تظبّط المدينة</div>`;
+      head += cross.map(c => c.kind === 'zone' ? zoneSuggestRow(c, 'cross') : `
         <div class="dp-item cross" onclick="chooseCrossCity('${jsq(c.cityId)}','${jsq(c.cityName)}','${jsq(c.districtId)}','${jsq(c.districtName)}')">
           <span class="dp-main"><span><b>${esc(c.cityName)}</b> ← ${esc(c.districtName)}${c.districtNameAr ? ` — ${esc(c.districtNameAr)}` : ''}</span>
           <span class="dp-why">طابق "${esc(c.matchedText)}" في ${esc(c.fieldLabel || 'العنوان')}</span></span>
-          <span class="dp-zone">${esc(c.zone || '')}</span>
+          <span class="dp-zone">🗺️ ${esc(c.zone || '—')}</span>
         </div>`).join('');
+    }
+    // ③ زون جوّه نفس المدينة — المدينة صح، والزون بيقصّر القايمة
+    const local = r.localZones || [];
+    if (local.length) {
+      head += `<div class="dp-group-hdr pick">🗺️ العنوان طابق زون في نفس المدينة — اضغط عشان تشوف مناطقه بس</div>`;
+      head += local.map(z => zoneSuggestRow(z, 'suggested')).join('');
     }
     if (head) head += `<div class="dp-group-hdr">كل مناطق ${esc(dpCities.find(c => c.cityId === dpCityId)?.cityName || r.cityName)}</div>`;
   }
 
   // البحث بيشمل الزون بالاسمين — كتابة "العبور" بتلاقي كل مناطق زون العبور
-  const list = q ? dpDistricts.filter(d =>
-    `${d.name} ${d.nameAr} ${d.zone || ''} ${d.zoneAr || ''}`.toLowerCase().includes(q)) : dpDistricts;
+  let list = dpDistricts;
+  if (dpZoneFilter) {
+    const zf = dpZoneFilter.toLowerCase();
+    list = list.filter(d => (d.zone || '').toLowerCase() === zf || (d.zoneAr || '').toLowerCase() === zf);
+  }
+  if (q) list = list.filter(d =>
+    `${d.name} ${d.nameAr} ${d.zone || ''} ${d.zoneAr || ''}`.toLowerCase().includes(q));
   if (!list.length && !head) { el.innerHTML = '<div class="ms-empty">مفيش مناطق مطابقة</div>'; return; }
   el.innerHTML = head + list.slice(0, 400).map(d => dpRow(d, '', d.id === chosen, '')).join('');
 }
@@ -2794,6 +2876,7 @@ function pinDistrictToProvince() {
 function closeDistrictPicker() {
   document.getElementById('districtOverlay').classList.remove('open');
   dpOrderId = null;
+  dpZoneFilter = null;
 }
 
 // ─── §TOOL-JS::upload ───
