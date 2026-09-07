@@ -2,7 +2,7 @@
 
 # 🚚 رفع أوردرات بوسطة — Bosta Orders Upload
 
-![version](https://img.shields.io/badge/version-v1.0.0-blue)
+![version](https://img.shields.io/badge/version-v1.1.0-blue)
 
 بديل زرار **Send to Bosta** بتاع بلجن بوسطة على شوبيفاي. الأداة بتعرض الأوردرات
 المؤهَّلة للشحن عبر بوسطة، والموظف بيرفعها **جماعيًا** بضغطة واحدة، والأداة بتكتب
