@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// EcomModa — Bosta-Orders-Upload (v1.1.0)
+// EcomModa — Bosta-Orders-Upload (v1.2.0)
 // skills: worker-builder v2.1.0 · constants v1.10.0 · bosta-api-helper v1.1.0 ·
 //         shopify-graphql-helper v1.1.0 · order-lifecycle v1.3.0 — 07-09-2026
 //
@@ -14,7 +14,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'bosta_orders_upload';   // ecommoda-constants §7 — لازم يتسجّل قبل أول writeLog
-const WORKER_VERSION = '1.1.0';
+const WORKER_VERSION = '1.2.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::bosta ───
@@ -1397,6 +1397,31 @@ export default {
           });
         } catch (e) { checks.push({ ok: false, label: 'كتالوج بوسطة', detail: e.message }); }
 
+        // تغطية الزون — الفرق بين «مفيش زون في الكتالوج» و«المنطقة دي بلا زون»
+        // لازم يبان. من غير الفحص ده، عمود زون فاضي في النافذة بيبقى غامض.
+        try {
+          const cat = await getCatalog(env);
+          let withZone = 0, totalD = 0;
+          const zones = new Set();
+          for (const c of cat.cities) {
+            for (const d of availableDistricts(c).list) {
+              totalD++;
+              const z = d.zone || d.zoneAr;
+              if (z) { withZone++; zones.add(`${c.cityName}/${z}`); }
+            }
+          }
+          const sample = [...zones].slice(0, 4).join(' · ');
+          checks.push({
+            ok: withZone > 0,
+            label: 'تغطية الزون في الكتالوج',
+            detail: withZone
+              ? `${withZone} من ${totalD} منطقة ليها زون · ${zones.size} زون مختلف` +
+                (sample ? ` · عيّنة: ${sample}` : '')
+              : `صفر — الكتالوج مابيرجّعش zoneName. الزون هيبان فاضي في نافذة الاختيار، ` +
+                `وده معناه إن الحقل مش موجود مش إن المناطق بلا زون.`,
+          });
+        } catch { /* الكتالوج فشل فوق وبيتعرض هناك */ }
+
         // جدول المحافظات مقابل الكتالوج
         try {
           const cat = await getCatalog(env);
@@ -1435,7 +1460,11 @@ export default {
         return json({
           ok: true, cityId, cityName: city?.cityName || '', cityAr: city?.cityAr || '',
           fieldMissing,
-          districts: list.map(d => ({ id: d.id, name: d.name, nameAr: d.nameAr, zone: d.zone })),
+          // الزون بيترجع بالاسمين — الواجهة بتعرضه في نافذة الاختيار. الزون هو
+          // المستوى فوق المنطقة عند بوسطة (مدينة ← زون ← منطقة)، ولحد دلوقتي
+          // **مش داخل في المطابقة** — بيتعرض للتشخيص بس.
+          districts: list.map(d => ({ id: d.id, name: d.name, nameAr: d.nameAr,
+                                      zone: d.zone, zoneAr: d.zoneAr })),
         }, 200, request);
       }
 
