@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// EcomModa — Bosta-Orders-Upload (v1.2.0)
+// EcomModa — Bosta-Orders-Upload (v1.3.0)
 // skills: worker-builder v2.1.0 · constants v1.10.0 · bosta-api-helper v1.1.0 ·
 //         shopify-graphql-helper v1.1.0 · order-lifecycle v1.3.0 — 07-09-2026
 //
@@ -14,7 +14,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'bosta_orders_upload';   // ecommoda-constants §7 — لازم يتسجّل قبل أول writeLog
-const WORKER_VERSION = '1.2.0';
+const WORKER_VERSION = '1.3.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::bosta ───
@@ -691,9 +691,64 @@ function ensureNormalized(catalog) {
       d.generic = (!!d.nameN   && (d.nameN   === c.cityNameN || d.nameN   === c.cityArN))
                || (!!d.nameArN && (d.nameArN === c.cityNameN || d.nameArN === c.cityArN));
     }
+    c.zoneIndex = buildZoneIndex(c);
   }
   catalog._normalized = true;
   return catalog;
+}
+
+// ─── §BOSTA::buildZoneIndex ───
+// فهرس الزونات لكل مدينة. الزون هو المستوى فوق المنطقة (مدينة ← زون ← منطقة)،
+// وهو **الاسم اللي العميل بيكتبه فعلًا** لما اسم المنطقة تسمية إدارية مركّبة:
+//   العنوان: "العبور الحي الخامس بلوك ١٦٠٢٧"
+//   المناطق: "المنطقة 01 (العبور)" · "دار مصر - العبور" · "احياء العبور الجديده"
+//   الزون  : "العبور"  ← ده اللي بيطابق
+// متحقَّق حيًا 07-09-2026: تغطية الزون ١٠٠٪ (القاهرة 590/590 · القليوبية 207/207).
+function buildZoneIndex(city) {
+  const byKey = new Map();
+  for (const d of city.districts) {
+    if (d.dropOff !== true) continue;          // نفس فلتر availableDistricts
+    const en = (d.zone || '').trim(), ar = (d.zoneAr || '').trim();
+    if (!en && !ar) continue;
+    const key = normText(en) + '|' + normText(ar);
+    let z = byKey.get(key);
+    if (!z) {
+      z = { zone: en, zoneAr: ar, nameN: normText(en), nameArN: normText(ar), count: 0 };
+      // زون اسمه اسم المدينة نفسها = معلومة شبه صفرية، زي المنطقة العامّة
+      z.generic = (!!z.nameN   && (z.nameN   === city.cityNameN || z.nameN   === city.cityArN))
+               || (!!z.nameArN && (z.nameArN === city.cityNameN || z.nameArN === city.cityArN));
+      byKey.set(key, z);
+    }
+    z.count++;
+  }
+  return [...byKey.values()];
+}
+
+// ─── §BOSTA::matchZonesIn ───
+// نفس ترجيح المناطق بالظبط — الفرق إن النتيجة **زون مش منطقة**، يعني بتحسم
+// المدينة ومابتحسمش المنطقة. الزون فيه مناطق كتير، فاختيار واحدة منها تخمين.
+function matchZonesIn(city, fields) {
+  const best = new Map();
+  for (const f of fields) {
+    const ftext = f.textN;
+    if (!ftext) continue;
+    for (const z of (city.zoneIndex || [])) {
+      for (const n of [z.nameN, z.nameArN]) {
+        if (!n || n.length < 3 || !ftext.includes(n)) continue;
+        const hit = {
+          zone: z.zone, zoneAr: z.zoneAr, count: z.count,
+          tier: f.tier, field: f.key, fieldLabel: f.label,
+          matched: n, matchedText: n === z.nameArN ? z.zoneAr : z.zone,
+          exact: ftext === n, generic: !!z.generic,
+        };
+        const key = z.nameN + '|' + z.nameArN;
+        const prev = best.get(key);
+        if (!prev || betterHit(hit, prev) < 0) best.set(key, hit);
+        break;
+      }
+    }
+  }
+  return [...best.values()].sort(betterHit);
 }
 
 // ─── §BOSTA::addressFields ───
@@ -803,16 +858,39 @@ function findCrossCity(catalog, fields, skipCityId) {
   const out = [];
   for (const c of catalog.cities) {
     if (c.cityId === skipCityId) continue;
+
+    // ① مطابقة منطقة — بتحسم المدينة **والمنطقة** مع بعض
     const { hits } = matchDistrictsIn(c, fields, null);
     let taken = 0;
     for (const h of hits) {
       if (h.matched.length < CROSS_MIN_LEN || h.generic) continue;
       if (++taken > CROSS_MAX_PER_CITY) break;
       out.push({
+        kind: 'district',
         cityId: c.cityId, cityName: c.cityName,
         districtId: h.id, districtName: h.name, districtNameAr: h.nameAr, zone: h.zone,
         matchedText: h.matchedText, fieldLabel: h.fieldLabel,
         _rank: [h.tier, h.exact ? 0 : 1, -h.matched.length],
+      });
+    }
+
+    // ② مطابقة زون — بتحسم **المدينة بس**. دي اللي بتلقط العبور: اسم المنطقة
+    //    عند بوسطة "المنطقة 01 (العبور)" ومحدش بيكتبها، لكن الزون "العبور"
+    //    هو نفسه اللي العميل كاتبه.
+    let takenZ = 0;
+    for (const z of matchZonesIn(c, fields)) {
+      if (z.matched.length < CROSS_MIN_LEN || z.generic) continue;
+      // الزون اللي مناطقه اتلقطت فوق مايتكررش كاقتراح منفصل
+      if (out.some(o => o.cityId === c.cityId && normText(o.zone || '') === normText(z.zone))) continue;
+      if (++takenZ > CROSS_MAX_PER_CITY) break;
+      out.push({
+        kind: 'zone',
+        cityId: c.cityId, cityName: c.cityName,
+        zone: z.zone, zoneAr: z.zoneAr, districtCount: z.count,
+        matchedText: z.matchedText, fieldLabel: z.fieldLabel,
+        // الزون بيترتّب جنب المناطق بنفس المفتاح — مافيش أفضلية لنوع على التاني،
+        // الأخصّية هي اللي بتحكم
+        _rank: [z.tier, z.exact ? 0 : 1, -z.matched.length],
       });
     }
   }
@@ -821,6 +899,21 @@ function findCrossCity(catalog, fields, skipCityId) {
     return 0;
   });
   return out.slice(0, CROSS_MAX_HITS).map(({ _rank, ...rest }) => rest);
+}
+
+// ─── §BOSTA::findLocalZones ───
+// نفس الفكرة بس **جوّه المدينة الصح**: العنوان مطابقش أي منطقة، بس مطابق زون.
+// المدينة هنا مش غلط — الفايدة إن الموظف يفتح النافذة ويلاقي القايمة مقصورة
+// على مناطق الزون ده (٧ مناطق بدل ٥٩٠) بدل ما يدوّر.
+function findLocalZones(city, fields) {
+  return matchZonesIn(city, fields)
+    .filter(z => z.matched.length >= CROSS_MIN_LEN && !z.generic)
+    .slice(0, CROSS_MAX_PER_CITY)
+    .map(z => ({
+      kind: 'zone', cityId: city.cityId, cityName: city.cityName,
+      zone: z.zone, zoneAr: z.zoneAr, districtCount: z.count,
+      matchedText: z.matchedText, fieldLabel: z.fieldLabel,
+    }));
 }
 
 // ─── §BOSTA::resolveAddress ───
@@ -870,6 +963,7 @@ function resolveAddress(order, catalog) {
       matchedText: m.matchedText, fieldLabel: m.fieldLabel,
     })),
     crossCity: [],
+    localZones: [],
   };
 
   if (matches.length === 1) {
@@ -880,9 +974,18 @@ function resolveAddress(order, catalog) {
     return { ...base, mode: 'zoneName', districtName: row.zoneOnly.en };
   }
   if (matches.length === 0) {
-    // مفيش مطابقة جوّه المدينة — هنا بس بندوّر بره (اقتراح، مش تطبيق)
-    const crossCity = findCrossCity(catalog, fields, row.cityId);
-    return { ...base, mode: 'province', ambiguous: false, crossCity, cityDoubt: crossCity.length > 0 };
+    // مفيش مطابقة منطقة جوّه المدينة. بندوّر على:
+    //   ① زون جوّه **نفس** المدينة — المدينة صح، والزون بيقصّر القايمة للموظف
+    //   ② منطقة أو زون في **مدينة تانية** — دي حالة «المدينة مشكوك فيها»
+    const localZones = findLocalZones(city, fields);
+    const crossCity  = findCrossCity(catalog, fields, row.cityId);
+    return {
+      ...base, mode: 'province', ambiguous: false,
+      localZones, crossCity,
+      // 🟠 الشك في المدينة بيتعلن **بس** لما فيه اقتراح في مدينة تانية.
+      //    زون جوّه نفس المدينة مش شك — دي مساعدة في اختيار المنطقة.
+      cityDoubt: crossCity.length > 0,
+    };
   }
   return { ...base, mode: 'province', ambiguous: true };
 }
@@ -1061,6 +1164,8 @@ function buildRow(order, catalog) {
     //    الجدول وصل لها. اقتراح للموظف، مش قرار: ممنوع التطبيق التلقائي.
     cityDoubt:   plan.ok ? !!plan.cityDoubt : false,
     crossCity:   plan.ok ? (plan.crossCity || []) : [],
+    // زون جوّه نفس المدينة — المدينة صح، والزون بيقصّر قايمة الاختيار
+    localZones:  plan.ok ? (plan.localZones || []) : [],
     catalogWarning: plan.ok ? plan.catalogWarning : null,
     problems,
     uploadable:  problems.length === 0,
