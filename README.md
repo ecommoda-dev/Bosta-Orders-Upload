@@ -2,7 +2,7 @@
 
 # 🚚 رفع أوردرات بوسطة — Bosta Orders Upload
 
-![version](https://img.shields.io/badge/version-v1.4.0-blue)
+![version](https://img.shields.io/badge/version-v1.5.0-blue)
 
 بديل زرار **Send to Bosta** بتاع بلجن بوسطة على شوبيفاي. الأداة بتعرض الأوردرات
 المؤهَّلة للشحن عبر بوسطة، والموظف بيرفعها **جماعيًا** بضغطة واحدة، والأداة بتكتب
@@ -41,7 +41,7 @@ AND custom.manual_status ∈ { Confirmed , Confirmed + Edit }
    مثبّتة فوق ومكتوب جنب كل واحدة **طابقت إيه ومن أنهي خانة**. وفيها **منتقي
    مدينة** كمان (بوسطة هرمها مدينة ← زون ← منطقة — والبحث والمطابقة الاتنين
    بيشوفوا الزون).
-4. الموظف يحدد ويضغط **رفع المحدد**. الأوردر المرفوع قبل كده بيطلب **تأكيد صريح**.
+4. الموظف يحدد ويضغط **رفع المحدد**، أو **⬆ رفع الكل** اللي بيحدد **كل المعروض حسب الفلتر الحالي** ويسأل تأكيد قبل الرفع. الأوردر المرفوع قبل كده بيطلب **تأكيد صريح**.
 5. الرفع بيحصل على دفعات، وكل صف بيجيب نتيجته الخاصة ومعاه رقم تتبعه.
 6. بعد كل نجاح: `custom.courier = Bosta` · `custom.bosta_tracking_number` ·
    تاج `Bosta_Uploaded_S1`.
@@ -74,7 +74,7 @@ AND custom.manual_status ∈ { Confirmed , Confirmed + Edit }
 المنطقة** — الموظف بيختار المنطقة من القايمة المقصورة.
 
 الأداة **بتقترح بس، مش بتطبّق**. الصفوف دي ليها فلتر خاص
-و**مستثناة من «تحديد الكل»**، وبتفضل قابلة للتحديد بالإيد بعد المراجعة.
+و**مستثناة من «تحديد الكل» ومن «رفع الكل»**، وبتفضل قابلة للتحديد بالإيد بعد المراجعة.
 
 ---
 
@@ -118,6 +118,7 @@ node tests/row-state.test.cjs
 node tests/zone-label.test.cjs
 node tests/zone-cross-city.test.cjs
 node tests/zone-picker-flow.test.cjs
+node tests/bulk-and-pin.test.cjs
 ```
 
 النشر أوتوماتيك على `main` عبر Cloudflare Workers Builds. الواجهة على GitHub Pages.
