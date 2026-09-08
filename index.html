@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>رفع أوردرات بوسطة — EcomModa</title>
-<!-- skills: html-builder v6.6.0 · constants v1.10.0 · order-lifecycle v1.3.0 · bosta-api-helper v1.1.0 — 07-09-2026 -->
+<!-- skills: html-builder v6.6.0 · constants v1.10.0 · order-lifecycle v1.3.0 · bosta-api-helper v1.1.0 — 08-09-2026 -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 </head>
@@ -453,7 +453,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
    فالعرض هنا `width` حقيقي + `overflow-wrap` مع قصّ على سطرين. */
 .data-table tbody td.cell-wrap{white-space:normal;text-align:right;overflow-wrap:anywhere;word-break:break-word;}
 .data-table tbody td.cell-name{width:170px;}
-.data-table tbody td.cell-addr{width:300px;font-size:12px;color:var(--text-secondary);}
+.data-table tbody td.cell-addr{width:360px;font-size:12px;color:var(--text-secondary);}
 /* النص الكامل مش بيضيع: `title` على الخلية + النافذة + تصدير XLSX */
 .cell-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.6;}
 .empty-row td{padding:40px;text-align:center;color:var(--text-muted);font-size:13px;}
@@ -490,17 +490,42 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .page-btn:disabled{opacity:.4;cursor:not-allowed;}
 
 /* ── District picker modal ──────────────────────────────────── */
-.dp-list{max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);}
-.dp-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;
-  border-bottom:1px solid var(--border);font-size:12.5px;cursor:pointer;}
+/* 🔴 سياق الأوردر حقول منفصلة، مش سطر واحد كله جنب بعضه. العنوان الحر هو
+   المصدر الوحيد للمطابقة — والموظف بيقارنه بعينه بالمنطقة اللي هيختارها،
+   فلزقه في نص متصل مع المحافظة كان بيخلّي القراءة نفسها مجهود. */
+.dp-ctx{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-bottom:12px;}
+.dp-ctx-f{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:7px 10px;min-width:0;}
+.dp-ctx-f.wide{grid-column:1/-1;}
+.dp-ctx-k{display:block;font-size:10.5px;font-weight:800;letter-spacing:.2px;
+  color:var(--text-muted);margin-bottom:3px;}
+.dp-ctx-v{display:block;font-size:12.5px;font-weight:700;color:var(--text-primary);
+  line-height:1.7;word-break:break-word;}
+.dp-ctx-v.muted{color:var(--text-muted);font-weight:600;}
+/* القايمة بقت جدول بأعمدة ثابتة: المنطقة · الزون · سبب المطابقة — الترويسة
+   ملزوقة فوق عشان الأعمدة تفضل معروفة وسط ٤٠٠ صف. */
+.dp-list{max-height:46vh;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);}
+.dp-thead,.dp-item{display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,1.15fr);
+  gap:10px;padding:9px 12px;align-items:start;}
+.dp-thead{position:sticky;top:0;z-index:2;background:var(--surface-2);color:var(--text-secondary);
+  font-size:11px;font-weight:800;letter-spacing:.2px;border-bottom:1px solid var(--border-strong);}
+.dp-item{border-bottom:1px solid var(--border);font-size:12.5px;cursor:pointer;}
 .dp-item:last-child{border-bottom:none;}
 .dp-item:hover{background:var(--accent-light);}
 .dp-item.chosen{background:var(--accent-light);color:var(--accent-dark);font-weight:700;}
+.dp-cell{min-width:0;}
+.dp-cell-why{font-size:11.5px;font-weight:600;color:var(--text-secondary);line-height:1.6;
+  word-break:break-word;min-width:0;}
+.dp-cell-why.empty{color:var(--text-muted);font-weight:500;}
+.dp-count{display:inline-block;margin-top:3px;font-size:10.5px;font-weight:800;color:var(--accent-dark);
+  background:var(--accent-light);border:1px solid var(--accent-border);border-radius:12px;padding:1px 8px;}
 /* الزون = المستوى فوق المنطقة عند بوسطة (مدينة ← زون ← منطقة).
-   بيتعرض للتشخيص — لسه **مش** داخل في المطابقة. */
-.dp-zone{font-size:11px;font-weight:700;color:var(--text-secondary);background:var(--surface-2);
-  border:1px solid var(--border);border-radius:20px;padding:2px 9px;white-space:nowrap;
-  max-width:150px;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
+   🔴 بيتعرض **كامل** — القص بـ ellipsis كان بيخفي بالظبط الجزء اللي بيفرّق
+   بين زونين (`العبور الجديده - احياء…`)، والزون هو اللي بيحسم المدينة. */
+.dp-zone{display:inline-block;font-size:11px;font-weight:700;color:var(--text-secondary);
+  background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:2px 9px;
+  line-height:1.7;max-width:100%;white-space:normal;word-break:break-word;}
 /* 🔴 «بلا زون» تتكتب صراحةً — الفراغ بيخلط بين «المنطقة دي بلا زون» و«الكتالوج
    مابيرجّعش الحقل أصلًا»، وده بالظبط نوع الغموض اللي بيوقف التشخيص. */
 .dp-zone.none{color:var(--text-muted);background:transparent;border-style:dashed;font-weight:600;}
@@ -519,13 +544,12 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .dp-clear-zone{border:1px solid var(--accent-border);background:var(--surface);color:var(--accent);
   border-radius:6px;padding:2px 8px;font-family:var(--font-body);font-size:11px;font-weight:700;cursor:pointer;}
 .dp-clear-zone:hover{background:var(--accent-light);border-color:var(--accent);}
-.dp-item{align-items:flex-start;}
 .dp-item.suggested{background:var(--accent-light);}
 .dp-item.suggested:hover{background:var(--accent-border);}
 .dp-item.cross{background:var(--amber-light);}
 .dp-item.cross:hover{background:var(--amber-border);}
 .dp-main{display:flex;flex-direction:column;gap:2px;min-width:0;}
-.dp-why{font-size:11px;font-weight:600;color:var(--text-muted);}
+.dp-why{font-size:11px;font-weight:600;color:var(--text-muted);line-height:1.6;word-break:break-word;}
 .dp-city-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
 .dp-city-row label{font-size:12px;font-weight:700;color:var(--text-secondary);white-space:nowrap;}
 .dp-city-select{flex:1;min-width:180px;padding:7px 10px;border-radius:var(--radius-sm);
@@ -621,6 +645,21 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">08-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>سياق الأوردر في نافذة اختيار المنطقة بقى حقول منفصلة.</b> كان سطر واحد كله جنب بعضه (المحافظة + العنوان الكامل مدموجين)، دلوقتي كل خانة شوبيفاي في حقل لوحدها: <b>المحافظة</b> · <b>المدينة</b> · <b>سطر ١</b> · <b>سطر ٢</b> — والترجيح بيفرّق بين خانة المدينة وخانة العنوان، فدمجهم كان بيخفي الخانة اللي المطابقة اتبنت عليها.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>النافذة بقت <b>أعرض</b> (960px بدل 560px) والقايمة بقت <b>جدول بأعمدة</b>: <b>المنطقة · الزون · سبب المطابقة</b>، بترويسة ملزوقة فوق.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>اسم الزون كان بيتقص بـ ellipsis</b> عند 150px — والقص كان بيخفي بالظبط الجزء اللي بيفرّق بين زونين (<code>برج العرب الجديده - احياء…</code>). الزون هو اللي بيحسم المدينة، فاسمه بيتعرض <b>كامل</b> دلوقتي.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>الجدول: <b>التاريخ</b> بقى بعد <b>رقم الأوردر</b> على طول · عمود <b>المحافظة</b> بقى <b>«المحافظة (شوبيفاي)»</b> (والفلتر كمان) · عمود جديد <b>«نوع المطابقة»</b> بنفس قيم فلتر «شكل العنوان» بالحرف.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>عمودي <b>التليفون</b> و<b>تليفون إضافي</b> اتشالوا من الجدول ومن تصدير XLSX. الأرقام لسه بتتبعت لبوسطة زي ما هي — العرض بس هو اللي اتشال، والبحث لسه بيلاقي بالتليفون.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>ملحوظة الزون جوّه النافذة كانت لسه بتقول إنه <b>«مش داخل في المطابقة التلقائية»</b> — كلام اتغيّر في v1.3.0 وفضل مكتوب.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v1.3.0</span>
           <span class="cl-ver-date">07-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -721,10 +760,11 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <ol>
             <li>الموظف يدخل بالـ PIN، والأداة بتستعلم من شوبيفاي لحظيًا (مفيش عدد محفوظ — الرقم بيتحرك خلال اليوم).</li>
             <li>لكل أوردر: المحافظة بتتحوّل لمدينة بوسطة بجدول حتمي مقفول، وبعدين الأداة بتحاول تطابق المنطقة من نص العنوان الحر (عربي وإنجليزي) على كتالوج بوسطة.</li>
-            <li>عمود <strong>المنطقة</strong> بيقول بالظبط هيتبعت إيه: <code>📍 اسم منطقة</code> = المطابقة نجحت والشحنة هتترفع بالمنطقة · <code>🗺️ اسم زون</code> = محافظة اتلغت إداريًا وبتتبعت كزون · <code>❓ N احتمالات</code> = المطابقة غامضة والاحتمالات مثبّتة فوق قايمة النافذة · <code>🟠 المدينة مشكوك فيها</code> = مفيش مطابقة جوه مدينة الجدول والعنوان طابق منطقة في <strong>مدينة تانية</strong> · <code>🏙️ المحافظة بس</code> = مفيش مطابقة، الشحنة بتترفع على المحافظة وبتدخل مسار العناوين غير الواضحة عند بوسطة (<strong>مش فشل</strong>). الشرح كامل على الـ hover.</li>
+            <li>عمود <strong>المنطقة</strong> بيقول بالظبط هيتبعت إيه: <code>📍 اسم منطقة</code> = المطابقة نجحت والشحنة هتترفع بالمنطقة · <code>🗺️ اسم زون</code> = محافظة اتلغت إداريًا وبتتبعت كزون · <code>❓ N احتمالات</code> = المطابقة غامضة والاحتمالات مثبّتة فوق قايمة النافذة · <code>🟠 المدينة مشكوك فيها</code> = مفيش مطابقة جوه مدينة الجدول والعنوان طابق منطقة في <strong>مدينة تانية</strong> · <code>🏙️ المحافظة بس</code> = مفيش مطابقة، الشحنة بتترفع على المحافظة وبتدخل مسار العناوين غير الواضحة عند بوسطة (<strong>مش فشل</strong>). الشرح كامل على الـ hover، وعمود <strong>نوع المطابقة</strong> جنبه بيكرّر نفس التصنيف بنص فلتر «شكل العنوان» بالحرف — عشان الفرز والفلترة والقراءة يبقوا على نفس القيمة.</li>
             <li>🟠 <strong>«المدينة مشكوك فيها» حالة مختلفة عن «المحافظة بس»، ومش أقل خطورة منها.</strong> «المحافظة بس» = المدينة صح والمنطقة ناقصة. «المدينة مشكوك فيها» = <strong>المدينة نفسها على الأرجح غلط</strong> — والمدينة بتحدد الفرع والتسعيرة، مش بس دقة العنوان. بيحصل لسببين: تصنيف بوسطة مش التقسيم الإداري (<strong>العبور</strong> إداريًا القليوبية وعند بوسطة تحت <strong>القاهرة</strong>)، أو العميل غلط في اختيار المحافظة. الصفوف دي <strong>مستثناة من «تحديد الكل»</strong> وليها فلتر خاص — تتراجع وتتحدد بالإيد.</li>
             <li>🎯 <strong>الزون داخل في المطابقة دلوقتي.</strong> لما نص العنوان مايطابقش أي منطقة، الأداة بتدوّر على <strong>اسم الزون</strong> — وده اللي بيلقط <strong>العبور</strong>: اسم المنطقة عند بوسطة <code>المنطقة 01 (العبور)</code> محدش بيكتبها، لكن الزون اسمه «العبور». الاقتراح بيطلع جاهز، والضغطة <strong>بتظبّط المدينة وتقصّر القايمة على مناطق الزون بس</strong>. ⚠️ الزون <strong>بيحسم المدينة مش المنطقة</strong> — فيه مناطق كتير واختيار واحدة تخمين.</li>
-            <li>🗺️ <strong>الزون</strong> ظاهر جنب كل منطقة في النافذة. بوسطة هرمها <strong>مدينة ← زون ← منطقة</strong>، والزون هو المستوى الأوسط. البحث بيشمله (كتابة «العبور» بتجيب كل مناطق زون العبور)، والمنطقة اللي مالهاش زون بتتكتب <strong>«بلا زون»</strong> صراحةً. ⚠️ الزون <strong>مش داخل في المطابقة التلقائية</strong> — العرض ده للتشخيص.</li>
+            <li>🗺️ <strong>الزون</strong> عمود قايم بذاته في قايمة النافذة (القايمة جدول: <strong>المنطقة · الزون · سبب المطابقة</strong>). بوسطة هرمها <strong>مدينة ← زون ← منطقة</strong>، والزون هو المستوى الأوسط. البحث بيشمله (كتابة «العبور» بتجيب كل مناطق زون العبور)، والمنطقة اللي مالهاش زون بتتكتب <strong>«بلا زون»</strong> صراحةً. 🔴 اسم الزون بيتعرض <strong>كامل من غير قص</strong> — الجزء المقصوص هو بالظبط اللي بيفرّق بين زونين، والزون هو اللي بيحسم المدينة.</li>
+            <li>نافذة المنطقة بتعرض بيانات شوبيفاي في <strong>حقول منفصلة</strong> — المحافظة · المدينة · سطر العنوان ١ و٢ — مش سطر واحد مدموج: الترجيح بيفرّق بين خانة <code>city</code> وخانة <code>address1</code>، فدمجهم في العرض بيخفي الخانة اللي المطابقة اتبنت عليها.</li>
             <li>جوّه نافذة المنطقة فيه <strong>منتقي مدينة</strong>. لو غيّرت المدينة، الرفع بيتبعت عليها هي — وعمود «مدينة بوسطة» في الجدول بيوريها بعلامة ✎ والمدينة الأصلية على الـ hover. اقتراحات المدن التانية بتتحط فوق القايمة، والضغط عليها بيغيّر المدينة والمنطقة مع بعض.</li>
             <li>أي صف ينفع يتفتح بزرار <em>اختر المنطقة</em> — والنافذة فيها <strong>↺ رجّع للمطابقة التلقائية</strong> (بتشيل التدخّل اليدوي) و<strong>🏙️ ارفع على المحافظة بس</strong> (بتثبّت الصف على المحافظة حتى لو المطابقة نجحت وقت الرفع). الاختيار كله اختياري، والرفع شغّال من غيره.</li>
             <li>الموظف يحدد الأوردرات ويضغط <strong>رفع المحدد</strong>. الأوردر المرفوع قبل كده بيطلب تأكيد صريح.</li>
@@ -806,13 +846,13 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 
 <!-- District picker modal -->
 <div class="eco-overlay" id="districtOverlay" onclick="if(event.target===this)closeDistrictPicker()">
-  <div class="eco-modal" style="max-width:560px;">
+  <div class="eco-modal" style="max-width:960px;">
     <div class="eco-modal-hdr">
       <span id="dpTitle">📍 اختر المنطقة</span>
       <button class="modal-close-x" onclick="closeDistrictPicker()">✕</button>
     </div>
     <div class="eco-modal-body">
-      <div style="font-size:12px;color:var(--text-secondary);line-height:1.8;margin-bottom:10px;" id="dpContext"></div>
+      <div class="dp-ctx" id="dpContext"></div>
       <div class="dp-state" id="dpState"></div>
       <div class="dp-city-row">
         <label for="dpCity">مدينة بوسطة:</label>
@@ -1011,7 +1051,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
         </div>
 
         <div class="flt-g">
-          <span class="flt-label">المحافظة</span>
+          <span class="flt-label">المحافظة (شوبيفاي)</span>
           <div class="ms-wrap" id="msWrap-province">
             <button class="ms-btn" id="msBtn-province" onclick="msToggle('province')">
               <span id="msBtnLabel-province">الكل</span><span class="ms-arrow">▾</span>
@@ -1171,16 +1211,15 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <thead><tr>
             <th><input type="checkbox" class="row-cb" id="selectAllRows" onclick="toggleSelectAllRows(this.checked)"></th>
             <th class="sortable-th" data-sort-key="orderNumber" onclick="toggleSort('orderNumber')">رقم الأوردر<span class="sort-icon" data-sort-key="orderNumber"></span></th>
+            <th class="sortable-th" data-sort-key="date"        onclick="toggleSort('date')">التاريخ<span class="sort-icon" data-sort-key="date"></span></th>
             <th class="sortable-th" data-sort-key="customer"    onclick="toggleSort('customer')">العميل<span class="sort-icon" data-sort-key="customer"></span></th>
-            <th class="sortable-th" data-sort-key="phone"       onclick="toggleSort('phone')">التليفون<span class="sort-icon" data-sort-key="phone"></span></th>
-            <th class="sortable-th" data-sort-key="secondPhone" onclick="toggleSort('secondPhone')">تليفون إضافي<span class="sort-icon" data-sort-key="secondPhone"></span></th>
             <th class="sortable-th" data-sort-key="address"     onclick="toggleSort('address')">العنوان كامل<span class="sort-icon" data-sort-key="address"></span></th>
-            <th class="sortable-th" data-sort-key="province"    onclick="toggleSort('province')">المحافظة<span class="sort-icon" data-sort-key="province"></span></th>
+            <th class="sortable-th" data-sort-key="province"    onclick="toggleSort('province')">المحافظة (شوبيفاي)<span class="sort-icon" data-sort-key="province"></span></th>
             <th class="sortable-th" data-sort-key="cityName"    onclick="toggleSort('cityName')">مدينة بوسطة<span class="sort-icon" data-sort-key="cityName"></span></th>
             <th>المنطقة</th>
+            <th class="sortable-th" data-sort-key="addrMode"    onclick="toggleSort('addrMode')">نوع المطابقة<span class="sort-icon" data-sort-key="addrMode"></span></th>
             <th class="sortable-th" data-sort-key="s1"          onclick="toggleSort('s1')">حالة S1<span class="sort-icon" data-sort-key="s1"></span></th>
             <th class="sortable-th" data-sort-key="upLabel"     onclick="toggleSort('upLabel')">حالة الرفع<span class="sort-icon" data-sort-key="upLabel"></span></th>
-            <th class="sortable-th" data-sort-key="date"        onclick="toggleSort('date')">التاريخ<span class="sort-icon" data-sort-key="date"></span></th>
           </tr></thead>
           <tbody id="tblBody"></tbody>
         </table>
@@ -1382,7 +1421,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v1.3.0';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v1.4.0';   // مصدر واحد لرقم نسخة الواجهة
 const MIN_WORKER_VERSION = '1.3.0';    // أقل نسخة Worker الواجهة دي بتشتغل معاها — مالهاش علاقة بـ TOOL_VERSION
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
@@ -1990,6 +2029,8 @@ const ADDR_MODE_ITEMS = [
   { value: 'cityFixed',label: '🏙️ مدينة معدّلة يدويًا' },
   { value: 'blocked',  label: '⛔ محافظة مش في الجدول' },
 ];
+// مصدر واحد لتسمية شكل العنوان: الفلتر والعمود بيقروا منه الاتنين
+const ADDR_MODE_LABEL = Object.fromEntries(ADDR_MODE_ITEMS.map(it => [it.value, it.label]));
 const LOG_TYPE_ITEMS = [
   { value: 'uploaded',             label: 'اترفع' },
   { value: 'upload_failed',        label: 'فشل الرفع' },
@@ -2006,7 +2047,7 @@ const msState = {
   logEmp:   { owner: 'log',  items: [], selected: new Set(), search: '', mode: 'list' },
 };
 const filterLabels = {
-  s1: 'الحالة', province: 'المحافظة', upState: 'حالة الرفع', addrMode: 'شكل العنوان',
+  s1: 'الحالة', province: 'المحافظة (شوبيفاي)', upState: 'حالة الرفع', addrMode: 'شكل العنوان',
   logType: 'نوع العملية', logEmp: 'الموظف',
 };
 
@@ -2354,6 +2395,7 @@ const sortConfig = {
   secondPhone: { type: 'string' },
   address: { type: 'string', get: r => fullAddressText(r) },
   province: { type: 'string' }, cityName: { type: 'string' }, s1: { type: 'string' },
+  addrMode: { type: 'string', get: r => ADDR_MODE_LABEL[rowAddrMode(r)] || rowAddrMode(r) },
   upLabel: { type: 'string', get: r => rowUpLabel(r) },
   date: { type: 'date', get: r => r.createdAt },
 };
@@ -2487,10 +2529,20 @@ function districtCell(r) {
                   onclick="openDistrictPicker('${jsq(r.orderId)}')">${esc(info.label)}</button>`;
 }
 
+// نوع المطابقة = **نفس** قيمة فلتر «شكل العنوان» بالحرف. مصدر واحد
+// (ADDR_MODE_LABEL) عشان الفلتر والعمود مايفترقوش لما تتضاف حالة جديدة.
+function addrModeCell(r) {
+  const mode = rowAddrMode(r);
+  const cls  = (mode === 'district' || mode === 'zoneName') ? 'badge-success'
+             : (mode === 'ambiguous' || mode === 'cityDoubt') ? 'badge-warn'
+             : mode === 'blocked' ? 'badge-danger' : 'badge-muted';
+  return `<span class="badge ${cls}" title="${esc(addrModeInfo(r).hint)}">${esc(ADDR_MODE_LABEL[mode] || mode)}</span>`;
+}
+
 function renderTable(rows) {
   const body = document.getElementById('tblBody');
   if (!rows.length) {
-    body.innerHTML = `<tr class="empty-row"><td colspan="12">لا توجد أوردرات مطابقة</td></tr>`;
+    body.innerHTML = `<tr class="empty-row"><td colspan="11">لا توجد أوردرات مطابقة</td></tr>`;
     document.getElementById('selectAllRows').checked = false;
     return;
   }
@@ -2510,17 +2562,16 @@ function renderTable(rows) {
                  ${rowNeedsCityDecision(r) ? 'data-doubt="1" title="مستثنى من تحديد الكل — المدينة محتاجة مراجعة. تقدر تحدده بإيدك."' : ''}
                  ${blocked ? 'disabled' : ''} onclick="onRowCheck('${jsq(r.orderId)}', this.checked)"></td>
       <td>${orderLink(r.orderNumber, r.orderId)}</td>
+      <td class="col-num">${formatDate(r.createdAt)}</td>
       <td class="cell-wrap cell-name">${esc(r.customer || '—')}
           ${blocked ? `<span class="problem-text">${esc(r.problems.join(' · '))}</span>` : ''}</td>
-      <td class="col-num">${esc(r.phone || '—')}</td>
-      <td class="col-num">${esc(r.secondPhone || '—')}</td>
       <td class="cell-wrap cell-addr" title="${esc(fullAddressText(r) || '—')}"><span class="cell-clamp">${esc(fullAddressText(r) || '—')}</span></td>
       <td>${esc(r.province || '—')}</td>
       <td>${cityCell(r)}</td>
       <td>${districtCell(r)}</td>
+      <td>${addrModeCell(r)}</td>
       <td>${s1Badge}</td>
       <td>${upBadge}</td>
-      <td class="col-num">${formatDate(r.createdAt)}</td>
     </tr>`;
   }).join('');
   const selectableIds = rows.filter(isAutoSelectable).map(r => r.orderId);
@@ -2558,7 +2609,7 @@ async function loadOrders(force) {
   const banner = document.getElementById('loadErrorBanner');
   banner.style.display = 'none';
   document.getElementById('tblBody').innerHTML =
-    `<tr class="empty-row"><td colspan="12"><span class="loading-spinner"></span></td></tr>`;
+    `<tr class="empty-row"><td colspan="11"><span class="loading-spinner"></span></td></tr>`;
   try {
     const d = await apiGet('get_orders', force ? { refresh: '1' } : {});
     allRows = d.rows || [];
@@ -2621,15 +2672,35 @@ function effCity(r) {
   };
 }
 
+// حقل واحد في شبكة السياق. الفاضي بيتكتب «—» صراحةً — الخانة المختفية
+// بتخلّي الموظف يفتكر إن العنوان أقصر مما هو فعلًا.
+function dpCtxField(key, val, wide) {
+  const empty = !String(val ?? '').trim();
+  return `<div class="dp-ctx-f${wide ? ' wide' : ''}">` +
+         `<span class="dp-ctx-k">${esc(key)}</span>` +
+         `<span class="dp-ctx-v${empty ? ' muted' : ''}">${empty ? '—' : esc(val)}</span></div>`;
+}
+// 🔴 خانات شوبيفاي بتتعرض **منفصلة زي ما هي** — مش مدموجة في سطر واحد.
+//    الترجيح بيفرّق بين خانة `city` وخانة `address1` (خانة المدينة تغلب)،
+//    فدمجهم في العرض بيخفي عن الموظف الخانة اللي المطابقة اتبنت عليها.
+function dpContextHTML(r) {
+  return dpCtxField('رقم الأوردر', r.orderNumber) +
+         dpCtxField('العميل', r.customer) +
+         dpCtxField('المحافظة (شوبيفاي)', r.province) +
+         dpCtxField('المدينة (شوبيفاي)', r.addressCity) +
+         dpCtxField('مدينة بوسطة (المطابقة التلقائية)', r.cityName) +
+         dpCtxField('حالة S1', r.s1) +
+         dpCtxField('العنوان (سطر ١)', r.address1, true) +
+         (String(r.address2 || '').trim() ? dpCtxField('العنوان (سطر ٢)', r.address2, true) : '');
+}
+
 async function openDistrictPicker(orderId) {
   const r = allRows.find(x => x.orderId === orderId);
   if (!r) return;
   if (!r.addressOk) { showToast(r.addressError || 'المحافظة مش معروفة', 'error', 6000); return; }
   dpOrderId = orderId;
   document.getElementById('dpTitle').textContent = `📍 اختر المنطقة — ${r.orderNumber}`;
-  document.getElementById('dpContext').innerHTML =
-    `<b>المحافظة على شوبيفاي:</b> ${esc(r.province || '—')} · ` +
-    `<b>عنوان شوبيفاي:</b> ${esc(fullAddressText(r)) || '—'}`;
+  document.getElementById('dpContext').innerHTML = dpContextHTML(r);
   document.getElementById('dpSearch').value = '';
   toggleSearchActiveState(document.getElementById('dpSearch'));
   document.getElementById('districtOverlay').classList.add('open');
@@ -2711,10 +2782,14 @@ function dpRow(d, cls, chosen, why) {
   const z = zoneLabel(d);
   return `<div class="dp-item ${cls}${chosen ? ' chosen' : ''}"
       onclick="chooseDistrict('${jsq(d.id)}','${jsq(d.name)}')">
-      <span class="dp-main"><span>${esc(d.name)}${d.nameAr ? ` — ${esc(d.nameAr)}` : ''}</span>
-      ${why ? `<span class="dp-why">${esc(why)}</span>` : ''}</span>
-      <span class="dp-zone${z.none ? ' none' : ''}" title="${esc(`الزون: ${z.text}`)}">🗺️ ${esc(z.text)}</span>
+      <span class="dp-main"><span>${esc(d.name)}${d.nameAr ? ` — ${esc(d.nameAr)}` : ''}</span></span>
+      <span class="dp-cell"><span class="dp-zone${z.none ? ' none' : ''}" title="${esc(`الزون: ${z.text}`)}">🗺️ ${esc(z.text)}</span></span>
+      <span class="dp-cell-why${why ? '' : ' empty'}">${why ? esc(why) : '—'}</span>
     </div>`;
+}
+// ترويسة أعمدة القايمة — ملزوقة فوق، عشان الأعمدة تفضل معروفة وسط ٤٠٠ صف
+function dpTableHead() {
+  return `<div class="dp-thead"><span>المنطقة</span><span>الزون</span><span>سبب المطابقة</span></div>`;
 }
 
 // عدّاد تغطية الزون للمدينة المعروضة. الرقم ده هو اللي بيفرّق بين
@@ -2728,17 +2803,20 @@ function renderZoneNote() {
   el.innerHTML = total
     ? `🗺️ <b>الزون</b> = المستوى فوق المنطقة عند بوسطة (مدينة ← زون ← منطقة). ` +
       `<b>${fmtNum(withZone)}</b> من <b>${fmtNum(total)}</b> منطقة هنا ليها زون. ` +
-      `بيتعرض للتشخيص و<b>البحث بيشمله</b> — لكنه لسه <b>مش داخل في المطابقة التلقائية</b>.`
+      `بيتعرض للتشخيص، <b>البحث بيشمله</b>، و<b>المطابقة بتشوفه</b> — بيظبّط المدينة ويقصّر القايمة، والمنطقة اختيارك.`
     : '';
 }
 // صف اقتراح زون. 🔴 مابيختارش منطقة — الزون فيه مناطق كتير، واختيار واحدة
 // منها تخمين. بيظبّط المدينة ويقصّر القايمة، والموظف يختار المنطقة من ٦ بدل ٥٩٠.
 function zoneSuggestRow(z, cls) {
   const n = z.districtCount || 0;
+  const zTxt = `${z.zone}${z.zoneAr && z.zoneAr !== z.zone ? ` — ${z.zoneAr}` : ''}`;
   return `<div class="dp-item ${cls}" onclick="chooseZone('${jsq(z.cityId)}','${jsq(z.cityName)}','${jsq(z.zone)}')">
-      <span class="dp-main"><span>🗺️ <b>${esc(z.cityName)}</b> ← زون <b>${esc(z.zone)}</b>${z.zoneAr ? ` — ${esc(z.zoneAr)}` : ''}</span>
-      <span class="dp-why">طابق "${esc(z.matchedText)}" في ${esc(z.fieldLabel || 'العنوان')} · اضغط تشوف ${fmtNum(n)} منطقة</span></span>
-      <span class="dp-zone">${fmtNum(n)} منطقة</span>
+      <span class="dp-main"><span>🗺️ <b>${esc(z.cityName)}</b></span>
+      <span class="dp-why">اضغط تظبّط المدينة وتقصّر القايمة</span></span>
+      <span class="dp-cell"><span class="dp-zone" title="${esc(`الزون: ${zTxt}`)}">🗺️ ${esc(zTxt)}</span>
+      <span class="dp-count">${fmtNum(n)} منطقة</span></span>
+      <span class="dp-cell-why">طابق "${esc(z.matchedText)}" في ${esc(z.fieldLabel || 'العنوان')}</span>
     </div>`;
 }
 
@@ -2801,8 +2879,9 @@ function renderDistrictList() {
       head += cross.map(c => c.kind === 'zone' ? zoneSuggestRow(c, 'cross') : `
         <div class="dp-item cross" onclick="chooseCrossCity('${jsq(c.cityId)}','${jsq(c.cityName)}','${jsq(c.districtId)}','${jsq(c.districtName)}')">
           <span class="dp-main"><span><b>${esc(c.cityName)}</b> ← ${esc(c.districtName)}${c.districtNameAr ? ` — ${esc(c.districtNameAr)}` : ''}</span>
-          <span class="dp-why">طابق "${esc(c.matchedText)}" في ${esc(c.fieldLabel || 'العنوان')}</span></span>
-          <span class="dp-zone">🗺️ ${esc(c.zone || '—')}</span>
+          <span class="dp-why">مدينة تانية — اضغط تظبّط المدينة والمنطقة</span></span>
+          <span class="dp-cell"><span class="dp-zone${c.zone ? '' : ' none'}" title="${esc(`الزون: ${c.zone || 'بلا زون'}`)}">🗺️ ${esc(c.zone || 'بلا زون')}</span></span>
+          <span class="dp-cell-why">طابق "${esc(c.matchedText)}" في ${esc(c.fieldLabel || 'العنوان')}</span>
         </div>`).join('');
     }
     // ③ زون جوّه نفس المدينة — المدينة صح، والزون بيقصّر القايمة
@@ -2823,7 +2902,7 @@ function renderDistrictList() {
   if (q) list = list.filter(d =>
     `${d.name} ${d.nameAr} ${d.zone || ''} ${d.zoneAr || ''}`.toLowerCase().includes(q));
   if (!list.length && !head) { el.innerHTML = '<div class="ms-empty">مفيش مناطق مطابقة</div>'; return; }
-  el.innerHTML = head + list.slice(0, 400).map(d => dpRow(d, '', d.id === chosen, '')).join('');
+  el.innerHTML = dpTableHead() + head + list.slice(0, 400).map(d => dpRow(d, '', d.id === chosen, '')).join('');
 }
 
 function chooseDistrict(id, name) {
@@ -3082,13 +3161,11 @@ async function exportOrdersXLSX() {
   await buildXLSX('الأوردرات', [
     { header: 'رقم الأوردر', key: 'orderNumber', width: 14 },
     { header: 'العميل', key: 'customer', width: 24 },
-    { header: 'التليفون', key: 'phone', width: 16 },
-    { header: 'تليفون احتياطي', key: 'secondPhone', width: 16 },
-    { header: 'المحافظة', key: 'province', width: 16 },
+    { header: 'المحافظة (شوبيفاي)', key: 'province', width: 18 },
     { header: 'مدينة بوسطة', key: 'cityName', width: 16 },
     { header: 'مدينة المطابقة التلقائية', key: 'cityAuto', width: 20 },
     { header: 'المنطقة', key: 'district', width: 20 },
-    { header: 'شكل العنوان', key: 'addrMode', width: 16 },
+    { header: 'نوع المطابقة', key: 'addrMode', width: 24 },
     { header: 'العنوان', key: 'address', width: 40 },
     { header: 'التحصيل', key: 'cod', width: 12 },
     { header: 'قيمة البضاعة', key: 'goodsValue', width: 14 },
@@ -3102,11 +3179,11 @@ async function exportOrdersXLSX() {
   ], rows.map(r => {
     const ov = districtOverride[r.orderId];
     return {
-      orderNumber: r.orderNumber, customer: r.customer, phone: r.phone, secondPhone: r.secondPhone,
+      orderNumber: r.orderNumber, customer: r.customer,
       province: r.province, cityName: effCity(r).cityName,
       cityAuto: effCity(r).changed ? r.cityName : '',
       district: ov?.districtName || r.districtName || '',
-      addrMode: rowAddrMode(r),
+      addrMode: ADDR_MODE_LABEL[rowAddrMode(r)] || rowAddrMode(r),
       address: fullAddressText(r),
       cod: r.cod, goodsValue: r.goodsValue, itemsCount: r.itemsCount,
       s1: r.s1, upLabel: rowUpLabel(r), previousTracking: r.previousTracking || '',
