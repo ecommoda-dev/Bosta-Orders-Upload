@@ -139,7 +139,7 @@
 | `index.html` | الواجهة (ملف واحد، GitHub Pages) |
 | `wrangler.toml` | إعداد النشر |
 | `MERGE-BRIEF.md` | تكليف الدمج — الجرد والقرارات والفخاخ |
-| `tests/` | ١١ مجموعة بـ Node عادي بلا تنصيب |
+| `tests/` | ١٢ مجموعة بـ Node عادي بلا تنصيب |
 
 ```
 node tests/address-matching.test.cjs   # ترجيح مطابقة المنطقة
@@ -153,6 +153,7 @@ node tests/worker-logs.test.cjs        # ترتيب السجل وحدوده
 node tests/re-payload.test.cjs         # عقد شحنة الاسترجاع/الاستبدال
 node tests/upload-flow.test.cjs        # مسار الرفع كامل على fetch مزيّف
 node tests/job-modes.test.cjs          # الأوضاع التلاتة في الواجهة
+node tests/re-endpoints.test.cjs       # الـ handler نفسه من الطلب للرد
 ```
 
 النشر أوتوماتيك على `main` عبر Cloudflare Workers Builds. الواجهة على GitHub Pages.
