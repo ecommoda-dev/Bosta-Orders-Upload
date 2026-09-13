@@ -1,7 +1,34 @@
 // ══════════════════════════════════════════════════════════════
-// EcomModa — Bosta-Orders-Upload (v1.3.0)
-// skills: worker-builder v2.1.0 · constants v1.10.0 · bosta-api-helper v1.1.0 ·
-//         shopify-graphql-helper v1.1.0 · order-lifecycle v1.3.0 — 07-09-2026
+// EcomModa — Bosta-Orders-Upload (v1.4.0)
+// skills: worker-builder v3.3.0 · html-builder v7.1.0 · constants v2.5.0 ·
+//         bosta-api-helper v2.0.0 · shopify-graphql-helper v2.2.0 ·
+//         order-lifecycle v1.6.0 — 13-09-2026
+//
+// v1.4.0 (جولة `skills-sweep` — 13-09-2026):
+// الأداة كانت متحاذية عند بصمة 07/08-09، والمهارات اتحركت بعدها كتير. الجرد
+// طلّع أربع بنود 🔴 وتلاتة 🟡 على الأداة دي، وكلها اتقفلت هنا. البنود الجاية
+// من `bosta-api-helper` v2.0.0 اتراجعت يدويًا (تسعة بنود، كلها بتخص الأداة دي).
+//
+// - 🔴 `ORDER BY` كان مكتوب حرفيًا في `getLogs` — مفيش ترتيب server-side أصلًا،
+//   وده اللي كان بيخلي الواجهة ترتّب **الصفحة المحمّلة بس**. دلوقتي
+//   `orderByClause()` بقائمة أعمدة **مقفولة** (القيمة جاية من العميل وبتتلزق في
+//   نص SQL — ORDER BY مابيقبلش bind) ومعاها كاسر تعادل إلزامي: من غيره الصف
+//   الواحد ممكن يظهر في صفحتين أو مايظهرش خالص.
+// - 🔴 `parseInt` بلا حراسة على `limit`/`offset` — `parseInt('abc')` = NaN،
+//   والـ NaN بيعدّي `Math.min`/`Math.max` زي ما هو ويوصل لـ D1 كـ bind فيرجّع
+//   خطأ غامض. اتحلّت بـ `clampInt()`.
+// - 🟡 حارس `WORKER_SECRET` الغايب: من غيره القالب بينتج `"Bearer undefined"`
+//   وأي طلب بالهيدر ده **بيعدّي** — يعني السر الناقص بيشيل الحماية.
+// - 🟡 `read_all_orders` اتضافت لـ `diag`: غيابها بيرجّع **صفر نتيجة مش خطأ
+//   صلاحية** على أي أوردر أقدم من ٦٠ يوم.
+// - 🟡 التليفون بقى بيتطبّع **قبل الإرسال** (`wirePhone`) مش وقت المقارنة بس.
+//   المتجر فيه تلات أشكال، منها `+20 12 71043044` **بمسافات** (`#53849`) —
+//   والحقل الخام كان بيروح لبوسطة زي ما هو.
+//
+// ومعاها توثيق حقائق `bosta-api-helper` v2.0.0 اللي بتخص الأداة دي: الـ
+// `uniqueBusinessReference` بتاعها **محجوز ليها** (الفرادة على الحساب كله)،
+// و`goodsInfo.amount` عليه تأمين ١٪ تلقائي، و`Math.abs` على الـ `cod` صح
+// **هنا بس**، و500 بلا `errorCode` حالة حقيقية لازم تتعالج.
 //
 // بديل زرار "Send to Bosta" بتاع بلجن بوسطة على شوبيفاي.
 // بيعرض الأوردرات المؤهَّلة، بيرفعها جماعيًا على بوسطة بنداءات فردية،
@@ -14,7 +41,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════════════
 const TOOL_NAME      = 'bosta_orders_upload';   // ecommoda-constants §7 — لازم يتسجّل قبل أول writeLog
-const WORKER_VERSION = '1.3.0';
+const WORKER_VERSION = '1.4.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::bosta ───
@@ -145,6 +172,46 @@ function assertEnv(env, ...groups) {
   }
 }
 
+// ─── §HELPERS::time — `Africa/Cairo` يتحسب، مايتكتبش ثابت ───
+// نسخة **حرفية** من `ecommoda-constants` §13 — ونفس البلوك بالظبط في
+// `index.html`. الإزاحة ١٨٠ دقيقة صيفًا و١٢٠ شتاءً، ومصر بتوقف التوقيت الصيفي
+// 29-10-2026 — فأي ثابت مكتوب بالإيد بيغلط من غير ما الأداة تشتكي.
+const CAIRO_TZ = 'Africa/Cairo';
+const _cairoFmt = new Intl.DateTimeFormat('en-CA', {
+  timeZone: CAIRO_TZ, hourCycle: 'h23',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+});
+function cairoParts(d) {
+  const o = {};
+  for (const p of _cairoFmt.formatToParts(d)) if (p.type !== 'literal') o[p.type] = p.value;
+  if (o.hour === '24') o.hour = '00';
+  return o;
+}
+function cairoOffsetMinutes(d) {
+  const p = cairoParts(d);
+  return Math.round((Date.UTC(+p.year, +p.month - 1, +p.day,
+                              +p.hour, +p.minute, +p.second) - d.getTime()) / 60000);
+}
+// حدود يوم تقويمي بالقاهرة → UTC. الإزاحة بتتقاس عند **ظهر** اليوم: أي تحويل
+// توقيت بيحصل فجرًا، فالظهر بيدّي إزاحة اليوم الصحيحة.
+function cairoDayBoundsUTC(dateStr) {
+  const offMin = cairoOffsetMinutes(new Date(`${dateStr}T12:00:00.000Z`));
+  return {
+    start: new Date(Date.parse(`${dateStr}T00:00:00.000Z`) - offMin * 60000).toISOString(),
+    end:   new Date(Date.parse(`${dateStr}T23:59:59.999Z`) - offMin * 60000).toISOString(),
+  };
+}
+
+// ─── §HELPERS::clampInt ───
+// أي رقم جاي من الـ query string بيعدّي من هنا. `parseInt` لوحدها بترجّع NaN
+// على مدخل مش رقم، وNaN بيعدّي Math.min/Math.max من غير ما يتغيّر.
+function clampInt(raw, fallback, min, max) {
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(Math.max(n, min), max);
+}
+
 // ─── §HELPERS::secretFingerprint ───
 async function secretFingerprint(secret) {
   if (!secret) return null;
@@ -153,9 +220,18 @@ async function secretFingerprint(secret) {
 }
 
 // ─── §HELPERS::normPhone ───
-// 🔴 المتجر فيه الشكلين مع بعض ("01009619555" و "+201033337575").
-//    من غير التطبيع، الرقمين بيتحسبوا مختلفين وبنبعت نفس الرقم في phone و secondPhone.
+// مفتاح **مقارنة** بس — مش القيمة اللي بتتبعت. بيرجّع الأرقام المجرّدة عشان
+// "01009619555" و"+201033337575" مايتحسبوش رقمين مختلفين فنبعت نفس الرقم في
+// `phone` و`secondPhone`.
 const normPhone = p => String(p || '').replace(/\D/g, '').replace(/^20/, '').replace(/^0/, '');
+
+// ─── §HELPERS::wirePhone ───
+// 🔴 دي القيمة اللي **بتتبعت فعلًا**. المتجر فيه **تلات** أشكال مقيسة:
+//    `01…` · `+201…` · و`+20 12 71043044` **بمسافات** (`#53849`, 10-09-2026).
+//    تمرير الحقل الخام كان بيحط نص فيه مسافات في `receiver.phone`.
+//    الناتج دايمًا الشكل المحلي `01…`.
+//    (`shopify-graphql-helper` §2.1 — الحقول الإلزامية لأي رفع شحن.)
+const wirePhone = p => { const d = normPhone(p); return d ? '0' + d : ''; };
 
 // ─── §HELPERS::normText ───
 // تطبيع نص عربي/إنجليزي للمطابقة: تشكيل، ألف/ياء/تاء مربوطة، ترقيم، مسافات.
@@ -275,15 +351,43 @@ function buildLogFilterSQL(select, {
     sql += ' AND (order_name LIKE ? OR notes LIKE ?)';
     b.push(`%${search}%`, `%${search}%`);
   }
-  if (dateFrom) { sql += ' AND substr(timestamp, 1, 10) >= ?'; b.push(dateFrom); }
-  if (dateTo)   { sql += ' AND substr(timestamp, 1, 10) <= ?'; b.push(dateTo); }
+  // 🔴 الفلتر بيتحوّل لحدود UTC بتاعة **اليوم التقويمي بالقاهرة**، مش
+  //    `substr(timestamp,1,10)`. الصفوف متخزّنة UTC، والموظف بيفكّر بتوقيت
+  //    القاهرة: رفع الساعة ١:٣٠ بالقاهرة متسجّل ٢٢:٣٠ أو ٢٣:٣٠ UTC **اليوم
+  //    اللي فات**، فالمقارنة النصّية كانت بتشيله من فلتر «اليوم» — والصف ده هو
+  //    الأثر الوحيد على إن الشحنة اتعملت.
+  if (dateFrom) { sql += ' AND timestamp >= ?'; b.push(cairoDayBoundsUTC(dateFrom).start); }
+  if (dateTo)   { sql += ' AND timestamp <= ?'; b.push(cairoDayBoundsUTC(dateTo).end); }
 
   return { sql, b };
 }
 
-async function getLogs(db, { limit = 100, offset = 0, ...filters } = {}) {
+// ⚠️ قائمة **مقفولة** — القيمة جاية من العميل وبتتلزق في نص SQL مباشرةً
+//    (ORDER BY مابيقبلش bind). أي قيمة بره القايمة بترجع للافتراضي بدون خطأ.
+// ⚠️ المفاتيح لازم تطابق `data-sort-key` في الواجهة **حرفيًا** — مفتاح مش في
+//    القايمة بيرجع للافتراضي في صمت، فالعمود يبان إنه اترتّب وهو مااترتّبش.
+// 🔴 `Map` مش object literal: البحث في object بيمشي على سلسلة الـ prototype،
+//    فـ`sortBy=constructor` كان بيرجّع دالة `Object` وتتلزق في نص SQL →
+//    خطأ من D1 و500 — بالظبط عكس «بترجع للافتراضي بدون خطأ» المكتوب فوق.
+//    نفس الكلام على `toString` · `valueOf` · `__proto__` · `hasOwnProperty`.
+const LOG_SORT_COLUMNS = new Map([
+  ['date', 'timestamp'], ['time', 'timestamp'], ['employee', 'employee'],
+  ['orderName', 'order_name'], ['type', 'type'],
+  ['result', `json_extract(extra, '$.result')`],
+]);
+
+function orderByClause(sortBy, sortDir) {
+  const col = LOG_SORT_COLUMNS.get(String(sortBy || '')) || 'timestamp';
+  const dir = String(sortDir || '').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+  // 🔴 كاسر تعادل إلزامي: من غيره صفوف نفس القيمة بترتيب عشوائي بين الصفحات،
+  //    والصف الواحد ممكن يظهر في صفحتين **أو مايظهرش خالص**.
+  return col === 'timestamp' ? ` ORDER BY timestamp ${dir}`
+                             : ` ORDER BY ${col} ${dir}, timestamp DESC`;
+}
+
+async function getLogs(db, { limit = 100, offset = 0, sortBy = null, sortDir = null, ...filters } = {}) {
   const { sql, b } = buildLogFilterSQL('SELECT *', filters);
-  const q = sql + ' ORDER BY timestamp DESC LIMIT ? OFFSET ?';
+  const q = sql + orderByClause(sortBy, sortDir) + ' LIMIT ? OFFSET ?';
   return (await db.prepare(q)
     .bind(...b, Math.min(limit, 100), Math.max(offset, 0)).all()).results;
 }
@@ -296,6 +400,9 @@ async function getLogsCount(db, filters = {}) {
 
 async function getLogsExport(db, filters = {}) {
   const { sql, b } = buildLogFilterSQL('SELECT *', filters);
+  // ⚠️ التصدير والعدّ **بيتجاهلوا الترتيب عن قصد** — العدّ مالوش ترتيب،
+  //    والتصدير بياخد ترتيب السيرفر الافتراضي. تمرير sortBy/sortDir ليهم بيفتح
+  //    باب اختلاف مصدر الباراميترات بين النداءات = تصدير مش مطابق للشاشة.
   const q = sql + ' ORDER BY timestamp DESC LIMIT ?';
   return (await db.prepare(q).bind(...b, LOG_EXPORT_MAX).all()).results;
 }
@@ -1000,10 +1107,14 @@ function buildDeliveryPayload(order, plan, mode) {
   const firstName = sa.firstName || parts[0] || '';
   const lastName  = sa.lastName  || parts.slice(1).join(' ');
 
-  const phone   = String(sa.phone || '').trim();
-  const second  = String(order.phone || '').trim();
+  const phone   = wirePhone(sa.phone);
+  const second  = wirePhone(order.phone);
   const sendSecond = second && normPhone(second) !== normPhone(phone);
 
+  // 🔴 `Math.abs` صح **هنا بالذات**: ده أوردر شحن عادي، والسالب معناه العميل
+  //    دفع زيادة فمفيش حاجة تتحصّل. **وممنوع نسخ السطر ده لأي أداة استرجاع أو
+  //    استبدال** — هناك السالب معناه بوسطة بتدفع للعميل عند الباب، والـ abs
+  //    بتحوّل «رجّعله ٢٠٠٠» لـ«حصّل منه ٢٠٠٠». (`bosta-api-helper` Step 8b.)
   const cod = Math.abs(Number(order.totalOutstandingSet?.presentmentMoney?.amount || 0));
   const goods = Math.abs(Number(order.currentSubtotalPriceSet?.presentmentMoney?.amount || 0));
 
@@ -1032,7 +1143,11 @@ function buildDeliveryPayload(order, plan, mode) {
   const payload = {
     type: BOSTA_TYPE,
     cod,
-    goodsInfo: { amount: goods },                     // قيمة البضاعة — مش الفلوس المحصّلة
+    // قيمة البضاعة — مش الفلوس المحصّلة.
+    // ⚠️ وليها **تكلفة مباشرة**: بوسطة بتحسب `pricing.insuranceFee` = **١٪**
+    //    منها تلقائيًا على الشحنة (مقيس: 2600 → 26). `bosta-api-helper` 8.9
+    //    كانت بتقول «مالوش أثر مالي تلقائي» — اتصحّحت في v2.0.0.
+    goodsInfo: { amount: goods },
     receiver,
     dropOffAddress,
     specs: {
@@ -1042,7 +1157,12 @@ function buildDeliveryPayload(order, plan, mode) {
     },
     businessLocationId: BOSTA_LOCATION_ID,
     businessReference:       '#' + orderNumber,       // 🔴 بالهاش — من غيره كل أدوات EcomModa مش هتلاقي الشحنة
-    uniqueBusinessReference: orderNumber,             // بدون هاش — حماية بوسطة من التكرار (11000)
+    // 🔴 القيمة دي **محجوزة لأداة رفع S1 دي بالذات** (`bosta-api-helper` 8.3،
+    //    مقيس حيًا 10-09-2026). الفرادة عند بوسطة على **الحساب كله وعبر كل
+    //    أنواع الشحنات**، و`terminate` بيحررها. يعني أي أداة تانية ترفع شحنة
+    //    على نفس الأوردر (استرجاع/استبدال) لازم قيمة مختلفة وإلا `400 · 11000`.
+    //    أداة الاسترجاع/الاستبدال بتبعت `#12345-R{n}` / `#12345-EX{n}`.
+    uniqueBusinessReference: orderNumber,
     allowToOpenPackage: ALLOW_OPEN_PKG,
     flexShippingInfo: { isOrderEligible: true, amountToBeCollected: FLEX_AMOUNT },
   };
@@ -1056,7 +1176,7 @@ function validateOrder(order, plan) {
   const problems = [];
   const sa = order.shippingAddress || {};
   if (!plan.ok) { problems.push(plan.error); return problems; }
-  if (!sa.phone || normPhone(sa.phone).length < 8) problems.push('رقم تليفون الشحن ناقص أو غير صالح');
+  if (!wirePhone(sa.phone) || normPhone(sa.phone).length < 8) problems.push('رقم تليفون الشحن ناقص أو غير صالح');
   const fullName = (sa.name || `${sa.firstName || ''} ${sa.lastName || ''}`).trim();
   if (!fullName) problems.push('اسم المستلم فاضي — firstName إلزامي عند بوسطة');
   const firstLineLen = [sa.address1, sa.address2, sa.city, sa.province].filter(Boolean).join(' ').length;
@@ -1106,7 +1226,15 @@ function humanizeBostaError(res) {
   if (code === '11000') return 'بوسطة رافضة: رقم الأوردر ده مرفوع عندها قبل كده (uniqueBusinessReference مكرر)';
   if (code === '3003')  return 'بوسطة رافضة: المنطقة غير موجودة عندها (District Not Found)';
   if (code === '3002')  return 'بوسطة رافضة: المدينة غير موجودة عندها';
+  if (code === '3008')  return 'بوسطة رافضة: أقصى مبلغ استرداد عند الباب -2000 جنيه';
   if (code === '1028')  return 'بوسطة رافضة: مفتاح الـ API غير صالح — راجع BOSTA_API_KEY';
+  // 🔴 مش كل فشل من بوسطة معاه `errorCode`. شكل العنوان الغلط بيرجّع
+  //    **500 بلا كود خالص** (مقيس 10-09-2026 على عقد الاسترجاع). أي
+  //    `humanizeBostaError` بيفترض وجود كود بيطلّع رسالة فاضية على الحالة دي.
+  if (res.status >= 500) {
+    return `بوسطة ردّت بخطأ داخلي (HTTP ${res.status}): ${res.message} — `
+         + 'بلّغ عن الأوردر ده بدل ما تعيد المحاولة.';
+  }
   return `بوسطة رافضة (HTTP ${res.status}${code ? ` · كود ${code}` : ''}): ${res.message}`;
 }
 
@@ -1361,15 +1489,34 @@ export default {
     if (request.method === 'OPTIONS')
       return new Response(null, { status: 204, headers: getCORS(request) });
 
-    // ALWAYS second: WORKER_SECRET check
-    const auth = request.headers.get('Authorization');
-    if (!auth || auth !== `Bearer ${env.WORKER_SECRET}`)
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: getCORS(request),
-      });
-
     const url    = new URL(request.url);
     const action = url.searchParams.get('action') || '';
+
+    // ALWAYS second: WORKER_SECRET
+    // 🔴 السر الناقص (أو اللي اتضاف من غير Promote) بيخلّي القالب ينتج القيمة
+    //    الحرفية `"Bearer undefined"` — وأي طلب بالهيدر ده **بيعدّي**. يعني
+    //    غياب السر كان بيشيل الحماية بدل ما يشدّدها.
+    // ⚠️ `diag` و`get_config` بيعدّوا **من الاتنين** (الحارس وفحص الـ auth) لما
+    //    السر يكون غايب — دول مسار التشخيص، ومن غير الاستثناء ده الرسالة بتقول
+    //    «شغّل ?action=diag» وهي حاجباه، وفحص السر جوّه `diag` بيبقى كود ميت.
+    //    والكشف محدود بحالة «Worker مالوش سر أصلًا» — وهي الحالة اللي كانت
+    //    بتفتح كل الـ endpoints قبل الحارس ده.
+    const DIAG_ACTIONS = new Set(['diag', 'get_config']);
+    const secretMissing = typeof env.WORKER_SECRET !== 'string' || env.WORKER_SECRET.trim() === '';
+
+    if (secretMissing && !DIAG_ACTIONS.has(action))
+      return new Response(JSON.stringify({
+        error: 'WORKER_SECRET مش مضبوط على الـ Worker — ضِفه من Settings → Variables '
+             + 'وبعدين Deployments → Promote version. (شغّل ?action=diag)',
+      }), { status: 500, headers: getCORS(request) });
+
+    if (!secretMissing) {
+      const auth = request.headers.get('Authorization');
+      if (!auth || auth !== `Bearer ${env.WORKER_SECRET}`)
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401, headers: getCORS(request),
+        });
+    }
 
     try {
 
@@ -1470,6 +1617,17 @@ export default {
             ok: scopes.includes('write_orders'),
             label: 'صلاحية write_orders',
             detail: scopes.includes('write_orders') ? 'موجودة' : `ناقصة! الصلاحيات: ${scopes.join(', ') || '—'}`,
+          });
+          // 🔴 غياب `read_all_orders` **مابيرجّعش خطأ** — بيرجّع صفر نتيجة على أي
+          //    أوردر أقدم من ٦٠ يوم. الأداة دي بتفلتر من START_DATE، فأول ما
+          //    التاريخ ده يعدّي الـ ٦٠ يوم الأوردرات القديمة بتختفي من القايمة
+          //    في صمت والموظف بيفتكرها اترفعت. الفحص هنا هو الإشارة الوحيدة.
+          checks.push({
+            ok: scopes.includes('read_all_orders'),
+            label: 'صلاحية read_all_orders',
+            detail: scopes.includes('read_all_orders')
+              ? 'موجودة — الأوردرات الأقدم من ٦٠ يوم بتظهر'
+              : 'ناقصة! أي أوردر أقدم من ٦٠ يوم هيرجع **صفر نتيجة بدون خطأ** — مش رسالة صلاحية',
           });
           checks.push({ ok: true, label: 'صلاحيات التطبيق (معلومة)', detail: scopes.join(', ') || '—' });
 
@@ -1665,9 +1823,16 @@ export default {
       // ─── §LOG-ENDPOINTS ───────────────────────────────────────────
       if (action === 'get_logs') {
         const p      = logParamsFrom(url, TOOL_NAME);
-        const limit  = Math.min(parseInt(url.searchParams.get('limit')  || '100'), 100);
-        const offset = Math.max(parseInt(url.searchParams.get('offset') || '0'),    0);
-        const entries = await getLogs(env.DB, { ...p, limit, offset });
+        // 🔴 `parseInt('abc')` = NaN، والـ NaN بيعدّي Math.min/Math.max زي ما هو
+        //    ويوصل لـ D1 كـ bind فيرجّع خطأ غامض. البند ده رجع أكتر من مرة في
+        //    الستاك — الحراسة بـ Number.isFinite مش اختيارية.
+        const entries = await getLogs(env.DB, {
+          ...p,
+          limit:   clampInt(url.searchParams.get('limit'),  100, 1, 100),
+          offset:  clampInt(url.searchParams.get('offset'),   0, 0, Number.MAX_SAFE_INTEGER),
+          sortBy:  url.searchParams.get('sortBy')  || null,
+          sortDir: url.searchParams.get('sortDir') || null,
+        });
         return json({ ok: true, entries }, 200, request);
       }
 
