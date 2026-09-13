@@ -121,7 +121,14 @@ const req=(action,body)=>({method:body?'POST':'GET',url:`https://w/?action=${act
   ok('التليفون اتظبّط قبل الإرسال', p.receiver.phone==='01271043044', p.receiver.phone);
   ok('الملاحظة بقت سطر واحد', !/\n/.test(p.notes||''), p.notes);
   ok('returnSpecs موجودة و specs لأ (CRP)', !!p.returnSpecs && p.specs===undefined);
-  ok('الحالة اتحدّثت', d.s2Written===true, d.s2Error);
+  // 🔴 v2.0.1 — الرفع **مابيحركش** الحالة. التأكيد ده اتقلب عن قصد: كان بيتأكد
+  //    إن الحالة اتحدّثت، وبقى بيتأكد إنها **ما اتحدّثتش**. نفس قاعدة الشحن
+  //    العادي: الانتقال بيحصل عند الطباعة.
+  ok('🔴 الرد مافيهوش أي ادعاء بتحديث حالة', d.s2Written===undefined && d.s2Error===undefined, d);
+  // ⚠️ الفحص على **نقلة الحالة** بالذات، مش على أي ذكر لـ"S2": اسم التاج
+  //    `Bosta_Uploaded_S2` واسم الميتافيلد `..._s2` الاتنين فيهم S2 وهما سليمين.
+  ok('ومفيش أي فعل بيقول إن الحالة اتحركت',
+     !(res.actions||[]).some(a=>/تحديث الحالة|تحديث S2|In-Return|→\s*Ready/.test(a)), res.actions);
   ok('واتسجّل في D1', dbRows.some(x=>x.batch), dbRows.length);
 
   console.log('\n③ حارس الكوريَر — طلب أحمد');
@@ -156,7 +163,11 @@ const req=(action,body)=>({method:body?'POST':'GET',url:`https://w/?action=${act
        !keys.includes('bosta_tracking_number') && !keys.includes('bosta_tracking_number_s1'), keys);
     // 🔴 طلب أحمد: في R/E بنتحقق من الكوريَر مش بنكتبه
     ok('🔴 و custom.courier مااتكتبش', !keys.includes('courier'), keys);
-    ok('وحالة S2 اتكتبت', keys.includes('status_2_r_e') && keys.includes('printing_time_s2'), keys);
+    // 🔴 v2.0.1 — الاتنين دول كانوا بيتكتبوا وقت الرفع واتشالوا بطلب أحمد.
+    //    `printing_time_s2` **وقت طباعة**، وكتابته وقت الرفع بتخلي أي تقرير
+    //    مبني عليه يقول إن البوليصة اتطبعت وهي ما اتطبعتش.
+    ok('🔴 حالة S2 مااتكتبتش', !keys.includes('status_2_r_e'), keys);
+    ok('🔴 و printing_time_s2 مااتكتبش', !keys.includes('printing_time_s2'), keys);
     ok('التاج Bosta_Uploaded_S2 مش S1',
        tagCalls.flat().includes('Bosta_Uploaded_S2') && !tagCalls.flat().includes('Bosta_Uploaded_S1'), tagCalls);
     ctx.fetch=origFetch;
@@ -183,7 +194,7 @@ const req=(action,body)=>({method:body?'POST':'GET',url:`https://w/?action=${act
     // 🔴 قيمة البضاعة = اللي بيسافر (الخارج) مش الراجع — #53701: 2400 مش 2600
     ok('قيمة البضاعة = الخارج مش الراجع', pe.goodsInfo?.amount===2400, pe.goodsInfo);
     ok('المرجع الفريد بـ -EX', pe.uniqueBusinessReference==='#53517-EX1', pe.uniqueBusinessReference);
-    ok('والحالة راحت Ready', d5.nextStatus==='Ready', d5.nextStatus);
+    ok('🔴 والحالة ما اتحركتش هنا كمان', d5.nextStatus===undefined && d5.s2Written===undefined, d5);
   }
 
   console.log('\n⑥ الاستبدال بلا قطع خارجة — حاجب');

@@ -50,6 +50,18 @@
 // 🔴 مسار `upload_re` **ما اشتغلش حي ولا مرة** لحد 13-09 (صفر صف في D1).
 //    الدمج مايتحسبش تشغيل حي — أول شحنة استرجاع حقيقية تتعمل **مراقَبة**.
 //
+// v2.0.1 (13-09-2026) — **الرفع مابيحركش حالة الأوردر.**
+// أول شحنة استبدال حية طلّعت إن `upload_re` بيكتب `status_2_r_e → Ready`
+// و`custom.printing_time_s2` على طول بعد الشحنة. الاتنين اتشالوا بقرار أحمد.
+// السبب هو **نفس قاعدة الشحن العادي** اللي الأداة دي ماشية عليها من أول يوم:
+// الانتقال بيحصل عند **الطباعة** مش عند الرفع، وتقديم الحالة من هنا بيكسر
+// بوابة الطباعة. و`printing_time_s2` **وقت طباعة** — كتابته وقت الرفع بتخلي
+// أي تقرير مبني عليه يقول إن البوليصة اتطبعت وهي ما اتطبعتش.
+// اللي بيتكتب بعد الشحنة بقى: رقم التتبع والتاج. بس. زي S1 بالحرف.
+// ⚠️ مسار الإكسيل (`confirm_upload`) **ما اتغيّرش** — هناك الشحنة بتتعمل من
+//    داشبورد بوسطة بالإيد، فتحديث الحالة خطوة يدوية منفصلة بمودال وchecklist،
+//    مش أثر جانبي للرفع.
+//
 // العقد المرجعي الكامل: SPEC.md في نفس الريبو.
 // ══════════════════════════════════════════════════════════════
 
@@ -65,7 +77,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.0.0';
+const WORKER_VERSION = '2.0.1';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -1382,7 +1394,7 @@ async function findBlockedCycleOrders(env, token, orders, jobType) {
 
 // Rule 15 ① / Rule 10 — «reject + log». صف لكل أوردر مرفوض، بيتكتب **قبل** ما
 // الـ 409 يرجع. فشل D1 مابيلغيش الرفض، بس لازم يبان: `logged: false` مش صمت.
-async function logCycleBlocks(db, blocked, job, employee) {
+async function logCycleBlocks(db, blocked, job, employee, { action = 'الرفع' } = {}) {
   if (!blocked.length) return { logged: true, logError: null };
   const now = new Date().toISOString();
   try {
@@ -1396,11 +1408,16 @@ async function logCycleBlocks(db, blocked, job, employee) {
       // الكتابة اللي **ما حصلتش** — before و after نفس القيمة عن قصد: مفيش حاجة اتحركت.
       valueBefore: row.s2Status || job.expectedStatus,
       valueAfter:  row.s2Status || job.expectedStatus,
-      notes: `اتمنع الرفع/التحديث إلى ${job.nextStatus} — ${row.code}: ${row.value}`,
+      // ⚠️ الرفع مابيحركش الحالة من v2.0.1، فرسالة «اتمنع التحديث إلى Ready»
+      //    بقت غلط عليه — بتخلي اللي بيقرا السجل يفتكر إن فيه نقلة اتمنعت
+      //    وهي أصلًا مابتحصلش. `confirm_upload` (مسار الإكسيل) لوحده هو اللي
+      //    بيمنع نقلة حقيقية، فهو اللي بيمرّر الحالة التالية.
+      notes: `اتمنع ${action} — ${row.code}: ${row.value}`,
       extra: {
         jobType: job.jobType,
         expectedStatus: job.expectedStatus,
-        blockedNextStatus: job.nextStatus,
+        blockedAction: action,
+        blockedNextStatus: action === 'الرفع' ? null : job.nextStatus,
         code: row.code, value: row.value, action: row.action,
       },
     })));
@@ -3427,48 +3444,23 @@ export default {
         const ordered = orders.map((o) => byId.get(o.id));
         const results = await runUploadBatchRE(env, token, ordered, catalog, job, overrides);
 
-        // ④ حالة S2 بتتكتب **بس** للصفوف اللي شحنتها موجودة فعلًا.
-        const uploaded = results
-          .map((r, i) => ({ r, order: orders[i] }))
-          .filter(({ r }) => r.status !== 'error' && r.trackingNumber);
-
+        // ④ 🔴 **الرفع مابيحركش حالة الأوردر — ولا بيكتب وقت طباعة.**
+        //    قرار أحمد 13-09-2026 بعد أول شحنة استبدال حية، وهو **نفس قاعدة
+        //    الشحن العادي بالحرف**: `upload` عمرها ما لمست `custom.manual_status`،
+        //    لأن الانتقال `Confirmed → Ready` بيحصل عند **الطباعة** مش عند الرفع،
+        //    وتقديم الحالة من هنا بيكسر بوابة الطباعة.
+        //    لحد v2.0.0 كان الاسترجاع/الاستبدال بيكسر القاعدة دي: بيكتب
+        //    `status_2_r_e → In-Return`/`Ready` **و**`printing_time_s2` وقت الرفع.
+        //    الاتنين اتشالوا. اللي بيتكتب بعد الشحنة بقى هو اللي بيتكتب في S1
+        //    بالظبط: رقم التتبع والتاج، وخلاص.
+        //    ⚠️ `setS2Status`/`verifyS2Status` **لسه موجودين** — مسار الإكسيل
+        //    (`confirm_upload`) بيستخدمهم، وهو خطوة يدوية منفصلة بمودال وchecklist،
+        //    مش جزء من الرفع.
+        //    ⚠️ ومفيش صف `metafields_change` بيتكتب من هنا كمان: الصف ده بيوثّق
+        //    **نقلة حالة**، ومفيش نقلة حصلت. كتابته وهي ما حصلتش بتدّي KPIs زمن
+        //    الدورة تاريخ اتحرك فيه حاجة على الورق بس.
+        // ⏱️ ختم زمني واحد لكل صفوف الدفعة — عشان يبانوا عملية واحدة في السجل.
         const now = nowToSecond();
-        let s2Error = null;
-        // 🔴 **لكل أوردر**، مش للدفعة. `verifyS2Status` بترد لكل أوردر أصلًا،
-        //    وتعارض واحد كان بيعلّم كل الصفوف المرفوعة كفشل كتابة — فيتسجّل
-        //    الحالة القديمة لأوردرات اتحركت فعلًا، ويتلغي صف
-        //    `metafields_change` بتاعها، فتحديث سليم يختفي من KPIs زمن الدورة.
-        const s2Failed = new Set();
-
-        if (uploaded.length) {
-          const targets = uploaded.map(({ order }) => order);
-          try {
-            await setS2Status(env, token, targets, job.nextStatus, now);
-            const mismatches = await verifyS2Status(env, token, targets, job.nextStatus, now);
-            for (const m of mismatches) s2Failed.add(m.id);
-            if (mismatches.length) {
-              s2Error = `التحقق رجّع قيم غير متوقعة على: ${mismatches.map((m) => m.name).join('، ')}`;
-            }
-          } catch (e) {
-            // الكتابة نفسها فشلت — مش عارفين أنهي أوردرات وصلت، فكل صف مرفوع
-            // بيتعامل كغير متحقَّق منه.
-            s2Error = e.message;
-            for (const { order } of uploaded) s2Failed.add(order.id);
-          }
-
-          for (const { r, order } of uploaded) {
-            if (!s2Failed.has(order.id)) { r.actions.push(`تحديث S2 إلى ${job.nextStatus}`); continue; }
-            // 🔴 الفشل هنا **عمره ما يلوّن الصف أحمر**. الشحنة موجودة ومدفوعة؛
-            //    الأحمر بيخلي الموظف يرفع تاني ويشتري واحدة تانية.
-            r.status = 'warning';
-            r.warnings.push(
-              `الشحنة اترفعت (${r.trackingNumber}) لكن تحديث الحالة إلى ${job.nextStatus} فشل: ${s2Error} — `
-              + 'غيّر الحالة يدويًا. **متعيدش الرفع** — ده بيعمل شحنة تانية بفلوس.',
-            );
-            r.shopifyWriteFailed = true;
-          }
-        }
-        const s2Written = uploaded.length > 0 && s2Failed.size === 0;
 
         // ⑤ السجل. `type` بيتقسم **بالأثر الخارجي** (`worker-builder` ⑭) —
         //    عشان كده رفع فاشل وكتابة رجعية فاشلة قيمتين مختلفتين: واحدة آمنة
@@ -3485,9 +3477,11 @@ export default {
             employee,
             orderId: order.id,
             orderName: order.name,
+            // 🔴 before == after عن قصد: **مفيش نقلة حالة بتحصل في الرفع**.
+            //    الصف بيوثّق الشحنة، مش حركة حالة. القيمتين مختلفتين كانوا
+            //    هيدّوا أي قارئ للسجل انطباع إن الأوردر اتحرك وهو مكانه.
             valueBefore: order.s2Status || job.expectedStatus,
-            // الحالة اتحركت بس للصفوف اللي وصلت فعلًا.
-            valueAfter: (r.status !== 'error' && !r.shopifyWriteFailed) ? job.nextStatus : (order.s2Status || job.expectedStatus),
+            valueAfter:  order.s2Status || job.expectedStatus,
             notes: r.status === 'error'
               ? `فشل رفع ${job.label} على بوسطة — ${r.error}`
               : `رفع ${job.label} على بوسطة · تتبع ${r.trackingNumber || '—'}${r.warnings.length ? ` · ${r.warnings.join(' · ')}` : ''}`,
@@ -3524,29 +3518,6 @@ export default {
           logged = false; logError = e.message;
         }
 
-        // تاريخ الحالة عبر الأدوات — KPIs زمن الدورة بتقرا `tool='metafields_change'`
-        // **بس**، فنقلة S2 دي لازم تبان هناك كمان.
-        const s2Landed = uploaded.filter(({ order }) => !s2Failed.has(order.id));
-        if (s2Landed.length) {
-          try {
-            await writeLogsBatch(env.DB, s2Landed.map(({ order }) => ({
-              timestamp: now,
-              tool: 'metafields_change',
-              type: 'update',
-              employee,
-              orderId: order.id,
-              orderName: order.name,
-              valueBefore: order.s2Status || job.expectedStatus,
-              valueAfter: job.nextStatus,
-              notes: `status_2_r_e: ${order.s2Status || job.expectedStatus} → ${job.nextStatus} (via ${job.tool} upload_re)`,
-              extra: { metafieldKey: 'custom.status_2_r_e', sourceTool: job.tool, jobType: job.jobType },
-            })));
-          } catch (e) {
-            logged = false;
-            logError = `${logError ? logError + ' | ' : ''}metafields_change: ${e.message}`;
-          }
-        }
-
         const summary = {
           success: results.filter(r => r.status === 'success').length,
           warning: results.filter(r => r.status === 'warning').length,
@@ -3554,10 +3525,10 @@ export default {
           skipped: 0,
         };
         return json({
-          ok: true, version: WORKER_VERSION, jobType: job.jobType, nextStatus: job.nextStatus,
+          ok: true, version: WORKER_VERSION, jobType: job.jobType,
           // ⚠️ عقد الترتيب: `results[i]` بتاع `orders[i]` من الطلب، مهما كان
           //    ترتيب انتهاء الرفع.
-          results, summary, counts: summary, s2Written, s2Error, logged, logError,
+          results, summary, counts: summary, logged, logError,
         }, 200, request);
       }
 
@@ -3687,7 +3658,8 @@ export default {
 
         const blockedCycles = await findBlockedCycleOrders(env, token, orders, job.jobType);
         if (blockedCycles.length) {
-          const { logged, logError } = await logCycleBlocks(env.DB, blockedCycles, job, employee);
+          const { logged, logError } = await logCycleBlocks(env.DB, blockedCycles, job, employee,
+            { action: `تحديث الحالة إلى ${job.nextStatus}` });
           return json({
             ok: false, code: 'CYCLE_BLOCKED',
             error: 'فيه أوردرات حالتها مش واضحة — اتمنع تحديث الحالة لحد ما تتصلّح في شوبيفاي',

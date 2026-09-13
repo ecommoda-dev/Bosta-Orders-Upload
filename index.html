@@ -736,6 +736,9 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <span class="cl-ver-date">13-09-2026</span>
         </div>
         <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>رفع الاسترجاع/الاستبدال كان بيقدّم حالة الأوردر — اتشال.</b> الرفع كان بيكتب <code>status_2_r_e</code> = <code>In-Return</code>/<code>Ready</code> <b>و</b><code>custom.printing_time_s2</code> على طول بعد الشحنة. الاتنين اتشالوا: الانتقال بيحصل عند <b>الطباعة</b> مش عند الرفع، وتقديم الحالة من هنا بيكسر بوابة الطباعة. دلوقتي الرفع بيكتب <b>رقم التتبع والتاج بس</b> — نفس الشحن العادي بالحرف. (اتمسك على أول شحنة استبدال حية، بطلب أحمد.)</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>الأوردر <b>بيفضل في القايمة بعد الرفع</b> ومعاه بادج <b>🔁 مرفوع</b> — لأن حالته ما اتغيّرتش. ده <b>نفس سلوك الشحن العادي</b> بالظبط: اللي بيحمي من الرفع المكرر هو التاج ورقم التتبع، وبوسطة نفسها بترفض الشحنة المكررة.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>مسار الإكسيل ما اتغيّرش</b> — نافذة «تحديث الحالة» بعد التصدير لسه شغّالة زي ما هي. هناك الشحنة بتتعمل من داشبورد بوسطة بالإيد، فتحديث الحالة خطوة منفصلة الموظف بيضغطها بنفسه مش أثر جانبي للرفع.</span></li>
           <li class="cl-item"><span class="cl-tag new">جديد</span><span>🔀 <b>الأداة بقت بترفع كل شحنات بوسطة.</b> أداة <code>Bosta-Return-Exchange-Exporter</code> اتنقلت هنا بالكامل. فوق الفلاتر فيه <b>مبدّل نوع الرفع</b>: <b>🚚 شحن عادي</b> · <b>↩️ استرجاع</b> · <b>🔄 استبدال</b>. كل وضع ليه استعلامه وأعمدته ونوع الشحنة بتاعه عند بوسطة (10 · 25 · 30).</span></li>
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>رقم التتبع اتقسم على ميتافيلدين.</b> <code>custom.bosta_tracking_number</code> <b>وقف</b>، وبدله <code>custom.bosta_tracking_number_s1</code> للشحنة العادية و<code>custom.bosta_tracking_number_s2</code> للاسترجاع/الاستبدال. الميتافيلد القديم لسه <b>بيتقرا</b> عشان الشحنات اللي اترفعت قبل كده تفضل باينة «مرفوعة» — بس مابيتكتبش تاني.</span></li>
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>التاج بقى حسب النوع:</b> <code>Bosta_Uploaded_S1</code> للشحن و<code>Bosta_Uploaded_S2</code> للاسترجاع/الاستبدال. تاج واحد للاتنين كان معناه إن أوردر أول ما يتعمل له استرجاع يبان «مرفوع» في شاشة الشحن، والعكس.</span></li>
@@ -885,15 +888,16 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
                 <td><code>custom.courier = Bosta</code> · <code>custom.bosta_tracking_number_s1</code> · تاج <code>Bosta_Uploaded_S1</code></td></tr>
             <tr><td>↩️ <strong>استرجاع</strong></td><td>25 (CRP)</td>
                 <td><code>custom.status_2_r_e = Confirmed + RETURN</code> <strong>و</strong> <code>custom.courier = Bosta</code></td>
-                <td><code>custom.bosta_tracking_number_s2</code> · تاج <code>Bosta_Uploaded_S2</code> · <code>custom.status_2_r_e → In-Return</code> · <code>custom.printing_time_s2</code></td></tr>
+                <td><code>custom.bosta_tracking_number_s2</code> · تاج <code>Bosta_Uploaded_S2</code></td></tr>
             <tr><td>🔄 <strong>استبدال</strong></td><td>30</td>
                 <td><code>custom.status_2_r_e = Confirmed + EXCHANGE</code> <strong>و</strong> <code>custom.courier = Bosta</code></td>
-                <td>نفس الاسترجاع، بس الحالة بتروح <code>Ready</code></td></tr>
+                <td>نفس الاسترجاع بالظبط</td></tr>
           </table>
+          <p>🔴 <strong>الرفع مابيحركش حالة الأوردر — في التلات أوضاع.</strong> الانتقال بيحصل عند <strong>الطباعة</strong> مش عند الرفع، وتقديم الحالة من هنا بيكسر بوابة الطباعة. الشحن العادي كان كده من أول يوم، والاسترجاع/الاستبدال اتظبطوا عليه في v2.0.1 (كانوا بيكتبوا <code>status_2_r_e</code> و<code>printing_time_s2</code> وقت الرفع). ⚠️ الاستثناء الوحيد هو <strong>مسار الإكسيل</strong>: هناك الشحنة بتتعمل من داشبورد بوسطة بالإيد، فنافذة «تحديث الحالة» خطوة منفصلة الموظف بيضغطها بنفسه.</p>
           <p>🔴 <strong>في الاسترجاع والاستبدال الأداة مابتكتبش <code>custom.courier</code>.</strong> بتتأكد إنه <strong>Bosta</strong> بالفعل قبل الشحنة، والأوردر اللي كوريَره حاجة تانية بيتوقف برسالة. شحنة الاسترجاع بتسحب من عند العميل — فالسؤال «هو ده مندوبنا أصلاً؟» مش «خليه مندوبنا».</p>
           <p>🔴 <strong>المبلغ في الاسترجاع/الاستبدال ليه اتجاه.</strong> السالب معناه <strong>بوسطة بتدفع للعميل عند الباب</strong>، وبيتعرض «↩ استرداد» بالأحمر. حد بوسطة للاسترداد <strong>٢٠٠٠ جنيه</strong> — واللي فوقه بيتقص، <strong>والقص بيتعلّم بعلامة ✂ والباقي مكتوب</strong> (بيتسوّى مكتبيًا).</p>
           <p>🔴 <strong>كل رقم في صف الاسترجاع/الاستبدال متحسب من الدورة المفتوحة الواحدة.</strong> الأوردر ممكن يكون عدّى بأكتر من دورة، والحساب من كلهم كان بيشحن قطع رجعت المخزن خلاص. الأوردر اللي دورته مش واضحة (أكتر من دورة مفتوحة · مفيش دورة · استبدال بلا قطع خارجة) <strong>بيتوقف ومعاه السبب</strong> — مش بيترفع بتخمين.</p>
-          <p>📄 <strong>تصدير ملف بوسطة (Excel)</strong> لسه موجود في وضعي الاسترجاع والاستبدال كـ<strong>خطة بديلة</strong> — لو عقد بوسطة اتغيّر أو المفتاح مش متاح أو الـ API رفض أوردر، المخزن مايقفش. المسار ده <strong>مالوش رقم تتبع</strong> (الشحنة بتتعمل من داشبورد بوسطة بالإيد)، فبيحدّث الحالة بس.</p>
+          <p>📄 <strong>تصدير ملف بوسطة (Excel)</strong> لسه موجود في وضعي الاسترجاع والاستبدال كـ<strong>خطة بديلة</strong> — لو عقد بوسطة اتغيّر أو المفتاح مش متاح أو الـ API رفض أوردر، المخزن مايقفش. المسار ده <strong>مالوش رقم تتبع</strong> (الشحنة بتتعمل من داشبورد بوسطة بالإيد)، وهو <strong>الوحيد اللي بيحدّث الحالة</strong> — عبر نافذة تأكيد منفصلة بـchecklist.</p>
 
           <h4>كيف تعمل — Workflow</h4>
           <ol>
@@ -1662,12 +1666,12 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.0.0';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.0.1';   // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
 //    القديم من غير ما حد ياخد باله. الحارس بيتنده في `checkWorkerVersion`.
-const MIN_WORKER_VERSION = '2.0.0';
+const MIN_WORKER_VERSION = '2.0.1';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -1696,9 +1700,12 @@ const JOBS = {
     statusLabel: 'الحالة (S2)', statusField: 's2',
     statusItems: [{ value: 'Confirmed + RETURN', label: 'Confirmed + RETURN' }],
     tag: 'Bosta_Uploaded_S2', trackingKey: 'bosta_tracking_number_s2',
+    // ⚠️ الحالة التالية دي بتخص **مسار الإكسيل لوحده** (`confirm_upload`).
+    // الرفع المباشر مابيحركش الحالة خالص — زيه زي الشحن العادي بالظبط.
     nextStatus: 'In-Return',
     hint: 'أوردرات <code>status_2_r_e = Confirmed + RETURN</code> وكوريَرها Bosta — شحنة CRP (type 25) بتسحب من العميل. '
-        + '🔴 عنوان العميل بيروح <code>pickupAddress</code>، و<b>المبلغ السالب معناه بوسطة بتدفع للعميل عند الباب</b>.',
+        + '🔴 عنوان العميل بيروح <code>pickupAddress</code>، و<b>المبلغ السالب معناه بوسطة بتدفع للعميل عند الباب</b>. '
+        + 'الرفع بيكتب رقم التتبع والتاج بس — <b>الحالة مابتتحركش</b>، زيها زي الشحن العادي.',
     excel: true, cancel: true,
   },
   exchange: {
@@ -1708,9 +1715,11 @@ const JOBS = {
     statusLabel: 'الحالة (S2)', statusField: 's2',
     statusItems: [{ value: 'Confirmed + EXCHANGE', label: 'Confirmed + EXCHANGE' }],
     tag: 'Bosta_Uploaded_S2', trackingKey: 'bosta_tracking_number_s2',
+    // ⚠️ زي الاسترجاع — بتخص مسار الإكسيل لوحده.
     nextStatus: 'Ready',
     hint: 'أوردرات <code>status_2_r_e = Confirmed + EXCHANGE</code> وكوريَرها Bosta — شحنة استبدال (type 30): '
-        + 'بتوصّل القطعة الجديدة وتسحب القديمة في نفس الزيارة.',
+        + 'بتوصّل القطعة الجديدة وتسحب القديمة في نفس الزيارة. '
+        + 'الرفع بيكتب رقم التتبع والتاج بس — <b>الحالة مابتتحركش</b>، زيها زي الشحن العادي.',
     excel: true, cancel: true,
   },
 };
