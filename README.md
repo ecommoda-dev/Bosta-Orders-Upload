@@ -2,7 +2,7 @@
 
 # 🚚 رفع بوسطة — Bosta Upload
 
-![version](https://img.shields.io/badge/version-v2.0.0-blue)
+![version](https://img.shields.io/badge/version-v2.0.1-blue)
 
 **كل شحنات بوسطة من أداة واحدة.** بديل زرار **Send to Bosta** بتاع بلجن بوسطة
 على شوبيفاي للشحن العادي، **وبديل أداة `Bosta-Return-Exchange-Exporter` بالكامل**
@@ -20,7 +20,8 @@
 | نوع بوسطة | `10` | `25` (CRP) | `30` |
 | الأوردرات اللي بتظهر | `custom.zone = Other_Regions`<br>`AND created_at >= 2026-08-01`<br>`AND custom.manual_status ∈ { Confirmed, Confirmed + Edit }` | `custom.status_2_r_e = Confirmed + RETURN`<br>`AND custom.courier = Bosta` | `custom.status_2_r_e = Confirmed + EXCHANGE`<br>`AND custom.courier = Bosta` |
 | عنوان العميل بيروح | `dropOffAddress` | **`pickupAddress`** | `dropOffAddress` |
-| بعد النجاح بتكتب | `custom.courier = Bosta`<br>`custom.bosta_tracking_number_s1`<br>تاج `Bosta_Uploaded_S1` | `custom.bosta_tracking_number_s2`<br>تاج `Bosta_Uploaded_S2`<br>`status_2_r_e → In-Return` | نفس الاسترجاع<br>بس الحالة `→ Ready` |
+| بعد النجاح بتكتب | `custom.courier = Bosta`<br>`custom.bosta_tracking_number_s1`<br>تاج `Bosta_Uploaded_S1` | `custom.bosta_tracking_number_s2`<br>تاج `Bosta_Uploaded_S2` | نفس الاسترجاع بالظبط |
+| بتحرّك حالة الأوردر؟ | ❌ لأ | ❌ لأ | ❌ لأ |
 
 القيم حرفية — `Other_Regions` بـ `_` و`Confirmed + Edit` بمسافات حوالين الـ `+`.
 فرق حرف واحد = صفر صف **من غير أي خطأ**.
@@ -34,6 +35,10 @@
   وبيتاخد بقيمته المطلقة.
 - **اتجاه العنوان بيتقلب.** الاسترجاع بيسحب من العميل فعنوانه بيروح
   `pickupAddress`؛ بوسطة بتملا ناحية المخزن لوحدها.
+- **الرفع مابيحركش حالة الأوردر — في التلات أوضاع.** الانتقال بيحصل عند
+  **الطباعة** مش عند الرفع. يعني الأوردر **بيفضل في القايمة بعد الرفع** ومعاه
+  بادج «🔁 مرفوع» — ده صح مش باج، واللي بيحمي من الرفع المكرر هو التاج ورقم
+  التتبع وبوسطة نفسها.
 - **الأداة مابتكتبش `custom.courier` في الاسترجاع/الاستبدال** — بتتأكد إنه
   **Bosta** بالفعل قبل الشحنة. شحنة الاسترجاع بتسحب من عند العميل، فالسؤال
   «هو ده مندوبنا أصلاً؟» مش «خليه مندوبنا».
@@ -50,7 +55,8 @@
 لسه موجود في وضعي الاسترجاع والاستبدال: ملف الـ٢٠ عمود اللي بيترفع على داشبورد
 بوسطة بالإيد، بفحص تكرار بالدورة وبعده نافذة تأكيد تحديث الحالة. موجود عشان لو
 عقد بوسطة اتغيّر أو المفتاح مش متاح أو الـ API رفض أوردر، المخزن مايقفش.
-⚠️ المسار ده **مالوش رقم تتبع** (الشحنة بتتعمل من الداشبورد)، فبيحدّث الحالة بس.
+⚠️ المسار ده **مالوش رقم تتبع** (الشحنة بتتعمل من الداشبورد)، وهو **الوحيد اللي
+بيحدّث حالة الأوردر** — عبر نافذة تأكيد منفصلة الموظف بيضغطها بنفسه.
 
 ---
 
