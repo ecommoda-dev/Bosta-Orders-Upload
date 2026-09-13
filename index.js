@@ -1820,6 +1820,10 @@ function findCrossCity(catalog, fields, skipCityId) {
 // المدينة هنا مش غلط — الفايدة إن الموظف يفتح النافذة ويلاقي القايمة مقصورة
 // على مناطق الزون ده (٧ مناطق بدل ٥٩٠) بدل ما يدوّر.
 function findLocalZones(city, fields) {
+  // 🔴 المدينة ممكن تبقى `null` لو cityId بتاع الجدول مش في الكتالوج الحي.
+  //    من غير الحارس ده الدالة بترمي، والاستثناء بيطلع من `get_orders` /
+  //    `fetch_candidates` **كله** — أوردر واحد بيوقّع القايمة كلها.
+  if (!city) return [];
   return matchZonesIn(city, fields)
     .filter(z => z.matched.length >= CROSS_MIN_LEN && !z.generic)
     .slice(0, CROSS_MAX_PER_CITY)
@@ -1864,6 +1868,16 @@ function resolveAddress(order, catalog) {
   }
 
   const city = catalog.cities.find(c => c.cityId === row.cityId) || null;
+  if (!city) {
+    // جدول المحافظات مقفول وحتمي، فالحالة دي معناها **كتالوج بوسطة اتغيّر**.
+    // بتتقال بالاسم بدل ما تتدهور لـ«مفيش مطابقة منطقة» صامتة — اللي كانت
+    // هتشحن على المدينة الغلط. (اتمسكت في `tests/re-payload.test.cjs` ⑨.)
+    return {
+      ok: false,
+      error: `مدينة بوسطة "${row.cityName}" (${row.cityId}) مش موجودة في الكتالوج الحي — `
+           + 'كتالوج بوسطة اتغيّر. راجع الجدول في ecommoda-constants §3.5.',
+    };
+  }
   const { matches, fieldMissing } = matchDistrict(city, fields, row.zoneOnly);
 
   const base = {
