@@ -707,6 +707,20 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">13-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>الوقت كان هيغلط بساعة من ٢٩ أكتوبر.</b> إزاحة القاهرة كانت مكتوبة ثابتة (+٣ ساعات)، ومصر بتوقف التوقيت الصيفي في <b>29-10-2026</b>. من غير الإصلاح ده كان كل وقت في الأداة هيبان متأخر ساعة — <b>من غير أي رسالة</b> — وأي فلتر تاريخ كان هيزحف معاه. دلوقتي الإزاحة <b>بتتحسب</b> لكل لحظة.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>سهم الترتيب في سجل العمليات كان بيرتّب الصفحة المعروضة بس.</b> السجل بيتحمّل صفحة صفحة من السيرفر، فالسهم كان شكله ترتيب على كل النتايج وهو بيرتّب ١٠٠ صف. دلوقتي الترتيب بيتعمل في السيرفر على <b>كل</b> النتايج، والضغط بيرجّعك لصفحة ١.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>رقم التليفون بقى بيتظبّط قبل ما يتبعت لبوسطة.</b> فيه أرقام في المتجر متسجّلة بمسافات (<code>+20 12 71043044</code>) وكانت بتتبعت زي ما هي.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>مهلة ٤٥ ثانية على كل نداء.</b> لو الـ Worker علّق، الصفحة كانت تفضل مستنية للأبد بسبينر شغّال. ⚠️ ورسالة المهلة بتقول صراحةً إن <b>العملية ممكن تكون تمّت</b> والرد اتأخر — راجع السجل قبل أي إعادة محاولة.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>الأداة اتحاذت على آخر إصدارات المهارات (جولة جرد 13-09-2026).</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v1.5.0</span>
           <span class="cl-ver-date">08-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -906,7 +920,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li><strong>بانر أحمر «فلتر الحالة مش متسق»</strong> معناه عدّ <code>Confirmed</code> + عدّ <code>Confirmed + Edit</code> مش بيساوي العدّ المدمج — بلّغ فورًا، والأداة بتفضل شغّالة على الاستعلام المدمج.</li>
             <li>المحافظة اللي مش في جدول <code>ecommoda-constants</code> §3.5 بتوقف رفع الصف بتاعها برسالة صريحة — <strong>مفيش تخمين</strong>.</li>
             <li>«النتائج» في الجدول الرئيسي بتتحسب على البيانات المحمّلة، وفي تاب السجل بتيجي من السيرفر (الفلترة كلها server-side).</li>
-            <li><strong>الترتيب في تاب السجل على الصفحة المعروضة بس</strong> (١٠٠ صف) — الفلترة والترقيم server-side، فترتيب عمود بيرتّب الصفحة الحالية مش كل السجل.</li>
+            <li><strong>الترتيب في تاب السجل server-side زي الفلترة والترقيم</strong> — الضغط على عمود بيرتّب <strong>كل</strong> النتايج وبيرجّع لصفحة ١. (كان بيرتّب الصفحة المعروضة بس — ١٠٠ صف — والسهم شكله ترتيب عام؛ اتصلح في v1.6.0.)</li>
             <li><strong>ترجيح المطابقة مش «الأطول يكسب».</strong> الترتيب: المنطقة اللي اسمها اسم المحافظة بتتأخّر (العميل بيكتب محافظته كعادة) ← خانة <code>city</code> تغلب <code>address1</code> ← التطابق الكامل يغلب الجزئي ← الطول بيفصل <strong>بس</strong> عند الاحتواء (مدينة نصر / نصر). مطابقتين منفصلتين = <strong>غموض معلَن</strong>، مش اختيار بالطول.</li>
             <li><strong>اقتراح الزون بيحسم المدينة مش المنطقة.</strong> زون واحد فيه مناطق كتير (زون العبور فيه ٦)، فاختيار منطقة منه تلقائيًا تخمين. الضغطة بتظبّط المدينة وتقصّر القايمة، والموظف بيختار.</li>
             <li><strong>اختيار زون بيمسح أي منطقة كانت متختارة قبله.</strong> اختيار زون = إعادة تحديد نطاق، ومنطقة من مدينة قديمة مع اسم مدينة جديد = شحنة في المكان الغلط.</li>
@@ -1523,8 +1537,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v1.5.0';   // مصدر واحد لرقم نسخة الواجهة
-const MIN_WORKER_VERSION = '1.3.0';    // أقل نسخة Worker الواجهة دي بتشتغل معاها — مالهاش علاقة بـ TOOL_VERSION
+const TOOL_VERSION       = 'v1.6.0';   // مصدر واحد لرقم نسخة الواجهة
+const MIN_WORKER_VERSION = '1.4.0';    // v1.4.0 — الصفحة بقت تبعت sortBy/sortDir لـ get_logs، وWorker أقدم بيتجاهلهم **في صمت** فالعمود يبان مرتّب وهو مش مرتّب
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -1540,12 +1554,36 @@ function isConfigured() {
 
 // ⚠️ apiRequest بتفرّق بين "الـ Worker رد بخطأ" و"مقدرناش نوصله أصلاً" —
 //    الاتنين كانوا بيدّوا نفس رسالة "Failed to fetch" الغامضة.
-async function apiRequest(url, opts) {
+// مهلة على نداءات **القراءة** (`ecommoda-html-builder`). من غيرها، Worker
+// بيعلّق بيسيب الصفحة مستنية للأبد بسبينر شغّال — الموظف بيفتكرها بتشتغل.
+const API_TIMEOUT_MS = 45000;
+
+// 🔴 **والرفع مستثنى عمدًا — `timeoutMs: 0`.** قطع النداء مابيوقّفش الـ Worker:
+//    الشحنات بتبقى اتعملت فعلًا بفلوس، والصفوف بتتعرض «فشل». ودي أسوأ حالة
+//    ممكنة هنا لأن الموظف بيعيد الرفع فيطلّع شحنة تانية لكل أوردر.
+//    والدفعة الواحدة ممكن توصل للمهلة بسهولة: ١٠ صفوف × إعادة محاولة 3003 ×
+//    تراجع THROTTLED من شوبيفاي. سلسلة السقوف: الواجهة `UPLOAD_CHUNK = 10`
+//    · الـ Worker `MAX_BATCH = 25` · وسقف تكلفة استعلام شوبيفاي — تلاتة مختلفة.
+async function apiRequest(url, opts, { timeoutMs = API_TIMEOUT_MS } = {}) {
   let resp;
+  const ctrl = timeoutMs > 0 ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
   try {
-    resp = await fetch(url, opts);
+    resp = await fetch(url, ctrl ? { ...opts, signal: ctrl.signal } : opts);
   } catch (e) {
+    // 🔴 المهلة **مش** معناها إن العملية ما تمّتش. النداء ممكن يكون وصل
+    //    والـ Worker خلّصه والرد اتقطع في السكة — فالرسالة لازم تقول كده،
+    //    عشان الموظف مايعيدش رفع شحنة اتعملت فعلًا بفلوس.
+    if (e.name === 'AbortError') {
+      throw new Error(
+        `النداء عدّى ${timeoutMs / 1000} ثانية من غير رد. `
+        + '⚠️ **ده مش معناه إن العملية فشلت** — ممكن تكون تمّت والرد اتأخر. '
+        + 'راجع تاب السجل أو حدّث القايمة قبل أي إعادة محاولة.',
+      );
+    }
     throw new Error(`تعذّر الوصول للـ Worker — راجع السر في الإعدادات أو نطاق الصفحة (CORS): ${e.message}`);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
   const text = await resp.text();
   let data;
@@ -1554,6 +1592,9 @@ async function apiRequest(url, opts) {
   if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
   return data;
 }
+// `upload` بيتنده بـ `timeoutMs: 0` — شوف التعليق فوق `apiRequest`.
+const NO_TIMEOUT_ACTIONS = new Set(['upload']);
+
 async function apiPost(action, body = {}) {
   if (!isConfigured()) { openSettings(); throw new Error('الإعدادات غير مكتملة'); }
   const { workerUrl, workerSecret } = getConfig();
@@ -1561,7 +1602,7 @@ async function apiPost(action, body = {}) {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${workerSecret}` },
     body:    JSON.stringify(body),
-  });
+  }, { timeoutMs: NO_TIMEOUT_ACTIONS.has(action) ? 0 : API_TIMEOUT_MS });
 }
 async function apiGet(action, params = {}) {
   if (!isConfigured()) { openSettings(); throw new Error('الإعدادات غير مكتملة'); }
@@ -1658,11 +1699,48 @@ function playBeep(type) {
   } catch {}
 }
 
-// ── الوقت — القاهرة (UTC+3) دايمًا، والصيغة الموحّدة 📅 DD/MM/YYYY 🕐 HH:MM ──
-function toCairo(iso) { return new Date(new Date(iso).getTime() + 3 * 60 * 60 * 1000); }
+// ── الوقت — `Africa/Cairo` **يتحسب**، مايتكتبش ثابت (ecommoda-constants §13) ──
+// 🔴 كان مكتوب `+ 3 * 60 * 60 * 1000` ثابت. مصر بتوقف التوقيت الصيفي
+//    **29-10-2026**، ومن ساعتها الإزاحة ١٢٠ دقيقة مش ١٨٠ — يعني كل وقت معروض
+//    في الأداة كان هيغلط بساعة **من غير أي رسالة**، وأي فلتر تاريخ هيزحف ساعة.
+//    الثابت مابيشتكيش، وده اللي بيخليه أخطر من خطأ.
+// النسخة دي **حرفية** من `ecommoda-constants` §13 — نفس الكود بالظبط في الـ Worker
+// وفي الواجهة، عشان الاتنين مايفترقوش.
+const CAIRO_TZ = 'Africa/Cairo';
+const _cairoFmt = new Intl.DateTimeFormat('en-CA', {
+  timeZone: CAIRO_TZ, hourCycle: 'h23',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+});
+function cairoParts(d) {
+  const o = {};
+  for (const p of _cairoFmt.formatToParts(d)) if (p.type !== 'literal') o[p.type] = p.value;
+  if (o.hour === '24') o.hour = '00';        // حارس: بعض المحركات بترجّع 24
+  return o;
+}
+function cairoOffsetMinutes(d) {             // ١٨٠ صيفًا · ١٢٠ شتاءً
+  const p = cairoParts(d);
+  return Math.round((Date.UTC(+p.year, +p.month - 1, +p.day,
+                              +p.hour, +p.minute, +p.second) - d.getTime()) / 60000);
+}
+
+// بترجّع Date مزحزحة بإزاحة القاهرة **بتاعة اللحظة دي** — فكل اللي بيقرا منها
+// بـ `getUTC*` بيفضل شغّال زي ما هو، والإصلاح بيتم في نقطة واحدة.
+// 🔴 حارس التاريخ غير الصالح إلزامي: `Intl.formatToParts` **بترمي RangeError**
+//    على `Invalid Date`، والقديمة (إزاحة ثابتة) كانت بترجّع NaN بلا رمي. من
+//    غير الحارس ده، صف واحد بتاريخ ناقص بيرمي جوّه `applyFilters()` —
+//    ودي بتتنده من دالة `async`، فالاستثناء بيتبلع في promise محدش بيقراها
+//    والشاشة بتقف من غير أي رسالة. (اتمسك في اختبار نافذة المنطقة.)
+function isValidDate(d) { return d instanceof Date && Number.isFinite(d.getTime()); }
+function toCairo(iso) {
+  const d = new Date(iso);
+  if (!isValidDate(d)) return d;                       // Invalid Date — الحساب بيتخطّى
+  return new Date(d.getTime() + cairoOffsetMinutes(d) * 60000);
+}
 function cairoNow()   { return toCairo(new Date().toISOString()); }
 function formatDateTime(iso) {
   const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  if (!isValidDate(d)) return '—';
   let h = d.getUTCHours();
   const ampm = h >= 12 ? 'مساءً' : 'صباحاً';
   h = h % 12 || 12;
@@ -1670,10 +1748,12 @@ function formatDateTime(iso) {
 }
 function formatDate(iso) {
   const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  if (!isValidDate(d)) return '—';
   return `📅 ${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()}`;
 }
 function formatTimeOnly(iso) {
   const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  if (!isValidDate(d)) return '—';
   let h = d.getUTCHours();
   const ampm = h >= 12 ? 'مساءً' : 'صباحاً';
   h = h % 12 || 12;
@@ -1681,10 +1761,12 @@ function formatTimeOnly(iso) {
 }
 function formatDateForExport(iso) {
   const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  if (!isValidDate(d)) return '—';
   return `${pad(d.getUTCDate())}-${pad(d.getUTCMonth()+1)}-${d.getUTCFullYear()}`;
 }
 function formatTimeForExport(iso) {
   const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  if (!isValidDate(d)) return '—';
   let h = d.getUTCHours();
   const ampm = h >= 12 ? 'مساءً' : 'صباحاً';
   h = h % 12 || 12;
@@ -1692,6 +1774,7 @@ function formatTimeForExport(iso) {
 }
 function cairoDateStr(iso) {
   const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  if (!isValidDate(d)) return '—';
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
 }
 const fmtNum = n => Number(n || 0).toLocaleString('en-US');
@@ -3465,6 +3548,15 @@ function logParams() {
   return p;
 }
 
+// 🔴 الترتيب **مش** فلتر: الـ Worker بيرتّب وبيصفّح، والعدّ والتصدير بيتجاهلوا
+//    الترتيب عن قصد. عشان كده الباراميترين دول منفصلين عن `logParams()` —
+//    لو دخلوا فيها كانوا هيتبعتوا لـ `get_logs_count` كمان ويفتحوا باب اختلاف
+//    مصدر الباراميترات بين النداءات.
+function logSortParams() {
+  if (!logSortState.key || !LOG_SORT_KEYS.includes(logSortState.key)) return {};
+  return { sortBy: logSortState.key, sortDir: logSortState.dir };
+}
+
 async function fetchLog() {
   updateLogFilterIconState();
   const body = document.getElementById('logTblBody');
@@ -3473,7 +3565,7 @@ async function fetchLog() {
   const base   = logParams();
   try {
     const [pageData, countData] = await Promise.all([
-      apiGet('get_logs',       { ...base, limit: LOG_PAGE_SIZE, offset }),
+      apiGet('get_logs',       { ...base, ...logSortParams(), limit: LOG_PAGE_SIZE, offset }),
       apiGet('get_logs_count', base),
     ]);
     logTotalCount = countData.total || 0;
@@ -3502,18 +3594,25 @@ function parseLogRow(e) {
 }
 const LOG_TYPE_LABEL = Object.fromEntries(LOG_TYPE_ITEMS.map(i => [i.value, i.label]));
 
-// ترتيب السجل — على الصفحة المحمّلة (الفلترة والترقيم server-side)
-// نفس فخ sortConfig فوق — صف السجل فيه ts مش date/time
-const logSortConfig = { date: { type: 'date', get: r => r.ts }, time: { type: 'date', get: r => r.ts },
-                        employee: { type: 'string' },
-                        type: { type: 'string' }, orderName: { type: 'string' } };
+// ترتيب السجل — **server-side بالكامل** (فلترة وترقيم وترتيب في الـ Worker).
+// ⚠️ المفاتيح دي لازم تطابق `LOG_SORT_COLUMNS` في الـ Worker **حرفيًا**: مفتاح
+//    مش في القايمة المقفولة هناك بيرجع للافتراضي **في صمت**، فالعمود يبان إنه
+//    اترتّب وهو مااترتّبش. وهي نفسها قيم `data-sort-key` في الترويسة.
+const LOG_SORT_KEYS = ['date', 'time', 'employee', 'type', 'orderName'];
 let logSortState = { key: null, dir: null };
+// 🔴 الترتيب بيتعمل في الـ Worker، مش هنا. السجل بيتصفّح سيرفر-سايد
+//    (`get_logs` بـ limit/offset)، فالترتيب client-side كان بيرتّب **الصفحة
+//    المعروضة بس** — سهم في الترويسة شكله ترتيب عام وهو بيرتّب ١٠٠ صف.
+//    (`ecommoda-html-builder` — data-table-standard §8.)
+// وبيرجّع لصفحة ١ عمدًا: الترتيب بيغيّر أنهي صف على أنهي صفحة، فالفضل على
+// نفس رقم الصفحة بيدّي خليط من ترتيبين.
 function toggleLogSort(key) {
   if (logSortState.key !== key) { logSortState.key = key; logSortState.dir = 'asc'; }
   else if (logSortState.dir === 'asc') { logSortState.dir = 'desc'; }
   else { logSortState.key = null; logSortState.dir = null; }
   updateLogSortHeaderUI();
-  renderLogTable();
+  logCurrentPage = 1;
+  fetchLog();
 }
 function updateLogSortHeaderUI() {
   document.querySelectorAll('#panelLog .sort-icon').forEach(el => {
@@ -3525,20 +3624,9 @@ function updateLogSortHeaderUI() {
     th.classList.toggle('sorted', th.dataset.sortKey === logSortState.key);
   });
 }
-function applyLogSort(rows) {
-  if (!logSortState.key) return rows;
-  const cfg = logSortConfig[logSortState.key];
-  const dir = logSortState.dir === 'asc' ? 1 : -1;
-  return [...rows].sort((a, b) => {
-    const read = cfg.get || (row => row[logSortState.key]);
-    const av = read(a), bv = read(b);
-    if (cfg.type === 'date') return (new Date(av).getTime() - new Date(bv).getTime()) * dir;
-    return String(av ?? '').localeCompare(String(bv ?? '')) * dir;
-  });
-}
-
 function renderLogTable() {
-  const rows = applyLogSort(logRows);
+  // الصفوف بتيجي مرتّبة من الـ Worker خلاص — مفيش ترتيب هنا.
+  const rows = logRows;
   const body = document.getElementById('logTblBody');
   document.getElementById('logFilteredCount').textContent = fmtNum(logTotalCount);
   if (!rows.length) {
