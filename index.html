@@ -626,6 +626,32 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
   border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .summary-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:12px 16px;font-size:13px;font-weight:700;}
+/* ─── مبدّل نوع الرفع (v2.0.0) ───
+   🔴 ده مش تاب عرض — ده بيغيّر **نوع الشحنة اللي هتتعمل بفلوس**. عشان كده
+   شريط مستقل وواضح فوق الفلاتر، والوضع النشط بلونه الخاص، ومعاه سطر بيشرح
+   الوضع الحالي — مش بادج صغير جنب الفلتر. */
+.job-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:11px 14px;
+  background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;}
+.job-bar-label{font-size:12.5px;font-weight:800;color:var(--text-secondary);white-space:nowrap;}
+.job-btns{display:flex;gap:6px;flex-wrap:wrap;}
+.job-btn{padding:8px 14px;border:2px solid var(--border-strong);background:var(--surface);
+  color:var(--text-secondary);border-radius:var(--radius-sm);font-family:var(--font-body);
+  font-size:13px;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.job-btn:hover{background:var(--surface-2);color:var(--text-primary);}
+.job-btn.active{background:var(--accent);color:var(--on-accent);border-color:var(--accent);}
+.job-btn.active.re{background:var(--amber);border-color:var(--amber);color:#fff;}
+.job-btn:disabled{opacity:.5;cursor:not-allowed;}
+.job-hint{flex:1;min-width:240px;font-size:11.5px;font-weight:600;color:var(--text-muted);line-height:1.7;}
+.job-hint code{background:var(--surface);padding:1px 4px;border-radius:3px;font-size:11px;}
+.job-hint b{color:var(--amber);}
+/* صف الاسترداد — الاتجاه لازم يبان في الجدول نفسه، مش في النافذة بس */
+.cod-refund{color:var(--danger);font-weight:800;}
+.cod-collect{font-weight:700;}
+.cycle-badge{display:inline-block;font-size:11px;font-weight:800;padding:2px 7px;border-radius:999px;
+  background:var(--surface-2);border:1px solid var(--border-strong);color:var(--text-secondary);}
+.cycle-badge.blocked{background:var(--danger-light);border-color:var(--danger);color:var(--danger);}
+.cycle-badge.warn{background:var(--amber-light);border-color:var(--amber);color:var(--amber);}
+.items-cell{font-size:11.5px;font-weight:600;line-height:1.6;color:var(--text-secondary);}
 </style>
 
 <!-- ⚠️ الـ wrapper ده لازم يلف كل المحتوى — تعريف المتغيّر لوحده من غير الـ div مالوش أي تأثير -->
@@ -640,8 +666,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
     <div class="app-title">
       <div class="app-icon">🚚</div>
       <div class="app-title-text">
-        <h1>رفع أوردرات بوسطة</h1>
-        <span>رفع الأوردرات المؤهَّلة على بوسطة جماعيًا</span>
+        <h1>رفع بوسطة</h1>
+        <span>شحن · استرجاع · استبدال — كل شحنات بوسطة من مكان واحد</span>
       </div>
     </div>
 
@@ -710,6 +736,16 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <span class="cl-ver-date">13-09-2026</span>
         </div>
         <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>🔀 <b>الأداة بقت بترفع كل شحنات بوسطة.</b> أداة <code>Bosta-Return-Exchange-Exporter</code> اتنقلت هنا بالكامل. فوق الفلاتر فيه <b>مبدّل نوع الرفع</b>: <b>🚚 شحن عادي</b> · <b>↩️ استرجاع</b> · <b>🔄 استبدال</b>. كل وضع ليه استعلامه وأعمدته ونوع الشحنة بتاعه عند بوسطة (10 · 25 · 30).</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>رقم التتبع اتقسم على ميتافيلدين.</b> <code>custom.bosta_tracking_number</code> <b>وقف</b>، وبدله <code>custom.bosta_tracking_number_s1</code> للشحنة العادية و<code>custom.bosta_tracking_number_s2</code> للاسترجاع/الاستبدال. الميتافيلد القديم لسه <b>بيتقرا</b> عشان الشحنات اللي اترفعت قبل كده تفضل باينة «مرفوعة» — بس مابيتكتبش تاني.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>التاج بقى حسب النوع:</b> <code>Bosta_Uploaded_S1</code> للشحن و<code>Bosta_Uploaded_S2</code> للاسترجاع/الاستبدال. تاج واحد للاتنين كان معناه إن أوردر أول ما يتعمل له استرجاع يبان «مرفوع» في شاشة الشحن، والعكس.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>في الاسترجاع/الاستبدال الأداة مابتكتبش <code>custom.courier</code>.</b> بتتأكد إنه <b>Bosta</b> بالفعل قبل ما تعمل الشحنة، والأوردر اللي كوريَره حاجة تانية بيتوقف برسالة. شحنة الاسترجاع بتسحب من عند العميل — فالسؤال هنا «هو ده مندوبنا أصلاً؟» مش «خليه مندوبنا».</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>🔴 <b>عمود المبلغ بيقول الاتجاه.</b> في الاسترجاع/الاستبدال المبلغ السالب معناه <b>بوسطة بتدفع للعميل عند الباب</b>، فبيتعرض <b>«↩ استرداد»</b> بالأحمر مش رقم عادي. ولو المبلغ أكبر من حد بوسطة (٢٠٠٠) بيتقص — <b>والقص بيتعلّم بعلامة ✂ والباقي مكتوب</b>، مش بيحصل في صمت.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>عمود الدورة المفتوحة والقطع.</b> كل رقم في صف الاسترجاع/الاستبدال متحسب من <b>الدورة المفتوحة الواحدة</b> بس. الأوردر اللي دورته مش واضحة (أكتر من دورة مفتوحة · مفيش دورة · استبدال بلا قطع خارجة) <b>بيتوقف ومعاه السبب</b>.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>زرار «✕ إلغاء الشحنة»</b> في جدول النتايج. لو شحنة استرجاع/استبدال اتعملت غلط، الإلغاء بيشيلها من بوسطة <b>وبيحرّر المرجع الفريد فتقدر ترفع تاني مصحّحة</b>. ⚠️ مابيرجّعش حالة الأوردر ولا بيمسح رقم التتبع — دول بإيدك.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>زرار «📄 ملف بوسطة (Excel)»</b> في وضعي الاسترجاع والاستبدال — الخطة البديلة زي ما كانت في الأداة القديمة (٢٠ عمود، فحص تكرار بالدورة، وبعدها نافذة تأكيد تحديث الحالة). موجود عشان لو عقد بوسطة اتغيّر أو المفتاح مش متاح، المخزن مايقفش.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>مدينة مش في كتالوج بوسطة كانت بتوقّع الشاشة كلها.</b> صف واحد محافظته الـ <code>cityId</code> بتاعها مش موجودة عند بوسطة كان بيرمي استثناء بيقفل القايمة بالكامل. دلوقتي بيوقف <b>الصف ده لوحده</b> برسالة بتسمّي السبب («كتالوج بوسطة اتغيّر») بدل ما يتدهور لـ«مفيش مطابقة منطقة» — اللي كان معناه شحنة على مدينة غلط.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>سجل العمليات بقى بيعرض <b>تاريخ الأداتين مع بعض</b> — الفلتر فيه أنواع الرفع الجديدة كلها، والصفوف القديمة بتاعة أداة الاسترجاع ما اتيتّمتش.</span></li>
           <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>الوقت كان هيغلط بساعة من ٢٩ أكتوبر.</b> إزاحة القاهرة كانت مكتوبة ثابتة (+٣ ساعات)، ومصر بتوقف التوقيت الصيفي في <b>29-10-2026</b>. من غير الإصلاح ده كان كل وقت في الأداة هيبان متأخر ساعة — <b>من غير أي رسالة</b> — وأي فلتر تاريخ كان هيزحف معاه. دلوقتي الإزاحة <b>بتتحسب</b> لكل لحظة.</span></li>
           <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>سهم الترتيب في سجل العمليات كان بيرتّب الصفحة المعروضة بس.</b> السجل بيتحمّل صفحة صفحة من السيرفر، فالسهم كان شكله ترتيب على كل النتايج وهو بيرتّب ١٠٠ صف. دلوقتي الترتيب بيتعمل في السيرفر على <b>كل</b> النتايج، والضغط بيرجّعك لصفحة ١.</span></li>
           <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>رقم التليفون بقى بيتظبّط قبل ما يتبعت لبوسطة.</b> فيه أرقام في المتجر متسجّلة بمسافات (<code>+20 12 71043044</code>) وكانت بتتبعت زي ما هي.</span></li>
@@ -829,7 +865,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 <div class="eco-overlay" id="aboutOverlay" onclick="if(event.target===this)closeAbout()">
   <div class="eco-modal">
     <div class="eco-modal-hdr">
-      <span>ℹ️ About — رفع أوردرات بوسطة</span>
+      <span>ℹ️ About — رفع بوسطة (شحن · استرجاع · استبدال)</span>
       <button class="modal-close-x" onclick="closeAbout()">✕</button>
     </div>
     <div class="eco-modal-body">
@@ -837,16 +873,27 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <details class="about-sec" open>
         <summary>📋 وصف الأداة</summary>
         <div class="about-sec-body">
-          <p><strong>الهدف:</strong> بديل زرار <em>Send to Bosta</em> بتاع بلجن بوسطة على شوبيفاي. بتعرض الأوردرات المؤهَّلة للشحن عبر بوسطة، والموظف بيرفعها <strong>جماعيًا</strong>، والأداة بتسجّل النتيجة على شوبيفاي وفي D1.</p>
+          <p><strong>الهدف:</strong> كل شحنات بوسطة من مكان واحد. بديل زرار <em>Send to Bosta</em> بتاع بلجن بوسطة على شوبيفاي للشحن العادي، <strong>وبديل أداة <code>Bosta-Return-Exchange-Exporter</code> بالكامل</strong> للاسترجاع والاستبدال (اتدمجت هنا في v2.0.0).</p>
           <p><strong>المستخدمون المستهدفون:</strong> فريق العمليات / المخزن.</p>
           <p><strong>حدود الأداة:</strong> شغلها بيخلص <strong>عند الرفع</strong>. متابعة حالة الشحنة بعد كده مش من شغلها — ولا الطباعة، ولا تقديم مرحلة الأوردر (<code>custom.manual_status</code> مبتتلمسش، و<code>custom.zone</code> مبتتكتبش أبدًا).</p>
 
-          <h4>الأوردرات اللي بتظهر</h4>
-          <ul>
-            <li><code>custom.zone = Other_Regions</code></li>
-            <li><code>created_at &gt;= 2026-08-01</code></li>
-            <li><code>custom.manual_status</code> = <code>Confirmed</code> أو <code>Confirmed + Edit</code></li>
-          </ul>
+          <h4>🔀 تلات أوضاع — المبدّل فوق الفلاتر</h4>
+          <table>
+            <tr><th>الوضع</th><th>نوع بوسطة</th><th>الأوردرات اللي بتظهر</th><th>بيكتب إيه بعد النجاح</th></tr>
+            <tr><td>🚚 <strong>شحن عادي</strong></td><td>10</td>
+                <td><code>custom.zone = Other_Regions</code> · <code>created_at &gt;= 2026-08-01</code> · <code>custom.manual_status</code> = <code>Confirmed</code> أو <code>Confirmed + Edit</code></td>
+                <td><code>custom.courier = Bosta</code> · <code>custom.bosta_tracking_number_s1</code> · تاج <code>Bosta_Uploaded_S1</code></td></tr>
+            <tr><td>↩️ <strong>استرجاع</strong></td><td>25 (CRP)</td>
+                <td><code>custom.status_2_r_e = Confirmed + RETURN</code> <strong>و</strong> <code>custom.courier = Bosta</code></td>
+                <td><code>custom.bosta_tracking_number_s2</code> · تاج <code>Bosta_Uploaded_S2</code> · <code>custom.status_2_r_e → In-Return</code> · <code>custom.printing_time_s2</code></td></tr>
+            <tr><td>🔄 <strong>استبدال</strong></td><td>30</td>
+                <td><code>custom.status_2_r_e = Confirmed + EXCHANGE</code> <strong>و</strong> <code>custom.courier = Bosta</code></td>
+                <td>نفس الاسترجاع، بس الحالة بتروح <code>Ready</code></td></tr>
+          </table>
+          <p>🔴 <strong>في الاسترجاع والاستبدال الأداة مابتكتبش <code>custom.courier</code>.</strong> بتتأكد إنه <strong>Bosta</strong> بالفعل قبل الشحنة، والأوردر اللي كوريَره حاجة تانية بيتوقف برسالة. شحنة الاسترجاع بتسحب من عند العميل — فالسؤال «هو ده مندوبنا أصلاً؟» مش «خليه مندوبنا».</p>
+          <p>🔴 <strong>المبلغ في الاسترجاع/الاستبدال ليه اتجاه.</strong> السالب معناه <strong>بوسطة بتدفع للعميل عند الباب</strong>، وبيتعرض «↩ استرداد» بالأحمر. حد بوسطة للاسترداد <strong>٢٠٠٠ جنيه</strong> — واللي فوقه بيتقص، <strong>والقص بيتعلّم بعلامة ✂ والباقي مكتوب</strong> (بيتسوّى مكتبيًا).</p>
+          <p>🔴 <strong>كل رقم في صف الاسترجاع/الاستبدال متحسب من الدورة المفتوحة الواحدة.</strong> الأوردر ممكن يكون عدّى بأكتر من دورة، والحساب من كلهم كان بيشحن قطع رجعت المخزن خلاص. الأوردر اللي دورته مش واضحة (أكتر من دورة مفتوحة · مفيش دورة · استبدال بلا قطع خارجة) <strong>بيتوقف ومعاه السبب</strong> — مش بيترفع بتخمين.</p>
+          <p>📄 <strong>تصدير ملف بوسطة (Excel)</strong> لسه موجود في وضعي الاسترجاع والاستبدال كـ<strong>خطة بديلة</strong> — لو عقد بوسطة اتغيّر أو المفتاح مش متاح أو الـ API رفض أوردر، المخزن مايقفش. المسار ده <strong>مالوش رقم تتبع</strong> (الشحنة بتتعمل من داشبورد بوسطة بالإيد)، فبيحدّث الحالة بس.</p>
 
           <h4>كيف تعمل — Workflow</h4>
           <ol>
@@ -861,7 +908,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li>أي صف ينفع يتفتح بزرار <em>اختر المنطقة</em> — والنافذة فيها <strong>↺ رجّع للمطابقة التلقائية</strong> (بتشيل التدخّل اليدوي) و<strong>🏙️ ارفع على المحافظة بس</strong> (بتثبّت الصف على المحافظة حتى لو المطابقة نجحت وقت الرفع). الاختيار كله اختياري، والرفع شغّال من غيره.</li>
             <li>الموظف يحدد الأوردرات ويضغط <strong>رفع المحدد</strong>، أو يضغط <strong>⬆ رفع الكل</strong> اللي بيحدد <strong>كل المعروض حسب الفلتر الحالي</strong> (والعدد مكتوب جوّه الزرار) ويسأل تأكيد قبل ما يرفع. صفوف 🟠 <strong>المدينة مشكوك فيها مستثناة من الاتنين</strong> — تتحدد بالإيد بعد المراجعة. والأوردر المرفوع قبل كده بيطلب تأكيد صريح.</li>
             <li>الرفع بيحصل على دفعات، وكل صف بيجيب نتيجته الخاصة ومعاه رقم تتبعه.</li>
-            <li>بعد كل نجاح: <code>custom.courier = Bosta</code> · <code>custom.bosta_tracking_number</code> · تاج <code>Bosta_Uploaded_S1</code>.</li>
+            <li>بعد كل نجاح: اللي في عمود «بيكتب إيه» في جدول الأوضاع فوق — بيختلف بالوضع.</li>
+            <li>🔴 <strong>لو الشحنة اتعملت وحاجة بعدها فشلت، الصف بيبقى <em>أصفر</em> مش أحمر.</strong> الأصفر معناه <strong>الشحنة موجودة عند بوسطة ومعاها رقم تتبع</strong> — إعادة الرفع بتشتري شحنة تانية بفلوس. الحل: صلّح باليد، أو اضغط <strong>✕ إلغاء الشحنة</strong> في جدول النتايج وبعدين ارفع تاني (الإلغاء بيحرّر المرجع الفريد عند بوسطة).</li>
           </ol>
 
           <h4>نتيجة كل صف — أربع حالات</h4>
@@ -1004,6 +1052,76 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════════
+     نوافذ الاسترجاع/الاستبدال — v2.0.0
+     ══════════════════════════════════════════════════════════════ -->
+
+<!-- ⛔ الرفع اتوقف على مستوى الدفعة (409). 🔴 دي **مش** نافذة فشل: الحارس رفض
+     قبل أي نداء لبوسطة، ومفيش ولا شحنة اتعملت. عرضها كفشل عام كان بيخلي
+     الموظف يعيد المحاولة على نفس الحالة الغلط بدل ما يروح يصلّحها في شوبيفاي. -->
+<div class="eco-overlay" id="cycleBlockOverlay" onclick="if(event.target===this)closeCycleBlockModal()">
+  <div class="eco-modal" style="max-width:720px;">
+    <div class="eco-modal-hdr">
+      <span id="cycleBlockTitle">⛔ الرفع اتوقف</span>
+      <button class="modal-close-x" onclick="closeCycleBlockModal()">✕</button>
+    </div>
+    <div class="eco-modal-body" id="cycleBlockBody"></div>
+    <div class="eco-modal-ftr">
+      <button class="btn-modal-save" onclick="closeCycleBlockModal()">تمام</button>
+    </div>
+  </div>
+</div>
+
+<!-- تكرار تصدير الإكسيل — المفتاح اسم الأوردر + **اسم الدورة** (v5.3.0).
+     المفتاح بالاسم لوحده كان بيقفل دورة تانية شرعية كـ«مكرر». -->
+<div class="eco-overlay" id="exportDupOverlay" onclick="if(event.target===this)closeExportDupModal()">
+  <div class="eco-modal" style="max-width:680px;">
+    <div class="eco-modal-hdr">
+      <span>⚠️ دورات اتصدّرت Excel قبل كده</span>
+      <button class="modal-close-x" onclick="closeExportDupModal()">✕</button>
+    </div>
+    <div class="eco-modal-body">
+      <div class="warn-banner">
+        الأوردرات دي <b>نفس دورتها</b> اتصدّرت في ملف بوسطة قبل كده. لو الملف القديم
+        اترفع فعلًا على بوسطة، التصدير تاني معناه <b>شحنة مكررة بفلوس حقيقية</b>.
+      </div>
+      <div class="dup-list" id="exportDupList"></div>
+    </div>
+    <div class="eco-modal-ftr">
+      <button class="btn-ghost" onclick="closeExportDupModal()">إلغاء</button>
+      <button class="btn-red" onclick="confirmExportRepeat()">أكّد وصدّرهم برضه</button>
+    </div>
+  </div>
+</div>
+
+<!-- تأكيد تحديث الحالة بعد تصدير الإكسيل ورفعه يدويًا على داشبورد بوسطة.
+     ⚠️ الـ checklist هنا **بوابة الواجهة** — الـ Worker بيسجّلها للتوثيق بس،
+     وبيفحص الدورات سيرفر-سايد بشكل مستقل قبل أي كتابة. -->
+<div class="eco-overlay" id="statusConfirmOverlay" onclick="if(event.target===this)closeStatusConfirmModal()">
+  <div class="eco-modal" style="max-width:620px;">
+    <div class="eco-modal-hdr">
+      <span id="statusConfirmTitle">✅ تحديث حالة الأوردرات</span>
+      <button class="modal-close-x" onclick="closeStatusConfirmModal()">✕</button>
+    </div>
+    <div class="eco-modal-body">
+      <div class="warn-banner" id="statusConfirmIntro"></div>
+      <label class="ms-item" style="cursor:pointer;">
+        <input type="checkbox" id="chkBostaUploaded" onchange="updateStatusConfirmBtn()">
+        <span>رفعت ملف بوسطة على الداشبورد فعلًا</span>
+      </label>
+      <label class="ms-item" id="chkInvoicesRow" style="cursor:pointer;">
+        <input type="checkbox" id="chkInvoicesSent" onchange="updateStatusConfirmBtn()">
+        <span>بعتّ فواتير الاستبدال للمخزن</span>
+      </label>
+      <div class="dup-list" id="statusConfirmList" style="margin-top:10px;"></div>
+    </div>
+    <div class="eco-modal-ftr">
+      <button class="btn-ghost" onclick="closeStatusConfirmModal()">لسه</button>
+      <button class="btn-modal-save" id="statusConfirmBtn" disabled onclick="submitStatusConfirm()">حدّث الحالة</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -1111,6 +1229,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <th>المنطقة المبعوتة</th>
             <th>ما تم فعليًا</th>
             <th>السبب / التحذير</th>
+            <th>إجراء</th>
           </tr></thead>
           <tbody id="resBody"></tbody>
         </table>
@@ -1119,6 +1238,14 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
   </div>
 
   <!-- ─── §TOOL::mainTable ─── -->
+  <!-- مبدّل نوع الرفع — v2.0.0. الترتيب مقصود: الشحن العادي الأول وهو
+       الافتراضي، والاتنين اللي بيعملوا شحنات R/E بعده وبلون تاني. -->
+  <div class="job-bar" id="jobBar">
+    <span class="job-bar-label">نوع الرفع:</span>
+    <div class="job-btns" id="jobBtns"></div>
+    <div class="job-hint" id="jobHint"></div>
+  </div>
+
   <div class="unified-section">
 
     <div class="flt-header" onclick="toggleFilters()">
@@ -1310,6 +1437,13 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="tbl-bar-left">
         <button class="act-btn refresh" onclick="event.stopPropagation(); loadOrders(true);">↺ تحديث</button>
         <button class="act-btn export"  onclick="event.stopPropagation(); exportOrdersXLSX();">⬇ تصدير XLSX</button>
+        <!-- ⚠️ الخطة البديلة. الملف ده هو ملف بوسطة نفسه (٢٠ عمود) اللي بيترفع
+             على داشبورد بوسطة بالإيد — بيفضل موجود عشان لو عقد الـ API اتغيّر
+             أو المفتاح مش متاح أو بوسطة رفضت أوردر، المخزن مايقفش. -->
+        <button class="act-btn export" id="bostaExcelBtn" style="display:none;"
+                onclick="event.stopPropagation(); exportBostaExcel();"
+                title="ملف بوسطة (٢٠ عمود) للرفع اليدوي على الداشبورد — الخطة البديلة لو الرفع المباشر مش متاح">
+          📄 ملف بوسطة (Excel)</button>
         <div class="bulk-actions">
           <button class="big-btn all" id="bulkAllBtn" onclick="event.stopPropagation(); askUploadAllVisible();"
                   title="بيحدد كل الصفوف المعروضة حسب الفلتر الحالي ويرفعها — صفوف 🟠 المدينة مشكوك فيها مستثناة">
@@ -1324,19 +1458,10 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
     <div class="tbl-body-wrap" id="tblBodyWrap">
       <div class="tbl-scroll">
         <table class="data-table">
-          <thead><tr>
-            <th><input type="checkbox" class="row-cb" id="selectAllRows" onclick="toggleSelectAllRows(this.checked)"></th>
-            <th class="sortable-th" data-sort-key="orderNumber" onclick="toggleSort('orderNumber')">رقم الأوردر<span class="sort-icon" data-sort-key="orderNumber"></span></th>
-            <th class="sortable-th" data-sort-key="date"        onclick="toggleSort('date')">التاريخ<span class="sort-icon" data-sort-key="date"></span></th>
-            <th class="sortable-th" data-sort-key="customer"    onclick="toggleSort('customer')">العميل<span class="sort-icon" data-sort-key="customer"></span></th>
-            <th class="sortable-th" data-sort-key="address"     onclick="toggleSort('address')">العنوان كامل<span class="sort-icon" data-sort-key="address"></span></th>
-            <th class="sortable-th" data-sort-key="province"    onclick="toggleSort('province')">المحافظة (شوبيفاي)<span class="sort-icon" data-sort-key="province"></span></th>
-            <th class="sortable-th" data-sort-key="cityName"    onclick="toggleSort('cityName')">مدينة بوسطة<span class="sort-icon" data-sort-key="cityName"></span></th>
-            <th>المنطقة</th>
-            <th class="sortable-th" data-sort-key="addrMode"    onclick="toggleSort('addrMode')">نوع المطابقة<span class="sort-icon" data-sort-key="addrMode"></span></th>
-            <th class="sortable-th" data-sort-key="s1"          onclick="toggleSort('s1')">حالة S1<span class="sort-icon" data-sort-key="s1"></span></th>
-            <th class="sortable-th" data-sort-key="upLabel"     onclick="toggleSort('upLabel')">حالة الرفع<span class="sort-icon" data-sort-key="upLabel"></span></th>
-          </tr></thead>
+          <!-- 🔴 الترويسة بتتبني من `tableColumns()` مش مكتوبة هنا — الأعمدة
+               بتختلف بالوضع (الدورة والمبلغ في R/E، حالة S1 في الشحن)، وترويسة
+               ثابتة مع جسم متغيّر معناها أعمدة بتزحف على بعضها في صمت. -->
+          <thead><tr id="tblHead"></tr></thead>
           <tbody id="tblBody"></tbody>
         </table>
       </div>
@@ -1537,12 +1662,64 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v1.6.0';   // مصدر واحد لرقم نسخة الواجهة
-const MIN_WORKER_VERSION = '1.4.0';    // v1.4.0 — الصفحة بقت تبعت sortBy/sortDir لـ get_logs، وWorker أقدم بيتجاهلهم **في صمت** فالعمود يبان مرتّب وهو مش مرتّب
+const TOOL_VERSION       = 'v2.0.0';   // مصدر واحد لرقم نسخة الواجهة
+// 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
+//    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
+//    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
+//    القديم من غير ما حد ياخد باله. الحارس بيتنده في `checkWorkerVersion`.
+const MIN_WORKER_VERSION = '2.0.0';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
 const UPLOAD_CHUNK       = 10;         // حجم دفعة الرفع من الواجهة (سقف الـ Worker ٢٥)
+
+// ─── §CONFIG::jobs ───
+// 🔴 الأداة بقت تلات أوضاع. الوضع بيحدد: الـ endpoint · أعمدة الجدول · فلتر
+//    الحالة · الميتافيلد والتاج اللي هيتكتبوا · وشكل الفلوس في الجدول.
+//    الخلط بينهم مش تفصيلة عرض — `cod` سالبة في R/E معناها **بوسطة بتدفع
+//    للعميل**، وعرضها زي ما هي في وضع الشحن معناه رقم مالوش معنى.
+const JOBS = {
+  s1: {
+    key: 's1', icon: '🚚', label: 'شحن عادي', short: 'شحن',
+    bostaType: 10,
+    listAction: 'get_orders', uploadAction: 'upload',
+    statusLabel: 'الحالة (S1)', statusField: 's1',
+    statusItems: [{ value: 'Confirmed', label: 'Confirmed' }, { value: 'Confirmed + Edit', label: 'Confirmed + Edit' }],
+    tag: 'Bosta_Uploaded_S1', trackingKey: 'bosta_tracking_number_s1',
+    hint: 'أوردرات <code>custom.zone = Other_Regions</code> وحالتها Confirmed — بتترفع شحنة عادية (type 10)، وبتكتب الكوريَر ورقم التتبع والتاج.',
+    excel: false, cancel: false,
+  },
+  return: {
+    key: 'return', icon: '↩️', label: 'استرجاع', short: 'استرجاع',
+    bostaType: 25,
+    listAction: 'fetch_candidates', uploadAction: 'upload_re',
+    statusLabel: 'الحالة (S2)', statusField: 's2',
+    statusItems: [{ value: 'Confirmed + RETURN', label: 'Confirmed + RETURN' }],
+    tag: 'Bosta_Uploaded_S2', trackingKey: 'bosta_tracking_number_s2',
+    nextStatus: 'In-Return',
+    hint: 'أوردرات <code>status_2_r_e = Confirmed + RETURN</code> وكوريَرها Bosta — شحنة CRP (type 25) بتسحب من العميل. '
+        + '🔴 عنوان العميل بيروح <code>pickupAddress</code>، و<b>المبلغ السالب معناه بوسطة بتدفع للعميل عند الباب</b>.',
+    excel: true, cancel: true,
+  },
+  exchange: {
+    key: 'exchange', icon: '🔄', label: 'استبدال', short: 'استبدال',
+    bostaType: 30,
+    listAction: 'fetch_candidates', uploadAction: 'upload_re',
+    statusLabel: 'الحالة (S2)', statusField: 's2',
+    statusItems: [{ value: 'Confirmed + EXCHANGE', label: 'Confirmed + EXCHANGE' }],
+    tag: 'Bosta_Uploaded_S2', trackingKey: 'bosta_tracking_number_s2',
+    nextStatus: 'Ready',
+    hint: 'أوردرات <code>status_2_r_e = Confirmed + EXCHANGE</code> وكوريَرها Bosta — شحنة استبدال (type 30): '
+        + 'بتوصّل القطعة الجديدة وتسحب القديمة في نفس الزيارة.',
+    excel: true, cancel: true,
+  },
+};
+// الوضع الحالي. **مابيتخزّنش** في localStorage عن قصد: فتح الأداة بيبدأ دايمًا
+// من الشحن العادي، فمفيش موظف بيفتح الصفحة ويلاقي نفسه في وضع بيعمل شحنات
+// استرجاع وهو فاكر إنه في الوضع العادي.
+let currentJobKey = 's1';
+const job = () => JOBS[currentJobKey];
+const isRE = () => currentJobKey !== 's1';
 
 function getConfig() {
   return { workerUrl: WORKER_URL, workerSecret: localStorage.getItem(LS_SECRET) || '' };
@@ -1589,11 +1766,22 @@ async function apiRequest(url, opts, { timeoutMs = API_TIMEOUT_MS } = {}) {
   let data;
   try { data = JSON.parse(text); }
   catch { throw new Error(`رد غير متوقع من الـ Worker (HTTP ${resp.status}): ${text.slice(0, 160)}`); }
-  if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+  if (!resp.ok) {
+    // 🔴 الرد المرفوض بيحمل **بيانات** مش رسالة بس: `409 CYCLE_BLOCKED` جاي
+    //    معاه قايمة الأوردرات الموقوفة وسبب كل واحد، و`DUPLICATES_FOUND` جاي
+    //    معاه سجل التصدير السابق. رمي الرسالة لوحدها كان بيرمي ده كله ويخلي
+    //    الموظف يشوف «فشل» من غير ما يعرف يصلّح إيه.
+    const err = new Error(data.error || `HTTP ${resp.status}`);
+    err.status = resp.status;
+    err.data = data;
+    throw err;
+  }
   return data;
 }
-// `upload` بيتنده بـ `timeoutMs: 0` — شوف التعليق فوق `apiRequest`.
-const NO_TIMEOUT_ACTIONS = new Set(['upload']);
+// 🔴 نداءات **الرفع** مستثناة من المهلة عن قصد: قطع النداء من عندنا مابيوقّفش
+//    الـ Worker — الشحنات بتبقى اتعملت بفلوس والصفوف بتتعرض «فشل»، فالموظف
+//    يعيد الرفع ويطلّع شحنة تانية لكل أوردر. المهلة للقراءة بس.
+const NO_TIMEOUT_ACTIONS = new Set(['upload', 'upload_re', 'confirm_upload']);
 
 async function apiPost(action, body = {}) {
   if (!isConfigured()) { openSettings(); throw new Error('الإعدادات غير مكتملة'); }
@@ -2216,15 +2404,31 @@ const ADDR_MODE_ITEMS = [
 ];
 // مصدر واحد لتسمية شكل العنوان: الفلتر والعمود بيقروا منه الاتنين
 const ADDR_MODE_LABEL = Object.fromEntries(ADDR_MODE_ITEMS.map(it => [it.value, it.label]));
+// 🔴 القيم دي لازم تطابق اللي الـ Worker بيكتبه **حرفيًا** — قيمة مكتوبة غلط
+//    هنا بتدّي فلتر بيرجّع صفر صف من غير أي خطأ. التلاتة الأولانية بتاعة الشحن
+//    العادي، والباقي بتاع الاسترجاع/الاستبدال (بيتكتبوا تحت `tool` تانية،
+//    والـ Worker بيقرا الاتنين — MERGE-BRIEF §٥).
 const LOG_TYPE_ITEMS = [
-  { value: 'uploaded',             label: 'اترفع' },
-  { value: 'upload_failed',        label: 'فشل الرفع' },
-  { value: 'shopify_write_failed', label: 'فشل الكتابة على شوبيفاي' },
-  { value: 'skipped',              label: 'اتخطّى' },
+  { value: 'uploaded',                label: '🚚 اترفع (شحن)' },
+  { value: 'upload_failed',           label: '🚚 فشل الرفع (شحن)' },
+  { value: 'shopify_write_failed',    label: '🚚 فشل الكتابة على شوبيفاي (شحن)' },
+  { value: 'skipped',                 label: '⏭️ اتخطّى' },
+  { value: 'upload_re_return',        label: '↩️ اترفع (استرجاع)' },
+  { value: 'upload_re_exchange',      label: '🔄 اترفع (استبدال)' },
+  { value: 're_upload_failed',        label: '↩️ فشل الرفع (استرجاع/استبدال)' },
+  { value: 're_shopify_write_failed', label: '↩️ فشل الكتابة على شوبيفاي (استرجاع/استبدال)' },
+  { value: 're_cancelled',            label: '✕ إلغاء شحنة' },
+  { value: 'cycle_block',             label: '⛔ اتمنع بسبب الدورات' },
+  { value: 'scan',                    label: '🔍 فحص' },
+  { value: 'export_return',           label: '📄 تصدير إكسيل (استرجاع)' },
+  { value: 'export_exchange',         label: '📄 تصدير إكسيل (استبدال)' },
+  { value: 'confirm_return',          label: '✅ تأكيد وتحديث حالة (استرجاع)' },
+  { value: 'confirm_exchange',        label: '✅ تأكيد وتحديث حالة (استبدال)' },
 ];
 
 const msState = {
-  s1:       { owner: 'main', items: [{ value: 'Confirmed', label: 'Confirmed' }, { value: 'Confirmed + Edit', label: 'Confirmed + Edit' }], selected: new Set(), search: '', mode: 'list' },
+  // عناصر فلتر الحالة بتتبدّل مع الوضع (`switchJob`) — S1 في الشحن، S2 في R/E
+  s1:       { owner: 'main', items: JOBS.s1.statusItems, selected: new Set(), search: '', mode: 'list' },
   province: { owner: 'main', items: [], selected: new Set(), search: '', mode: 'list' },
   upState:  { owner: 'main', items: UP_STATE_ITEMS, selected: new Set(), search: '', mode: 'list' },
   addrMode: { owner: 'main', items: ADDR_MODE_ITEMS, selected: new Set(), search: '', mode: 'list' },
@@ -2584,6 +2788,10 @@ const sortConfig = {
   addrMode: { type: 'string', get: r => ADDR_MODE_LABEL[rowAddrMode(r)] || rowAddrMode(r) },
   upLabel: { type: 'string', get: r => rowUpLabel(r) },
   date: { type: 'date', get: r => r.createdAt },
+  // أعمدة R/E — المفاتيح دي لازم تطابق `sort` في `tableColumns()` حرفيًا،
+  // وإلا العمود يبان قابل للترتيب والضغط عليه مايعملش حاجة.
+  cycle: { type: 'string', get: r => r.cycleName || '' },
+  cod:   { type: 'number', get: r => Number(r.cod || 0) },
 };
 let sortState = { key: null, dir: null };
 function toggleSort(key) {
@@ -2649,7 +2857,7 @@ function applyFilters() {
   const filtered = allRows.filter(r => {
     if (q && !([r.orderNumber, r.customer, r.phone, r.addressCity, r.address1]
       .join(' ').toLowerCase().includes(q))) return false;
-    if (msState.s1.selected.size       && !msState.s1.selected.has(r.s1)) return false;
+    if (msState.s1.selected.size       && !msState.s1.selected.has(r[job().statusField])) return false;
     if (msState.province.selected.size && !msState.province.selected.has(r.province || '—')) return false;
     if (msState.upState.selected.size  && !msState.upState.selected.has(rowUpState(r))) return false;
     if (msState.addrMode.selected.size && !msState.addrMode.selected.has(rowAddrMode(r))) return false;
@@ -2726,44 +2934,133 @@ function addrModeCell(r) {
   return `<span class="badge ${cls}" title="${esc(addrModeInfo(r).hint)}">${esc(ADDR_MODE_LABEL[mode] || mode)}</span>`;
 }
 
+// ─── §TOOL-JS::columns ───
+// 🔴 مصدر **واحد** للأعمدة: الترويسة والجسم والـ colspan بتاع الصف الفاضي كلهم
+//    بيتبنوا منه. قبل الدمج كانت الترويسة مكتوبة في الـ HTML و`colspan="11"`
+//    مكتوب رقم — وده كان بيمشي وقت جدول واحد بس. بتلات أوضاع بأعمدة مختلفة، أي
+//    عمود يتضاف في ناحية من غير التانية بيزحزح الجدول كله من غير أي رسالة.
+function tableColumns() {
+  const re = isRE();
+  const cols = [
+    { key: 'cb',          head: `<input type="checkbox" class="row-cb" id="selectAllRows" onclick="toggleSelectAllRows(this.checked)">` },
+    { key: 'orderNumber', label: 'رقم الأوردر', sort: 'orderNumber', cell: r => orderLink(r.orderNumber, r.orderId) },
+    { key: 'date',        label: 'التاريخ', sort: 'date', cls: 'col-num', cell: r => formatDate(r.createdAt) },
+    { key: 'customer',    label: 'العميل', sort: 'customer', cls: 'cell-wrap cell-name',
+      cell: r => `${esc(r.customer || '—')}${!r.uploadable ? `<span class="problem-text">${esc((r.problems || []).join(' · '))}</span>` : ''}` },
+    { key: 'address',     label: 'العنوان كامل', sort: 'address', cls: 'cell-wrap cell-addr',
+      cell: r => `<span class="cell-clamp">${esc(fullAddressText(r) || '—')}</span>`,
+      attrs: r => `title="${esc(fullAddressText(r) || '—')}"` },
+    { key: 'province',    label: 'المحافظة (شوبيفاي)', sort: 'province', cell: r => esc(r.province || '—') },
+    { key: 'cityName',    label: 'مدينة بوسطة', sort: 'cityName', cell: cityCell },
+    { key: 'district',    label: 'المنطقة', cell: districtCell },
+    { key: 'addrMode',    label: 'نوع المطابقة', sort: 'addrMode', cell: addrModeCell },
+  ];
+
+  if (re) {
+    // الدورة المفتوحة — نص مفتاح كل حاجة في R/E. الصف الموقوف بسبب الدورة
+    // بيقول السبب هنا، مش في tooltip على عمود تاني.
+    cols.push({ key: 'cycle', label: 'الدورة المفتوحة', sort: 'cycle', cell: cycleCell });
+    // القطع الراجعة/الخارجة — الموظف بيراجع الوصف اللي المندوب هيقراه
+    cols.push({ key: 'items', label: 'القطع', cls: 'cell-wrap', cell: itemsCell });
+    // 🔴 المبلغ بإشارته. «استرداد» بالأحمر لأن السالب معناه **بوسطة بتدفع
+    //    للعميل عند الباب** — لو ده باين غلط، الغلط بيتصرف فلوس.
+    cols.push({ key: 'cod', label: 'المبلغ', sort: 'cod', cls: 'col-num', cell: codCell });
+  } else {
+    cols.push({ key: 's1', label: 'حالة S1', sort: 's1',
+      cell: r => r.s1 === 'Confirmed + Edit'
+        ? `<span class="badge badge-warn">${esc(r.s1)}</span>`
+        : `<span class="badge badge-info">${esc(r.s1 || '—')}</span>` });
+  }
+
+  cols.push({ key: 'upLabel', label: 'حالة الرفع', sort: 'upLabel', cell: upCell });
+  return cols;
+}
+
+function renderTableHead() {
+  const tr = document.getElementById('tblHead');
+  if (!tr) return;
+  tr.innerHTML = tableColumns().map(c => {
+    if (c.head) return `<th>${c.head}</th>`;
+    if (!c.sort) return `<th>${esc(c.label)}</th>`;
+    return `<th class="sortable-th" data-sort-key="${esc(c.sort)}" onclick="toggleSort('${jsq(c.sort)}')">`
+         + `${esc(c.label)}<span class="sort-icon" data-sort-key="${esc(c.sort)}"></span></th>`;
+  }).join('');
+  updateSortHeaderUI();
+}
+
+// ─── خلايا خاصة بالاسترجاع/الاستبدال ───
+function cycleCell(r) {
+  const info = r.cycleInfo || {};
+  if (info.blocked) {
+    const b = info.blockReason || {};
+    return `<span class="cycle-badge blocked" title="${esc(b.action || '')}">⛔ ${esc(b.code || 'موقوف')}</span>`;
+  }
+  const warn = (info.warnings || [])[0];
+  const cls = warn ? 'cycle-badge warn' : 'cycle-badge';
+  const title = warn ? `${warn.code}: ${warn.action}` : 'الدورة المفتوحة الوحيدة — كل أرقام الصف دي متحسبة منها';
+  return `<span class="${cls}" title="${esc(title)}">${esc(r.cycleName || '—')}${warn ? ' ⚠' : ''}</span>`;
+}
+
+function itemsCell(r) {
+  // الاستبدال: اللي **خارج** هو اللي المندوب شايله. الاسترجاع: مفيش حاجة خارجة.
+  const out = r.outgoingDescription;
+  const back = r.returnDescription;
+  const recovered = r.outgoingSource === 'order_unfulfilled';
+  const parts = [];
+  if (currentJobKey === 'exchange') {
+    parts.push(`<div><b>خارج:</b> ${esc(out || '—')}${recovered ? ' <span title="القطع اتقروا من سطور الأوردر مش من الدورة — اتعدّلت بالإيد. راجع الوصف.">⚠</span>' : ''}</div>`);
+  }
+  parts.push(`<div><b>راجع:</b> ${esc(back || '—')}</div>`);
+  return `<div class="items-cell">${parts.join('')}</div>`;
+}
+
+function codCell(r) {
+  const v = Number(r.cod || 0);
+  if (v < 0) {
+    const clip = r.codClipped
+      ? ` <span title="${esc(`مستحق ${fmtNum(Math.abs(r.codRaw))} — بوسطة بترجّع ٢٠٠٠ كحد أقصى، والباقي ${fmtNum(r.codRemainder)} يتسوّى مكتبيًا`)}">✂</span>`
+      : '';
+    return `<span class="cod-refund" title="بوسطة هتدفع للعميل عند الباب">↩ استرداد ${fmtNum(Math.abs(v))}${clip}</span>`;
+  }
+  if (v > 0) return `<span class="cod-collect" title="بوسطة هتحصّل من العميل">${fmtNum(v)}</span>`;
+  return '<span class="cod-collect">0</span>';
+}
+
+function upCell(r) {
+  if (!r.uploadable) return `<span class="badge badge-danger">⛔ موقوف</span>`;
+  if (r.alreadyUploaded) {
+    return `<span class="badge badge-warn" title="${esc(`عليه ${job().tag} أو رقم تتبع في custom.${job().trackingKey}`)}">`
+         + `🔁 مرفوع${r.previousTracking ? ` · ${esc(r.previousTracking)}` : ''}</span>`;
+  }
+  return `<span class="badge badge-success">🟢 جاهز</span>`;
+}
+
 function renderTable(rows) {
+  const cols = tableColumns();
   const body = document.getElementById('tblBody');
   if (!rows.length) {
-    body.innerHTML = `<tr class="empty-row"><td colspan="11">لا توجد أوردرات مطابقة</td></tr>`;
-    document.getElementById('selectAllRows').checked = false;
+    body.innerHTML = `<tr class="empty-row"><td colspan="${cols.length}">لا توجد أوردرات مطابقة</td></tr>`;
+    const sa = document.getElementById('selectAllRows');
+    if (sa) sa.checked = false;
     return;
   }
   body.innerHTML = rows.map(r => {
     const blocked = !r.uploadable;
-    const upBadge = blocked
-      ? `<span class="badge badge-danger">⛔ موقوف</span>`
-      : r.alreadyUploaded
-        ? `<span class="badge badge-warn">🔁 مرفوع${r.previousTracking ? ` · ${esc(r.previousTracking)}` : ''}</span>`
-        : `<span class="badge badge-success">🟢 جاهز</span>`;
-    const s1Badge = r.s1 === 'Confirmed + Edit'
-      ? `<span class="badge badge-warn">${esc(r.s1)}</span>`
-      : `<span class="badge badge-info">${esc(r.s1 || '—')}</span>`;
-    return `
-    <tr class="${blocked ? 'row-blocked' : ''}">
-      <td><input type="checkbox" class="row-cb" data-id="${esc(r.orderId)}" ${selected.has(r.orderId) ? 'checked' : ''}
+    const cells = cols.map(c => {
+      if (c.key === 'cb') {
+        return `<td><input type="checkbox" class="row-cb" data-id="${esc(r.orderId)}" ${selected.has(r.orderId) ? 'checked' : ''}
                  ${rowNeedsCityDecision(r) ? 'data-doubt="1" title="مستثنى من تحديد الكل — المدينة محتاجة مراجعة. تقدر تحدده بإيدك."' : ''}
-                 ${blocked ? 'disabled' : ''} onclick="onRowCheck('${jsq(r.orderId)}', this.checked)"></td>
-      <td>${orderLink(r.orderNumber, r.orderId)}</td>
-      <td class="col-num">${formatDate(r.createdAt)}</td>
-      <td class="cell-wrap cell-name">${esc(r.customer || '—')}
-          ${blocked ? `<span class="problem-text">${esc(r.problems.join(' · '))}</span>` : ''}</td>
-      <td class="cell-wrap cell-addr" title="${esc(fullAddressText(r) || '—')}"><span class="cell-clamp">${esc(fullAddressText(r) || '—')}</span></td>
-      <td>${esc(r.province || '—')}</td>
-      <td>${cityCell(r)}</td>
-      <td>${districtCell(r)}</td>
-      <td>${addrModeCell(r)}</td>
-      <td>${s1Badge}</td>
-      <td>${upBadge}</td>
-    </tr>`;
+                 ${blocked ? 'disabled' : ''} onclick="onRowCheck('${jsq(r.orderId)}', this.checked)"></td>`;
+      }
+      const cls   = c.cls ? ` class="${c.cls}"` : '';
+      const attrs = c.attrs ? ' ' + c.attrs(r) : '';
+      return `<td${cls}${attrs}>${c.cell(r)}</td>`;
+    }).join('');
+    return `<tr class="${blocked ? 'row-blocked' : ''}">${cells}</tr>`;
   }).join('');
   const selectableIds = rows.filter(isAutoSelectable).map(r => r.orderId);
-  document.getElementById('selectAllRows').checked =
-    selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
+  const sa = document.getElementById('selectAllRows');
+  if (sa) sa.checked = selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
 }
 
 function onRowCheck(id, checked) {
@@ -2812,7 +3109,9 @@ function askUploadAllVisible() {
   document.getElementById('bulkAllMsg').className = 'dp-state' + (doubt || dups ? ' doubt' : '');
   document.getElementById('bulkAllMsg').innerHTML =
     `هيترفع <b>${fmtNum(rows.length)}</b> أوردر — كل المعروض حسب الفلتر الحالي. ` +
-    `دي <b>شحنات حقيقية على بوسطة</b>.` +
+    // 🔴 نوع الشحنة مكتوب في نص التأكيد نفسه. الأداة بقت تلات أوضاع، والموظف
+    //    لازم يشوف إنه بيعمل «استرجاع» مش «شحن» في اللحظة دي بالذات.
+    `دي <b>شحنات ${esc(job().label)} حقيقية على بوسطة (type ${job().bostaType})</b>.` +
     (doubt ? `<br>🟠 <b>${fmtNum(doubt)}</b> صف «المدينة مشكوك فيها» <b>مستثنى</b> — راجعه وحدده بإيدك.` : '') +
     (dups  ? `<br>🔁 <b>${fmtNum(dups)}</b> أوردر مرفوع قبل كده — هيتسألك عليه تأكيد تاني.` : '');
   document.getElementById('bulkAllOverlay').classList.add('open');
@@ -2825,41 +3124,74 @@ function confirmUploadAllVisible() {
   startUpload();
 }
 
+// ─── §TOOL-JS::jobSwitch ───
+// 🔴 تبديل الوضع بيغيّر **نوع الشحنة اللي هتتعمل بفلوس**. عشان كده بيمسح
+//    التحديد والتعديلات اليدوية بالكامل قبل ما يحمّل: تعديل منطقة اتعمل على
+//    أوردر شحن عادي مالوش أي معنى على صف استرجاع لنفس الأوردر، وسيبانه كان
+//    بيخلي الصف يترفع على عنوان الموظف ما اختارهوش للنوع ده.
+function renderJobBar() {
+  const btns = document.getElementById('jobBtns');
+  btns.innerHTML = Object.values(JOBS).map(j => {
+    const on = j.key === currentJobKey;
+    return `<button class="job-btn ${on ? 'active' : ''} ${j.key !== 's1' ? 're' : ''}"
+                    id="jobBtn-${esc(j.key)}" ${uploadRunning ? 'disabled' : ''}
+                    onclick="switchJob('${jsq(j.key)}')">${j.icon} ${esc(j.label)}</button>`;
+  }).join('');
+  document.getElementById('jobHint').innerHTML = job().hint;
+  // زرار تصدير ملف بوسطة بيبان في أوضاع R/E بس — الشحن العادي مالوش مسار إكسيل
+  const ex = document.getElementById('bostaExcelBtn');
+  if (ex) ex.style.display = job().excel ? '' : 'none';
+}
+
+async function switchJob(key) {
+  if (uploadRunning) { showToast('في نص رفع شغّال — استنى لحد ما يخلص', 'warning'); return; }
+  if (!JOBS[key] || key === currentJobKey) return;
+  currentJobKey = key;
+
+  // مسح كامل — مفيش حاجة من الوضع اللي فات بتعدّي للجديد
+  allRows = []; visibleRows = []; selected.clear(); districtOverride = {};
+  lastResults = []; hideResults();
+  excelState = { exported: false, orders: [], allowRepeat: false };
+  sortState = { key: null, dir: null };
+  msState.s1.selected.clear();
+  msState.s1.items = job().statusItems;
+  msState.province.selected.clear(); msState.province.items = [];
+  msState.upState.selected.clear();
+  msState.addrMode.selected.clear();
+  document.getElementById('msBtnLabel-s1').textContent = 'الكل';
+  const lblEl = document.querySelector('#msWrap-s1')?.closest('.flt-g')?.querySelector('.flt-label');
+  if (lblEl) lblEl.textContent = job().statusLabel;
+  filterLabels.s1 = job().statusLabel;
+
+  renderJobBar();
+  renderTableHead();
+  msRenderList('s1');
+  renderChips();
+  await loadOrders(false);
+}
+
 // ─── §TOOL-JS::load ───
+// وضع واحد لكل نداء: `get_orders` للشحن العادي و`fetch_candidates` للاسترجاع
+// والاستبدال. 🔴 **مش استعلام واحد مدموج** — دول مكنتين حالة مختلفتين وفلترين
+// مختلفين، والدمج كان هيخلي فلتر واحد غلط يفضّي الشاشتين مع بعض.
 async function loadOrders(force) {
   const banner = document.getElementById('loadErrorBanner');
   banner.style.display = 'none';
+  renderTableHead();
   document.getElementById('tblBody').innerHTML =
-    `<tr class="empty-row"><td colspan="11"><span class="loading-spinner"></span></td></tr>`;
+    `<tr class="empty-row"><td colspan="${tableColumns().length}"><span class="loading-spinner"></span></td></tr>`;
   try {
-    const d = await apiGet('get_orders', force ? { refresh: '1' } : {});
+    const j = job();
+    const d = isRE()
+      ? await apiPost(j.listAction, { jobType: j.key, employee: currentEmployee?.username || null })
+      : await apiGet(j.listAction, force ? { refresh: '1' } : {});
     allRows = d.rows || [];
     selected.clear();
     districtOverride = {};
+    excelState = { exported: false, orders: [], allowRepeat: false };
 
-    // حارس فلتر الحالة — بيمسك العطل يوم ما يحصل، مش وقت اختبار يدوي مرة واحدة
-    const g = d.filterGuard || {};
-    const gb = document.getElementById('guardBanner');
-    if (g.checked && g.consistent === false) {
-      gb.style.display = '';
-      gb.innerHTML = `🔴 <b>فلتر الحالة مش متسق — بلّغ فورًا.</b> العدّ المدمج ` +
-        `<b>${fmtNum(g.combined)}</b> بينما <code>Confirmed</code> = ${fmtNum(g.confirmed)} و` +
-        `<code>Confirmed + Edit</code> = ${fmtNum(g.confirmedEdit)} (المجموع ${fmtNum(g.confirmed + g.confirmedEdit)}). ` +
-        `الأداة شغّالة على الاستعلام المدمج، بس ممكن يكون فيه أوردرات مش ظاهرة.`;
-    } else if (!g.checked) {
-      gb.style.display = '';
-      gb.innerHTML = `⚠️ حارس فلتر الحالة ما اشتغلش (${esc(g.reason || 'سبب غير معروف')}) — ` +
-                     `مش خطأ في الرفع، بس التحقق من اتساق الفلتر مش متاح دلوقتي.`;
-    } else { gb.style.display = 'none'; }
-
-    const catWarn = allRows.find(r => r.catalogWarning)?.catalogWarning;
-    const cb = document.getElementById('catalogBanner');
-    const notes = [];
-    if (catWarn) notes.push(`${catWarn} — كل الأوردرات هترفع على مستوى المحافظة.`);
-    // الوصول لسقف الصفحات معناه القايمة **ناقصة** — لازم يبان، مش يعدّي كأنها كاملة
-    if (d.truncated) notes.push(`القايمة اتقصت عند سقف الصفحات (${fmtNum(d.pages)} صفحة) — فيه أوردرات مؤهَّلة مش ظاهرة. بلّغ.`);
-    if (notes.length) { cb.style.display = ''; cb.textContent = `⚠️ ${notes.join(' · ')}`; }
-    else cb.style.display = 'none';
+    renderGuardBanner(d);
+    renderCatalogBanner(d);
 
     // قايمة المحافظات في الفلتر بتتبني من البيانات نفسها
     const provinces = [...new Set(allRows.map(r => r.province || '—'))].sort();
@@ -2875,6 +3207,48 @@ async function loadOrders(force) {
     banner.textContent = `تعذّر تحميل الأوردرات: ${e.message}`;
     showToast(e.message, 'error', 7000);
   }
+}
+
+// حارس فلتر الحالة — بيمسك العطل يوم ما يحصل، مش وقت اختبار يدوي مرة واحدة.
+// موجود في وضع الشحن بس: فلتر S2 قيمة واحدة، فمفيش «مجموع الاتنين = المدمج»
+// يتفحص أصلًا (`Confirmed + Edit` هي اللي بتخلق السؤال ده).
+function renderGuardBanner(d) {
+  const gb = document.getElementById('guardBanner');
+  if (isRE()) { gb.style.display = 'none'; return; }
+  const g = d.filterGuard || {};
+  if (g.checked && g.consistent === false) {
+    gb.style.display = '';
+    gb.innerHTML = `🔴 <b>فلتر الحالة مش متسق — بلّغ فورًا.</b> العدّ المدمج ` +
+      `<b>${fmtNum(g.combined)}</b> بينما <code>Confirmed</code> = ${fmtNum(g.confirmed)} و` +
+      `<code>Confirmed + Edit</code> = ${fmtNum(g.confirmedEdit)} (المجموع ${fmtNum(g.confirmed + g.confirmedEdit)}). ` +
+      `الأداة شغّالة على الاستعلام المدمج، بس ممكن يكون فيه أوردرات مش ظاهرة.`;
+  } else if (!g.checked) {
+    gb.style.display = '';
+    gb.innerHTML = `⚠️ حارس فلتر الحالة ما اشتغلش (${esc(g.reason || 'سبب غير معروف')}) — ` +
+                   `مش خطأ في الرفع، بس التحقق من اتساق الفلتر مش متاح دلوقتي.`;
+  } else { gb.style.display = 'none'; }
+}
+
+function renderCatalogBanner(d) {
+  const cb = document.getElementById('catalogBanner');
+  const notes = [];
+  // 🔴 بوسطة مش شغّالة **مايوقفش** مسار الإكسيل. الرسالة بتقول ده صراحةً، وإلا
+  //    الموظف بيفتكر إن الأداة كلها واقعة.
+  if (isRE() && d.catalogLoaded === false) {
+    notes.push(`كتالوج بوسطة ما اتحمّلش (${esc(d.catalogError || 'سبب غير معروف')}) — `
+             + `الرفع المباشر مقفول، وتصدير ملف بوسطة لسه شغّال.`);
+  }
+  const catWarn = allRows.find(r => r.catalogWarning)?.catalogWarning;
+  if (catWarn) notes.push(`${catWarn} — كل الأوردرات هترفع على مستوى المحافظة.`);
+  // الوصول لسقف الصفحات معناه القايمة **ناقصة** — لازم يبان، مش يعدّي كأنها كاملة
+  if (d.truncated) notes.push(`القايمة اتقصت عند سقف الصفحات (${fmtNum(d.pages)} صفحة) — فيه أوردرات مؤهَّلة مش ظاهرة. بلّغ.`);
+  const pi = d.pageInfo || {};
+  if (pi.detailsFallbackPossible) {
+    notes.push('شوبيفاي رفضت جزء من دفعات التفاصيل بسبب تكلفة الاستعلام واتقسمت — لو العدد باين ناقص، اعمل تحديث.');
+  }
+  if (pi.blockedByCycles) notes.push(`${fmtNum(pi.blockedByCycles)} أوردر موقوف بسبب حالة الدورات — الصفوف ظاهرة ومعاها السبب.`);
+  if (notes.length) { cb.style.display = ''; cb.innerHTML = `⚠️ ${notes.join(' · ')}`; }
+  else cb.style.display = 'none';
 }
 
 // ─── §TOOL-JS::district ───
@@ -3285,9 +3659,11 @@ async function runUpload(rows, allowDuplicate) {
   btn.disabled = true;
   document.getElementById('bulkAllBtn').disabled = true;
   document.getElementById('clearSelBtn').disabled = true;
+  renderJobBar();          // الأوضاع بتتقفل أثناء الرفع
   lastResults = [];
   showResults();
 
+  const j = job();
   const chunks = [];
   for (let i = 0; i < rows.length; i += UPLOAD_CHUNK) chunks.push(rows.slice(i, i + UPLOAD_CHUNK));
 
@@ -3296,23 +3672,12 @@ async function runUpload(rows, allowDuplicate) {
     for (const chunk of chunks) {
       document.getElementById('bulkSelLbl').textContent = '⏳ جاري الرفع...';
       document.getElementById('bulkSelCnt').textContent = `${fmtNum(done)}/${fmtNum(rows.length)}`;
-      const items = chunk.map(r => {
-        const ov = districtOverride[r.orderId] || {};
-        return {
-          orderId: r.orderId, orderNumber: r.orderNumber,
-          // 🔴 المدينة بتتبعت مع المنطقة دايمًا. الـ Worker بيتحقق إن المنطقة
-          //    تبع المدينة دي فعلًا وبيوقف الصف لو لأ — مش بيرجع للتلقائي بصمت.
-          cityId: ov.cityId || undefined,
-          districtId: ov.districtId || undefined,
-          forceProvince: ov.forceProvince || undefined,
-          allowDuplicate: allowDuplicate && r.alreadyUploaded ? true : undefined,
-        };
-      });
       let res;
       try {
-        res = await apiPost('upload', { employee: currentEmployee?.username || null, items });
+        res = isRE() ? await postUploadRE(chunk, j) : await postUploadS1(chunk, j, allowDuplicate);
       } catch (e) {
-        // الدفعة كلها ما وصلتش — الصفوف دي حالتها مش معروفة، مش "فشل رفع"
+        // 🔴 الدفعة كلها ما وصلتش — الصفوف دي حالتها **مش معروفة**، مش «فشل رفع».
+        //    الفرق ده هو اللي بيمنع الموظف يعيد الرفع ويطلّع شحنة تانية بفلوس.
         res = { results: chunk.map(r => ({
           orderId: r.orderId, orderNumber: r.orderNumber, status: 'error',
           actions: [], warnings: [], trackingNumber: null,
@@ -3322,9 +3687,13 @@ async function runUpload(rows, allowDuplicate) {
       lastResults.push(...(res.results || []));
       done += chunk.length;
       renderResults();
+      // حارس الدورات رفض الدفعة كلها قبل أي شحنة — مفيش فايدة من إكمال الباقي
+      // على نفس الحالة، والموظف لازم يشوف السبب مش «فشل» عام.
+      if (res.cycleBlocked) break;
     }
   } finally {
     uploadRunning = false;
+    renderJobBar();
     updateSelectionUI();
   }
 
@@ -3338,6 +3707,136 @@ async function runUpload(rows, allowDuplicate) {
   await loadOrders(false);
   if (currentTab === 'log') fetchLog();
   else logLoaded = false;   // السجل هيتحمّل من جديد أول ما التاب يتفتح
+}
+
+// الشحن العادي — `upload` بياخد `items` ومعاها `allowDuplicate` لكل صف
+async function postUploadS1(chunk, j, allowDuplicate) {
+  const items = chunk.map(r => {
+    const ov = districtOverride[r.orderId] || {};
+    return {
+      orderId: r.orderId, orderNumber: r.orderNumber,
+      // 🔴 المدينة بتتبعت مع المنطقة دايمًا. الـ Worker بيتحقق إن المنطقة
+      //    تبع المدينة دي فعلًا وبيوقف الصف لو لأ — مش بيرجع للتلقائي بصمت.
+      cityId: ov.cityId || undefined,
+      districtId: ov.districtId || undefined,
+      forceProvince: ov.forceProvince || undefined,
+      allowDuplicate: allowDuplicate && r.alreadyUploaded ? true : undefined,
+    };
+  });
+  return apiPost(j.uploadAction, { employee: currentEmployee?.username || null, items });
+}
+
+// الاسترجاع/الاستبدال — `upload_re` بياخد `orders` (IDs وأسماء بس) و`overrides`
+// مفهرسة بالـ GID. 🔴 الصفحة **مابتبعتش** عنوان ولا فلوس ولا محتوى دورة:
+//    الـ Worker بيعيد قراءتهم من شوبيفاي وقت الرفع، مش من شاشة ممكن تكون
+//    بقالها دقايق.
+async function postUploadRE(chunk, j) {
+  const overrides = {};
+  for (const r of chunk) {
+    const ov = districtOverride[r.orderId];
+    if (!ov) continue;
+    overrides[r.orderGid] = {
+      cityId: ov.cityId || undefined,
+      districtId: ov.districtId || undefined,
+      forceProvince: ov.forceProvince || undefined,
+    };
+  }
+  try {
+    return await apiPost(j.uploadAction, {
+      jobType: j.key,
+      employee: currentEmployee?.username || null,
+      orders: chunk.map(r => ({
+        id: r.orderGid, name: r.orderNumber, s2Status: r.s2,
+        courier: r.courier, cycleName: r.cycleName, cycleCreatedAt: r.cycleCreatedAt,
+      })),
+      overrides,
+    });
+  } catch (e) {
+    // 🔴 409 CYCLE_BLOCKED / ORDER_NOT_READABLE = **مفيش ولا شحنة اتعملت**.
+    //    ده رفض مقصود من الحارس، مش عطل — وعرضه كـ«فشل رفع» عام بيخلي الموظف
+    //    يعيد المحاولة على نفس الحالة الغلط بدل ما يروح يصلّحها في شوبيفاي.
+    const d = e.data || {};
+    if (d.code === 'CYCLE_BLOCKED' || d.code === 'ORDER_NOT_READABLE') {
+      openCycleBlockModal(d, j);
+      const byId = new Map((d.blocked || []).map(b => [b.id, b]));
+      return {
+        cycleBlocked: true,
+        results: chunk.map(r => {
+          const b = byId.get(r.orderGid);
+          return {
+            orderId: r.orderId, orderNumber: r.orderNumber, status: 'error',
+            actions: [], warnings: [], trackingNumber: null,
+            error: b ? `${b.code}: ${b.action}`
+                     : (d.missing || []).includes(r.orderNumber)
+                       ? 'شوبيفاي ما رجّعتش الأوردر ده وقت الرفع — الدفعة كلها اتوقفت قبل أي شحنة'
+                       : 'الدفعة اتوقفت كلها بسبب أوردرات تانية في نفس الدفعة — **مفيش ولا شحنة اتعملت**',
+          };
+        }),
+      };
+    }
+    throw e;
+  }
+}
+
+// ─── §TOOL-JS::cycleBlock ───
+function openCycleBlockModal(d, j) {
+  const rows = d.blocked || [];
+  const missing = d.missing || [];
+  const body = document.getElementById('cycleBlockBody');
+  const parts = [];
+  parts.push(`<p style="font-weight:700;line-height:1.9;">${esc(d.error || 'الرفع اتوقف')}</p>`);
+  // ⚠️ السطر ده مهم أكتر من القايمة نفسها: الموظف لازم يعرف إنه **مش** محتاج
+  //    يروح يلغي حاجة عند بوسطة.
+  parts.push(`<p style="color:var(--success);font-weight:800;">✅ مفيش ولا شحنة اتعملت — الرفع اتوقف قبل أي نداء لبوسطة.</p>`);
+  if (rows.length) {
+    parts.push('<div class="dup-list">' + rows.map(b =>
+      `<div style="padding:7px 0;border-bottom:1px solid var(--border);">
+         <b>${esc(b.name || '—')}</b> — <span class="badge badge-danger">${esc(b.code)}</span>
+         <div style="font-size:11.5px;color:var(--text-muted);margin-top:3px;">${esc(b.value || '')}</div>
+         <div style="font-size:12px;margin-top:3px;line-height:1.8;">${esc(b.action || '')}</div>
+       </div>`).join('') + '</div>');
+  }
+  if (missing.length) {
+    parts.push(`<p style="margin-top:8px;">شوبيفاي ما رجّعتش: <b>${esc(missing.join('، '))}</b></p>`);
+  }
+  if (d.logged === false) {
+    parts.push(`<p style="color:var(--amber);font-weight:700;margin-top:8px;">⚠️ الرفض اتسجّل في D1 بالفشل (${esc(d.logError || '')}) — الرفض نفسه قايم.</p>`);
+  }
+  body.innerHTML = parts.join('');
+  document.getElementById('cycleBlockTitle').textContent = `⛔ الرفع اتوقف — ${j.label}`;
+  document.getElementById('cycleBlockOverlay').classList.add('open');
+  playBeep('error');
+}
+function closeCycleBlockModal() { document.getElementById('cycleBlockOverlay').classList.remove('open'); }
+
+// ─── §TOOL-JS::cancelShipment ───
+// 🔴 الإلغاء **بيحرّر** `uniqueBusinessReference`، فإعادة الرفع بعد التصحيح
+//    بتعدّي. ده سبب وجود الزرار ده بدل ما الموظف يروح داشبورد بوسطة.
+//    ⚠️ ومابيرجّعش حالة S2 ولا بيمسح رقم التتبع من الميتافيلد — دول قرارات تانية.
+async function cancelShipment(trackingNumber, orderId, orderName, btn) {
+  if (!trackingNumber) { showToast('مفيش رقم تتبع', 'error'); return; }
+  const okGo = confirm(
+    `إلغاء شحنة ${trackingNumber} (${orderName}) عند بوسطة؟\n\n`
+    + '• الشحنة هتتلغي عند بوسطة نهائيًا.\n'
+    + '• حالة الأوردر على شوبيفاي مش هتترجع — غيّرها بإيدك لو محتاج.\n'
+    + '• رقم التتبع هيفضل مكتوب في الميتافيلد — امسحه لو الشحنة مش هتترفع تاني.\n'
+    + '• بعد الإلغاء تقدر ترفع الدورة دي تاني.',
+  );
+  if (!okGo) return;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ جاري الإلغاء...'; }
+  try {
+    await apiPost('cancel_re', {
+      jobType: currentJobKey, employee: currentEmployee?.username || null,
+      trackingNumber, orderId, orderName, reason: 'إلغاء من الأداة بعد الرفع',
+    });
+    showToast(`اتلغت شحنة ${trackingNumber} ✓ — تقدر ترفع تاني دلوقتي`, 'success', 7000);
+    if (btn) { btn.textContent = '✓ اتلغت'; }
+    const row = lastResults.find(r => r.trackingNumber === trackingNumber);
+    if (row) { row.cancelled = true; renderResults(); }
+  } catch (e) {
+    showToast(`فشل الإلغاء: ${e.message}`, 'error', 8000);
+    if (btn) { btn.disabled = false; btn.textContent = '✕ إلغاء الشحنة'; }
+  }
 }
 
 function summarize(rows) {
@@ -3373,7 +3872,10 @@ function renderResults() {
     `<span class="badge badge-muted">اتخطّى ${fmtNum(s.skipped)}</span>`;
   const body = document.getElementById('resBody');
   if (!lastResults.length) {
-    body.innerHTML = `<tr class="empty-row"><td colspan="8"><span class="loading-spinner"></span></td></tr>`;
+    // 🔴 العدد بيتقرا من الترويسة نفسها — كان مكتوب 8 بالإيد، وعمود «إجراء»
+    //    اللي اتضاف في v2.0.0 خلّاه 9 من غير ما حاجة تشتكي.
+    const nCols = document.querySelectorAll('#resBodyWrap thead th').length || 9;
+    body.innerHTML = `<tr class="empty-row"><td colspan="${nCols}"><span class="loading-spinner"></span></td></tr>`;
     return;
   }
   body.innerHTML = lastResults.map(r => {
@@ -3391,8 +3893,19 @@ function renderResults() {
       <td>${esc(r.districtSent || '—')}</td>
       <td class="act-list">${(r.actions || []).length ? (r.actions || []).map(a => `• ${esc(a)}`).join('<br>') : '—'}</td>
       <td class="act-list">${reason || '—'}${notLogged}</td>
+      <td>${resultAction(r)}</td>
     </tr>`;
   }).join('');
+}
+
+// 🔴 زرار الإلغاء بيبان **بس** لما تكون فيه شحنة فعلًا (رقم تتبع) في وضع R/E.
+//    ده أهم زرار في الصفحة على الصف الأصفر: «تم جزئيًا» معناها الشحنة موجودة
+//    وبتكلّف فلوس، والحل مش إعادة الرفع — الحل إلغاء وإعادة رفع مصححة، والإلغاء
+//    هو اللي بيحرّر `uniqueBusinessReference` عشان الرفع التاني يعدّي أصلًا.
+function resultAction(r) {
+  if (!isRE() || !r.trackingNumber) return '—';
+  if (r.cancelled) return '<span class="badge badge-muted">اتلغت</span>';
+  return `<button class="mini-btn doubt" onclick="cancelShipment('${jsq(r.trackingNumber)}','${jsq(r.orderId)}','${jsq(r.orderNumber)}',this)">✕ إلغاء الشحنة</button>`;
 }
 
 // ─── §TOOL-JS::export ───
@@ -3415,7 +3928,7 @@ function currentFilteredRows() {
   const q = searchTerm.trim().toLowerCase();
   return allRows.filter(r => {
     if (q && !([r.orderNumber, r.customer, r.phone, r.addressCity, r.address1].join(' ').toLowerCase().includes(q))) return false;
-    if (msState.s1.selected.size       && !msState.s1.selected.has(r.s1)) return false;
+    if (msState.s1.selected.size       && !msState.s1.selected.has(r[job().statusField])) return false;
     if (msState.province.selected.size && !msState.province.selected.has(r.province || '—')) return false;
     if (msState.upState.selected.size  && !msState.upState.selected.has(rowUpState(r))) return false;
     if (msState.addrMode.selected.size && !msState.addrMode.selected.has(rowAddrMode(r))) return false;
@@ -3441,12 +3954,18 @@ async function exportOrdersXLSX() {
     { header: 'التحصيل', key: 'cod', width: 12 },
     { header: 'قيمة البضاعة', key: 'goodsValue', width: 14 },
     { header: 'القطع', key: 'itemsCount', width: 8 },
-    { header: 'حالة S1', key: 's1', width: 16 },
+    { header: job().statusLabel, key: 'status', width: 22 },
     { header: 'حالة الرفع', key: 'upLabel', width: 16 },
     { header: 'رقم تتبع سابق', key: 'previousTracking', width: 16 },
     { header: 'التاريخ', key: 'date', width: 14 },
     { header: 'الوقت', key: 'time', width: 14 },
     { header: 'ملاحظات المنع', key: 'problems', width: 40 },
+    // أعمدة R/E — بتتحط في التلات أوضاع وبتفضل فاضية في الشحن العادي بدل ما
+    // يبقى فيه شكلين ملف مختلفين حسب الوضع.
+    { header: 'الدورة المفتوحة', key: 'cycleName', width: 16 },
+    { header: 'القطع الراجعة', key: 'returnDescription', width: 30 },
+    { header: 'القطع الخارجة', key: 'outgoingDescription', width: 30 },
+    { header: 'المرجع الفريد', key: 'uref', width: 18 },
   ], rows.map(r => {
     const ov = districtOverride[r.orderId];
     return {
@@ -3457,12 +3976,243 @@ async function exportOrdersXLSX() {
       addrMode: ADDR_MODE_LABEL[rowAddrMode(r)] || rowAddrMode(r),
       address: fullAddressText(r),
       cod: r.cod, goodsValue: r.goodsValue, itemsCount: r.itemsCount,
-      s1: r.s1, upLabel: rowUpLabel(r), previousTracking: r.previousTracking || '',
+      status: r[job().statusField] || '', upLabel: rowUpLabel(r), previousTracking: r.previousTracking || '',
       date: formatDateForExport(r.createdAt), time: formatTimeForExport(r.createdAt),
       problems: (r.problems || []).join(' · '),
+      cycleName: r.cycleName || '', returnDescription: r.returnDescription || '',
+      outgoingDescription: r.outgoingDescription || '', uref: r.uref || '',
     };
-  }), `bosta-orders-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }), `bosta-${currentJobKey}-${new Date().toISOString().slice(0, 10)}.xlsx`);
   showToast(`تم تصدير ${fmtNum(rows.length)} أوردر ✓`, 'success');
+}
+
+// ══════════════════════════════════════════════════════════════
+// §EXCEL — ملف بوسطة (الخطة البديلة، اتسابت بقرار أحمد)
+// ⚠️ المسار ده **مالوش رقم تتبع**: الشحنة بتتعمل من داشبورد بوسطة بالإيد، يعني
+//    مفيش `custom.bosta_tracking_number_s2` ولا تاج. ده الفرق الحقيقي بينه وبين
+//    الرفع المباشر، ومكتوب هنا عشان محدش يفتكرهم نفس الحاجة.
+// ══════════════════════════════════════════════════════════════
+let excelState = { exported: false, orders: [], allowRepeat: false };
+
+// ملاحظة الأوردر بتتلمّ في سطر واحد — حقل `Delivery Notes` في ملف بوسطة نص
+// واحد والمندوب بيقراه، وسطر جديد خام بيكسّر الصف.
+// ⚠️ والـ note ملاحظات **داخلية** لخدمة العملاء — الكلام ده بيوصل للمندوب.
+function flattenNote(note) {
+  const t = String(note ?? '').replace(/\s*\n+\s*/g, ' / ').replace(/\s{2,}/g, ' ').trim();
+  return t ? t.slice(0, 500) : null;
+}
+
+// صفوف التصدير = **المحدد**، ولو مفيش تحديد فالمعروض حسب الفلتر الحالي.
+// الصفوف الموقوفة بتتشال: صف بوسطة من غير دورة واضحة مش شحنة.
+function excelRows() {
+  const base = selected.size ? allRows.filter(r => selected.has(r.orderId)) : currentFilteredRows();
+  return base.filter(r => !(r.cycleInfo && r.cycleInfo.blocked));
+}
+
+function excelPayload(rows) {
+  return rows.map(r => ({
+    id: r.orderGid, name: r.orderNumber, s2Status: r.s2, courier: r.courier,
+    cycleName: r.cycleName, cycleCreatedAt: r.cycleCreatedAt,
+  }));
+}
+
+async function exportBostaExcel() {
+  if (!job().excel) return;
+  if (!currentEmployee) { showToast('سجّل الدخول الأول', 'error'); return; }
+  const rows = excelRows();
+  if (!rows.length) { showToast('مفيش صفوف صالحة للتصدير', 'warning'); return; }
+
+  const btn = document.getElementById('bostaExcelBtn');
+  btn.disabled = true; btn.textContent = '⏳ فحص التكرار...';
+  try {
+    const d = await apiPost('check_export_duplicates', { jobType: currentJobKey, orders: excelPayload(rows) });
+    if (Number(d.count || 0) > 0) {
+      openExportDupModal(d.duplicates || {}, rows);
+      return;
+    }
+    await performExcelExport(rows, false);
+  } catch (e) {
+    showToast(`فشل فحص التكرار: ${e.message}`, 'error', 8000);
+  } finally {
+    btn.disabled = false; btn.textContent = '📄 ملف بوسطة (Excel)';
+  }
+}
+
+let pendingExportDup = null;
+function openExportDupModal(duplicates, rows) {
+  pendingExportDup = rows;
+  document.getElementById('exportDupList').innerHTML = Object.values(duplicates).map(d =>
+    `<div style="padding:6px 0;border-bottom:1px solid var(--border);">
+       • <b>${esc(d.orderName)}</b>${d.cycleName ? ` · دورة ${esc(d.cycleName)}` : ''} —
+       اتصدّر ${fmtNum(d.exportCount)} مرة، آخرها ${esc(formatDateTime(d.lastExportAt))}
+     </div>`).join('') || '<div>—</div>';
+  document.getElementById('exportDupOverlay').classList.add('open');
+  playBeep('warn');
+}
+function closeExportDupModal() {
+  document.getElementById('exportDupOverlay').classList.remove('open');
+  pendingExportDup = null;
+}
+async function confirmExportRepeat() {
+  const rows = pendingExportDup;
+  closeExportDupModal();
+  if (rows && rows.length) await performExcelExport(rows, true);
+}
+
+async function performExcelExport(rows, allowRepeat) {
+  const btn = document.getElementById('bostaExcelBtn');
+  btn.disabled = true; btn.textContent = '⏳ جاري التجهيز...';
+  try {
+    const file = await buildBostaExcelFile(rows);
+    // 🔴 التسجيل **قبل** التنزيل: لو D1 رفض، الموظف مايمشيش بملف مش متسجّل —
+    //    وفحص التكرار الجاي كان هيقول «ما اتصدّرش قبل كده» على ملف اترفع فعلًا.
+    await apiPost('record_export', {
+      jobType: currentJobKey, employee: currentEmployee?.username || null,
+      orders: excelPayload(rows), allowRepeat,
+    });
+    downloadBlob(file.buf, file.filename);
+    excelState = { exported: true, orders: rows.slice(), allowRepeat: !!allowRepeat };
+    showToast(`اتصدّر ${fmtNum(rows.length)} أوردر ✓ — ارفع الملف على بوسطة وبعدين حدّث الحالة`, 'success', 8000);
+    // رفع الملف على بوسطة + نافذة تأكيد تحديث الحالة — من غير زرار وسيط
+    window.open('https://business.bosta.co/orders/upload/smart-upload', '_blank', 'noopener');
+    openStatusConfirmModal();
+    if (currentTab === 'log') fetchLog(); else logLoaded = false;
+  } catch (e) {
+    if (e.data?.code === 'DUPLICATES_FOUND') {
+      openExportDupModal(e.data.duplicates || {}, rows);
+    } else {
+      showToast(`فشل التصدير: ${e.message}`, 'error', 8000);
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = '📄 ملف بوسطة (Excel)';
+  }
+}
+
+function downloadBlob(buf, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([buf], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  }));
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  URL.revokeObjectURL(a.href);
+  a.remove();
+}
+
+// ─── §EXCEL::buildBostaExcelFile ───
+// ٢٠ عمود، من `Full Name` لحد `Pay With Bosta Credits?`. العمود U القديم
+// («Brand Name» بقيمة `Ecommoda` ثابتة) اتشال بطلب أحمد 02-09-2026.
+// 🔴 كل رقم هنا جاي من الصف اللي الـ Worker حسبه (الدورة المفتوحة الواحدة،
+//    القطع الخارجة، الـ cod المقصوص) — الصفحة **مابتحسبش** أي حاجة من جديد.
+//    قبل v5.2.0 كانت الصفحة بتفرد كل الدورات وتجمعهم، فدورة مقفولة من الشهر
+//    اللي فات كانت بتتشحن تاني في ملف النهارده (`#51656`).
+async function buildBostaExcelFile(rows) {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Sheet1');
+  ws.columns = [
+    { key: 'fullName' }, { key: 'phone' }, { key: 'city' }, { key: 'streetName' },
+    { key: 'cashAmount' }, { key: 'area' }, { key: 'landmark' }, { key: 'workAddress' },
+    { key: 'secondPhone' }, { key: 'flexship' }, { key: 'openPackage' }, { key: 'packageType' },
+    { key: 'itemCount' }, { key: 'description' }, { key: 'deliveryNotes' }, { key: 'orderRef' },
+    { key: 'returnItems' }, { key: 'returnDesc' }, { key: 'goodsValue' }, { key: 'bostaCredits' },
+  ];
+  ws.addRow([
+    'Full Name', 'Phone', 'City', 'Street Name', 'Cash Amount', 'Area', 'Landmark',
+    'Work address?', 'Second Phone', 'Apply Flexship\nFees?', 'Allow\nOpening Package?',
+    'Package Type', 'No. of Items', 'Package Description', 'Delivery Notes', 'Order Reference',
+    'Return #Items', 'Return Package\nDescription', 'Goods Value\nAmount', 'Pay With Bosta\nCredits?',
+  ]);
+
+  const isExchange = currentJobKey === 'exchange';
+  rows.forEach(r => {
+    // الـ cod جاي **مقصوص عند ‎-2000** من الـ Worker (حد بوسطة، errorCode 3008)،
+    // وبإشارته. صفر بيتساب فاضي زي ما الملف القديم كان بيعمل.
+    const cash = Number(r.cod || 0);
+    ws.addRow({
+      fullName:    r.customer || null,
+      phone:       r.phone || null,
+      city:        r.province || null,
+      streetName:  r.address1 || null,
+      cashAmount:  cash !== 0 ? cash : null,
+      area:        r.addressCity || null,
+      landmark:    r.address2 || null,
+      workAddress: null,
+      secondPhone: r.secondPhone || null,
+      flexship:    'Yes',
+      openPackage: 'Yes',
+      packageType: null,
+      // 🔴 «اللي خارج» بيتكتب على الاستبدال بس. على الاسترجاع مفيش حاجة خارجة —
+      //    العميل بيسلّم القطع — فالعمودين بيفضلوا فاضيين **بقرار**، مش بالصدفة.
+      itemCount:   isExchange && r.outgoingCount !== 1 ? (r.outgoingCount || null) : null,
+      description: isExchange ? (r.outgoingDescription || null) : null,
+      deliveryNotes: flattenNote(r.note),
+      orderRef:    r.orderNumber || null,
+      returnItems: r.returnCount > 1 ? r.returnCount : null,
+      returnDesc:  r.returnDescription || null,
+      goodsValue:  r.goodsValue > 0 ? r.goodsValue : null,
+      bostaCredits: null,
+    });
+  });
+
+  return { buf: await wb.xlsx.writeBuffer(), filename: 'Bosta_Export.xlsx' };
+}
+
+// ─── §EXCEL::statusConfirm ───
+function openStatusConfirmModal() {
+  const rows = excelState.orders || [];
+  if (!excelState.exported || !rows.length) { showToast('صدّر ملف بوسطة الأول', 'error'); return; }
+  const j = job();
+  document.getElementById('statusConfirmTitle').textContent = `✅ تحديث الحالة إلى ${j.nextStatus} — ${j.label}`;
+  document.getElementById('statusConfirmIntro').innerHTML =
+    `هتتحدّث حالة <b>${fmtNum(rows.length)}</b> أوردر من <code>${esc(j.statusItems[0].value)}</code> `
+    + `إلى <code>${esc(j.nextStatus)}</code>. ⚠️ اعملها <b>بعد</b> ما ترفع الملف على بوسطة فعلًا — `
+    + `الحالة دي بتقول للستاك كله إن الشحنة بقت عند بوسطة.`;
+  document.getElementById('chkInvoicesRow').style.display = currentJobKey === 'exchange' ? '' : 'none';
+  document.getElementById('chkBostaUploaded').checked = false;
+  document.getElementById('chkInvoicesSent').checked = false;
+  document.getElementById('statusConfirmList').innerHTML =
+    rows.map(r => `<div>• ${orderLink(r.orderNumber, r.orderId)}${r.cycleName ? ` · ${esc(r.cycleName)}` : ''}</div>`).join('');
+  updateStatusConfirmBtn();
+  document.getElementById('statusConfirmOverlay').classList.add('open');
+}
+function closeStatusConfirmModal() { document.getElementById('statusConfirmOverlay').classList.remove('open'); }
+function updateStatusConfirmBtn() {
+  const need = document.getElementById('chkBostaUploaded').checked
+    && (currentJobKey !== 'exchange' || document.getElementById('chkInvoicesSent').checked);
+  document.getElementById('statusConfirmBtn').disabled = !need;
+}
+async function submitStatusConfirm() {
+  const rows = excelState.orders || [];
+  if (!rows.length) return;
+  const btn = document.getElementById('statusConfirmBtn');
+  btn.disabled = true; btn.textContent = '⏳ جاري التحديث...';
+  try {
+    const d = await apiPost('confirm_upload', {
+      jobType: currentJobKey, employee: currentEmployee?.username || null,
+      orders: excelPayload(rows),
+      checklist: {
+        bostaUploaded: document.getElementById('chkBostaUploaded').checked,
+        invoicesSent:  document.getElementById('chkInvoicesSent').checked,
+      },
+    });
+    closeStatusConfirmModal();
+    showToast(`اتحدّثت ${fmtNum(d.count)} أوردر إلى ${esc(d.updatedTo)} ✓`, 'success', 7000);
+    excelState = { exported: false, orders: [], allowRepeat: false };
+    await loadOrders(false);
+    if (currentTab === 'log') fetchLog(); else logLoaded = false;
+  } catch (e) {
+    // 🔴 حارس الدورات بيرفض سيرفر-سايد هنا كمان — مودال الواجهة مش البوابة الوحيدة.
+    if (e.data?.code === 'CYCLE_BLOCKED') {
+      closeStatusConfirmModal();
+      openCycleBlockModal(e.data, job());
+    } else {
+      showToast(`فشل تحديث الحالة: ${e.message}`, 'error', 9000);
+    }
+  } finally {
+    btn.textContent = 'حدّث الحالة';
+    updateStatusConfirmBtn();
+  }
 }
 
 async function exportResultsXLSX() {
@@ -3730,6 +4480,8 @@ resetDateFilter('log');
 updateFilterIconState();
 updateLogFilterIconState();
 updateSelectionUI();
+renderJobBar();
+renderTableHead();
 renderTable([]);
 buildTabChipMenu();
 updateTabChip();
