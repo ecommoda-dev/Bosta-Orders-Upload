@@ -1,38 +1,54 @@
 // ══════════════════════════════════════════════════════════════
-// EcomModa — Bosta-Orders-Upload (v1.4.0)
+// EcomModa — Bosta-Orders-Upload (v2.0.0)
 // skills: worker-builder v3.3.0 · html-builder v7.1.0 · constants v2.5.0 ·
 //         bosta-api-helper v2.0.0 · shopify-graphql-helper v2.2.0 ·
 //         order-lifecycle v1.6.0 — 13-09-2026
 //
-// v1.4.0 (جولة `skills-sweep` — 13-09-2026):
-// الأداة كانت متحاذية عند بصمة 07/08-09، والمهارات اتحركت بعدها كتير. الجرد
-// طلّع أربع بنود 🔴 وتلاتة 🟡 على الأداة دي، وكلها اتقفلت هنا. البنود الجاية
-// من `bosta-api-helper` v2.0.0 اتراجعت يدويًا (تسعة بنود، كلها بتخص الأداة دي).
+// v2.0.0 — **الدمج**: الأداة بقت بترفع كل شحنات بوسطة، مش الشحن العادي بس.
+// `Bosta-Return-Exchange-Exporter` v6.0.0 اتنقلت هنا بالكامل (MERGE-BRIEF.md).
 //
-// - 🔴 `ORDER BY` كان مكتوب حرفيًا في `getLogs` — مفيش ترتيب server-side أصلًا،
-//   وده اللي كان بيخلي الواجهة ترتّب **الصفحة المحمّلة بس**. دلوقتي
-//   `orderByClause()` بقائمة أعمدة **مقفولة** (القيمة جاية من العميل وبتتلزق في
-//   نص SQL — ORDER BY مابيقبلش bind) ومعاها كاسر تعادل إلزامي: من غيره الصف
-//   الواحد ممكن يظهر في صفحتين أو مايظهرش خالص.
-// - 🔴 `parseInt` بلا حراسة على `limit`/`offset` — `parseInt('abc')` = NaN،
-//   والـ NaN بيعدّي `Math.min`/`Math.max` زي ما هو ويوصل لـ D1 كـ bind فيرجّع
-//   خطأ غامض. اتحلّت بـ `clampInt()`.
-// - 🟡 حارس `WORKER_SECRET` الغايب: من غيره القالب بينتج `"Bearer undefined"`
-//   وأي طلب بالهيدر ده **بيعدّي** — يعني السر الناقص بيشيل الحماية.
-// - 🟡 `read_all_orders` اتضافت لـ `diag`: غيابها بيرجّع **صفر نتيجة مش خطأ
-//   صلاحية** على أي أوردر أقدم من ٦٠ يوم.
-// - 🟡 التليفون بقى بيتطبّع **قبل الإرسال** (`wirePhone`) مش وقت المقارنة بس.
-//   المتجر فيه تلات أشكال، منها `+20 12 71043044` **بمسافات** (`#53849`) —
-//   والحقل الخام كان بيروح لبوسطة زي ما هو.
+// تلات أوضاع في Worker واحد:
+//   s1        → شحنة عادية   (type 10) — كانت الأداة دي
+//   return    → استرجاع CRP  (type 25) — كانت الأداة التانية
+//   exchange  → استبدال      (type 30) — كانت الأداة التانية
 //
-// ومعاها توثيق حقائق `bosta-api-helper` v2.0.0 اللي بتخص الأداة دي: الـ
-// `uniqueBusinessReference` بتاعها **محجوز ليها** (الفرادة على الحساب كله)،
-// و`goodsInfo.amount` عليه تأمين ١٪ تلقائي، و`Math.abs` على الـ `cod` صح
-// **هنا بس**، و500 بلا `errorCode` حالة حقيقية لازم تتعالج.
+// 🔴 أخطر أربع نقاط في الدمج — الأربعة دول السبب إن البلوكات فضلت **منفصلة**
+//    بدل ما تتدمج في دالة واحدة بـ if:
 //
-// بديل زرار "Send to Bosta" بتاع بلجن بوسطة على شوبيفاي.
-// بيعرض الأوردرات المؤهَّلة، بيرفعها جماعيًا على بوسطة بنداءات فردية،
-// وبيكتب النتيجة على شوبيفاي وفي D1.
+// ① `Math.abs` على الـ `cod`: صح في s1 (السالب = العميل دفع زيادة)، **كارثة**
+//    في R/E (السالب = بوسطة بتدفع للعميل عند الباب). الدالتين
+//    `buildDeliveryPayload` و`buildRePayload` ما بيشاركوش سطر حساب الفلوس، و
+//    `resolveCod` بتعيش في §RE-UPLOAD لوحدها. من ٤ أوردرات R/E مقيسة ٣ سالبين.
+// ② اتجاه العنوان بيتقلب: 10 و30 → `dropOffAddress` · 25 → `pickupAddress`.
+//    الغلط فيه بيرجّع **500 بلا `errorCode`**، مش 400 واضح.
+// ③ `uniqueBusinessReference` قاعدتين: s1 → `12345` · R/E → `#12345-R{n}`.
+//    الفرادة عند بوسطة على الحساب كله وعبر كل الأنواع — نفس القيمة = 400/11000.
+// ④ فلترين ومكنتين حالة — مش استعلام واحد مدموج. كل وضع ليه استعلامه.
+//
+// 🔴 التغييرات اللي طلبها أحمد مع الدمج (13-09-2026):
+// - `custom.bosta_tracking_number` **اتوقف**. بدله ميتافيلدين جداد اتعملوا على
+//   المتجر: `custom.bosta_tracking_number_s1` (الشحنة العادية) و
+//   `custom.bosta_tracking_number_s2` (الاسترجاع/الاستبدال). الاتنين
+//   `number_integer` وعليهم **Unique values only**. القديم لسه **بيتقرا** في
+//   حارس الرفع المكرر عشان الـ ٣٥٦ شحنة اللي اترفعت قبل كده — بس مابيتكتبش.
+//   ✅ وده بيقفل ق-٥ المؤجَّل: رقم تتبع الـ S2 بقى له ميتافيلد فعلًا.
+// - التاج بقى حسب النوع: `Bosta_Uploaded_S1` · `Bosta_Uploaded_S2`.
+// - 🔴 في R/E **مابنكتبش** `custom.courier = Bosta` — بنتحقق إنه **بالفعل**
+//   Bosta قبل الشحنة. شحنة استرجاع على أوردر كوريره حاجة تانية معناها إننا
+//   بنسحب من عند مندوب مش بتاعنا. الكتابة بتخص s1 لوحدها (هي اللي بتختار
+//   الكوريَر أصلًا).
+//
+// ⚠️ قيمة `tool` في D1 فضلت **مقسومة** (اختيار «أ» في MERGE-BRIEF §٥) — قرار
+//    أحمد: يتأجّل لحد ما التجربة تكتمل. s1 → `bosta_orders_upload` ·
+//    R/E → `bosta_exchange_export`. صفر هجرة، والـ ٥٦٦ صف التاريخية ما اتيتّمتش،
+//    وتاب السجل بيقرا **الاتنين** فالموظف بيشوف تاريخ متصل. تغييرها بعدين =
+//    سطر واحد + `ecommoda-tool-rename`.
+//
+// ⚠️ تصدير Excel **اتساب** (قرار أحمد، MERGE-BRIEF §٦ بند ٢) كخطة بديلة:
+//    عقد بوسطة يتغيّر · المفتاح مش متاح · أوردر الـ API رافضه.
+//
+// 🔴 مسار `upload_re` **ما اشتغلش حي ولا مرة** لحد 13-09 (صفر صف في D1).
+//    الدمج مايتحسبش تشغيل حي — أول شحنة استرجاع حقيقية تتعمل **مراقَبة**.
 //
 // العقد المرجعي الكامل: SPEC.md في نفس الريبو.
 // ══════════════════════════════════════════════════════════════
@@ -40,18 +56,42 @@
 // ══════════════════════════════════════════════════════════════
 // §CONSTANTS
 // ══════════════════════════════════════════════════════════════
-const TOOL_NAME      = 'bosta_orders_upload';   // ecommoda-constants §7 — لازم يتسجّل قبل أول writeLog
-const WORKER_VERSION = '1.4.0';
+// 🔴 قيمتين `tool` في Worker واحد — استثناء معلن، مش سهو. الأداة واحدة للموظف
+//    والسجل بيفضل بيفرّق بين **عمليتين مختلفتين بطبيعتهم** (مكنتين حالة
+//    مختلفتين، وفلترين مختلفين). القرار ده مؤقت لحد ما التجربة تكتمل
+//    (MERGE-BRIEF §٥، اختيار «أ») — تغييره سطر واحد + `ecommoda-tool-rename`.
+//    ⚠️ لازم يتسجّل كاستثناء في `ecommoda-constants` §7.
+const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العادي
+const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
+// تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
+const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
+const WORKER_VERSION = '2.0.0';
 const API_VERSION    = '2026-01';
+
+// ─── §CONSTANTS::jobs ───
+// الوضع هو اللي بيحدد: استعلام شوبيفاي · نوع شحنة بوسطة · اتجاه العنوان ·
+// معاملة الـ cod · شكل المرجع الفريد · الميتافيلد اللي بيتكتب · التاج · نوع
+// صف السجل. مفيش حاجة من دول بتتشارك بين s1 و R/E.
+const JOB_S1       = 's1';
+const JOB_RETURN   = 'return';
+const JOB_EXCHANGE = 'exchange';
+const RE_JOBS      = new Set([JOB_RETURN, JOB_EXCHANGE]);
+const ALL_JOBS     = new Set([JOB_S1, JOB_RETURN, JOB_EXCHANGE]);
 
 // ─── §CONSTANTS::bosta ───
 const BOSTA_BASE        = 'https://app.bosta.co/api/v2';
 const BOSTA_LOCATION_ID = 'GeZMkbD7o';                          // كلية البنات - مصر الجديدة
 const BOSTA_COUNTRY_ID  = '60e4482c7cb7d4bc4849c4d5';           // مصر
-const BOSTA_TYPE        = 10;                                   // Package Delivery (Send)
-const FLEX_AMOUNT       = 100;                                  // SPEC §٤.٢ — على كل الأوردرات
-const COD_MAX           = 30000;                                // موثّق حرفيًا في api.yaml
+// `ecommoda-constants` §3.2 — من SDK بوسطة نفسها. الفلترة على الكود مش النص.
+const BOSTA_TYPE_BY_JOB = { [JOB_S1]: 10, [JOB_RETURN]: 25, [JOB_EXCHANGE]: 30 };
+const FLEX_AMOUNT       = 100;                                  // SPEC §٤.٢ — على أوردرات s1 بس
 const ALLOW_OPEN_PKG    = true;                                 // قرار تشغيلي — EGP 7/شحنة، متتشالش
+// 🔴 حدّين **في اتجاهين متعاكسين**. `COD_MAX` موثّق في api.yaml؛
+//    `COD_REFUND_MIN` **مقيس حيًا**: ‎-2700 رجّع 400 · errorCode "3008" ·
+//    "The Refund COD amount should be less than or equal -2000 EGP"،
+//    **ومفيش شحنة اتعملت**.
+const COD_MAX           = 30000;
+const COD_REFUND_MIN    = -2000;
 
 // ─── §CONSTANTS::shopify ───
 // القيم الحرفية — فرق حرف واحد = صفر صف من غير أي خطأ (ecommoda-order-lifecycle)
@@ -59,9 +99,76 @@ const S1_CONFIRMED      = 'Confirmed';
 const S1_CONFIRMED_EDIT = 'Confirmed + Edit';
 const ZONE_VALUE        = 'Other_Regions';
 const START_DATE        = '2026-08-01';                         // بتوقيت المتجر (القاهرة)
-const UPLOAD_TAG        = 'Bosta_Uploaded_S1';
-const MF_COURIER        = { key: 'courier',               type: 'single_line_text_field' };
-const MF_TRACKING       = { key: 'bosta_tracking_number', type: 'number_integer' };  // 🔴 رقم مش نص
+// مكنة حالة S2 — منفصلة تمامًا عن S1 (`ecommoda-order-lifecycle` Rule 15)
+const S2_STATUS_BY_JOB  = { [JOB_RETURN]: 'Confirmed + RETURN', [JOB_EXCHANGE]: 'Confirmed + EXCHANGE' };
+const S2_NEXT_BY_JOB    = { [JOB_RETURN]: 'In-Return',          [JOB_EXCHANGE]: 'Ready' };
+const COURIER_VALUE     = 'Bosta';
+
+// 🔴 التاج بيتقسم بالنوع. تاج واحد للاتنين معناه إن حارس الرفع المكرر بتاع s1
+//    بيتلغي أول ما الأوردر يتعمل له استرجاع — والعكس.
+const UPLOAD_TAG_BY_JOB = {
+  [JOB_S1]:       'Bosta_Uploaded_S1',
+  [JOB_RETURN]:   'Bosta_Uploaded_S2',
+  [JOB_EXCHANGE]: 'Bosta_Uploaded_S2',
+};
+
+// 🔴 الميتافيلدات. النوع `number_integer` **مش نص** — `metafieldsSet` بيطلب
+//    تطابق النوع بالحرف مع التعريف الحي، واختلافه بيسقّط **النداء كله** بما
+//    فيه أي ميتافيلد تاني في نفس النداء. الأداة بتتحقق `/^\d+$/` قبل الكتابة.
+const MF_COURIER      = { key: 'courier',                  type: 'single_line_text_field' };
+const MF_TRACKING_S1  = { key: 'bosta_tracking_number_s1', type: 'number_integer' };
+const MF_TRACKING_S2  = { key: 'bosta_tracking_number_s2', type: 'number_integer' };
+const MF_TRACKING_BY_JOB = {
+  [JOB_S1]:       MF_TRACKING_S1,
+  [JOB_RETURN]:   MF_TRACKING_S2,
+  [JOB_EXCHANGE]: MF_TRACKING_S2,
+};
+// ⚠️ الميتافيلد القديم — **مابيتكتبش خلاص** (v2.0.0). لسه بيتقرا في حارس الرفع
+//    المكرر عشان الـ ٣٥٦ شحنة اللي اترفعت عليه قبل الدمج؛ بدونه كل أوردر قديم
+//    هيبان «مش مرفوع». مفيش migration — التاج `Bosta_Uploaded_S1` كان بيتكتب
+//    معاه من أول يوم فهو الحارس التاني.
+const MF_TRACKING_LEGACY = { key: 'bosta_tracking_number', type: 'number_integer' };
+const MF_S2_STATUS       = { key: 'status_2_r_e',     type: 'single_line_text_field' };
+const MF_PRINTING_S2     = { key: 'printing_time_s2', type: 'date_time' };
+
+// ─── §CONSTANTS::logTypes ───
+// ⚠️ `ecommoda-constants` §7 — القيم دي لازم تتسجّل هناك. `worker-builder`
+//    القاعدة ٧ بتقول التسجيل **قبل** أول `writeLog` مش بعده.
+// 🔴 الفصل بين «الرفع فشل» و«الكتابة الرجعية فشلت» مش تجميلي في أي نوع:
+//    الأولى = مفيش شحنة، فإعادة المحاولة آمنة. التانية = الشحنة **موجودة فعلًا
+//    عند بوسطة ومعاها رقم تتبع**، وإعادة الرفع بتشتري شحنة تانية بفلوس حقيقية.
+const LOG_TYPE_BY_JOB = {
+  [JOB_S1]:       'uploaded',
+  [JOB_RETURN]:   'upload_re_return',
+  [JOB_EXCHANGE]: 'upload_re_exchange',
+};
+const UPLOAD_FAILED_BY_JOB = {
+  [JOB_S1]:       'upload_failed',
+  [JOB_RETURN]:   're_upload_failed',
+  [JOB_EXCHANGE]: 're_upload_failed',
+};
+const WRITE_FAILED_BY_JOB = {
+  [JOB_S1]:       'shopify_write_failed',
+  [JOB_RETURN]:   're_shopify_write_failed',
+  [JOB_EXCHANGE]: 're_shopify_write_failed',
+};
+const CYCLE_BLOCK_TYPE = 'cycle_block';
+const CANCEL_TYPE      = 're_cancelled';
+const EXPORT_TYPES     = ['export_return', 'export_exchange'];
+
+// ─── §CONSTANTS::cycles ───
+// `ecommoda-order-lifecycle` Rule 15 / state-machines.md §2.4 — دورات
+// CANCELED/DECLINED بتتشال **قبل** الترتيب: الـ `closedAt` بتاعهم `null`،
+// والـ null بيتقرا «لسه مفتوحة» في فحص التداخل، فسيبانهم بيفبرك تداخل وهمي.
+const RETURNS_PAGE_SIZE         = 10;
+const IGNORED_RETURN_STATUSES   = ['CANCELED', 'DECLINED'];
+const ORDER_LINE_ITEMS_PAGE_SIZE = 25;
+const DISCOVERY_PAGE_SIZE       = 100;
+const DISCOVERY_MAX_PAGES       = 10;
+const DETAILS_BATCH_SIZE        = 25;
+// ⚠️ اتنزّل من 50 في v5.5.0: `EXCHANGE_WITHOUT_ITEMS` بقى كود حاجب، فالحارس
+//    مابقاش استعلام scalars بس — بقى بيقرا نفس مصدري القطع الخارجة.
+const CYCLE_GUARD_BATCH_SIZE    = 20;
 
 // ─── §CONSTANTS::batch ───
 const MAX_BATCH   = 25;   // أقصى عدد أوردرات في نداء upload واحد
@@ -233,6 +340,55 @@ const normPhone = p => String(p || '').replace(/\D/g, '').replace(/^20/, '').rep
 //    (`shopify-graphql-helper` §2.1 — الحقول الإلزامية لأي رفع شحن.)
 const wirePhone = p => { const d = normPhone(p); return d ? '0' + d : ''; };
 
+// ─── §HELPERS::text ───
+const cleanText = v => String(v ?? '').trim();
+
+function chunks(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+// ─── §HELPERS::nowToSecond ───
+// بتقص للثانية الكاملة عشان القيمة اللي تتكتب دلوقتي وتتقرا بعدين تتقارن
+// بالتساوي حتى لو شوبيفاي رمت الكسور من `date_time`.
+function nowToSecond() {
+  return new Date(Math.floor(Date.now() / 1000) * 1000).toISOString();
+}
+
+function isShopifyCostError(err) {
+  return /cost|exceeds the single query max cost limit|maximum cost/i.test(err?.message || String(err));
+}
+
+// ─── §HELPERS::job ───
+// الوضع بييجي من العميل — قايمة **مقفولة**، وأي قيمة بره القايمة بتوقف النداء
+// برسالة، مش بترجع لـ s1 في صمت (رجوع صامت هنا معناه شحنة بالنوع الغلط).
+function getJob(raw, { allow = ALL_JOBS } = {}) {
+  const jt = cleanText(raw) || JOB_S1;
+  if (!allow.has(jt)) {
+    const err = new Error(`نوع العملية غير صحيح (${jt || '—'}) — استخدم s1 أو return أو exchange`);
+    err.status = 400;
+    throw err;
+  }
+  const isRE = RE_JOBS.has(jt);
+  return {
+    jobType:        jt,
+    isRE,
+    bostaType:      BOSTA_TYPE_BY_JOB[jt],
+    tool:           isRE ? TOOL_NAME_RE : TOOL_NAME,
+    tag:            UPLOAD_TAG_BY_JOB[jt],
+    trackingMf:     MF_TRACKING_BY_JOB[jt],
+    uploadedType:   LOG_TYPE_BY_JOB[jt],
+    uploadFailType: UPLOAD_FAILED_BY_JOB[jt],
+    writeFailType:  WRITE_FAILED_BY_JOB[jt],
+    expectedStatus: isRE ? S2_STATUS_BY_JOB[jt] : null,
+    nextStatus:     isRE ? S2_NEXT_BY_JOB[jt]   : null,
+    exportType:     jt === JOB_EXCHANGE ? 'export_exchange' : jt === JOB_RETURN ? 'export_return' : null,
+    confirmType:    jt === JOB_EXCHANGE ? 'confirm_exchange' : jt === JOB_RETURN ? 'confirm_return' : null,
+    label:          jt === JOB_RETURN ? 'استرجاع' : jt === JOB_EXCHANGE ? 'استبدال' : 'شحن',
+  };
+}
+
 // ─── §HELPERS::normText ───
 // تطبيع نص عربي/إنجليزي للمطابقة: تشكيل، ألف/ياء/تاء مربوطة، ترقيم، مسافات.
 function normText(s) {
@@ -325,10 +481,39 @@ async function writeLog(db, entry) {
   ).run();
 }
 
+// إضافة خاصة بالأداة دي (مش من §SHARED) — بتلمّ صفوف بشكل `writeLog` في نداء
+// `batch()` واحد. الرفع بيكتب صف لكل أوردر، و٢٥ نداء منفصل على D1 جوّه نفس
+// الطلب بيقرّب من سقف الـ subrequests بتاع Cloudflare.
+async function writeLogsBatch(db, entries) {
+  if (!Array.isArray(entries) || !entries.length) return;
+  for (const group of chunks(entries, 40)) {
+    await db.batch(group.map((entry) => db.prepare(`
+      INSERT INTO logs
+        (timestamp, tool, type, employee, order_id, order_name,
+         sku, product_title, delta, value_before, value_after, notes, extra)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      entry.timestamp    ?? new Date().toISOString(),
+      entry.tool,
+      entry.type,
+      entry.employee     ?? null,
+      entry.orderId      ?? null,
+      entry.orderName    ?? null,
+      entry.sku          ?? null,
+      entry.productTitle ?? null,
+      entry.delta        ?? null,
+      entry.valueBefore  ?? null,
+      entry.valueAfter   ?? null,
+      entry.notes        ?? null,
+      entry.extra ? JSON.stringify(entry.extra) : null,
+    )));
+  }
+}
+
 const LOG_EXPORT_MAX = 2000;   // سقف التصدير — بيرجع للواجهة كـ `cap`
 
 function buildLogFilterSQL(select, {
-  tool      = null,
+  tool      = null,  tools     = null,
   employee  = null, employees = null,
   type      = null, types     = null,
   search    = null,
@@ -337,10 +522,16 @@ function buildLogFilterSQL(select, {
   let sql = `${select} FROM logs WHERE type NOT IN ('login','logout')`;
   const b = [];
 
+  // 🔴 الأداة بتكتب تحت **قيمتين** `tool` (الدمج — اختيار «أ» في MERGE-BRIEF §٥)،
+  //    فتاب السجل لازم يقرا الاتنين. فلتر على قيمة واحدة هنا كان معناه إن
+  //    الموظف يشوف نص تاريخه بس، والنص التاني يبان كأنه ما حصلش.
+  const tls  = Array.isArray(tools) && tools.length ? tools : (tool ? [tool] : []);
   const emps = Array.isArray(employees) && employees.length ? employees : (employee ? [employee] : []);
   const typs = Array.isArray(types)     && types.length     ? types     : (type     ? [type]     : []);
 
-  if (tool) { sql += ' AND tool = ?'; b.push(tool); }
+  if (tls.length) {
+    sql += ` AND tool IN (${tls.map(() => '?').join(',')})`; b.push(...tls);
+  }
   if (emps.length) {
     sql += ` AND employee IN (${emps.map(() => '?').join(',')})`; b.push(...emps);
   }
@@ -407,12 +598,12 @@ async function getLogsExport(db, filters = {}) {
   return (await db.prepare(q).bind(...b, LOG_EXPORT_MAX).all()).results;
 }
 
-function logParamsFrom(url, tool) {
+function logParamsFrom(url, tools) {
   const csv = (k) => (url.searchParams.get(k) || '')
     .split(',').map(s => s.trim()).filter(Boolean);
   const employees = csv('employees'), types = csv('types');
   return {
-    tool,
+    tools: Array.isArray(tools) ? tools : [tools],
     employees: employees.length ? employees : null,
     employee:  url.searchParams.get('employee') || null,
     types:     types.length ? types : null,
@@ -423,9 +614,86 @@ function logParamsFrom(url, tool) {
   };
 }
 
+// ─── §SHARED::findExportDuplicateStats — مسار الإكسيل ───
+// مفتاح التكرار = اسم الأوردر + **اسم الدورة** (v5.3.0 — قرار أحمد). المفتاح
+// بالاسم لوحده كان بيقفل أوردر بدورة تانية **شرعية** كـ«مكرر»، فـ`allowRepeat`
+// بقى بيتستخدم روتيني والحماية فقدت معناها.
+//
+// ⚠️ الصفوف القديمة (قبل v5.3.0، مالهاش `cycleName` في `extra`) لا بتتلغي ولا
+// بتتحسب على عماها: بتتطابق مع الدورة الحالية **بس** لو `timestamp >=
+// cycle.createdAt` — تصدير حصل قبل ما الدورة توجد مستحيل يكون تصدير ليها.
+// مفيش migration.
+async function findExportDuplicateStats(db, orders) {
+  const byName = new Map();
+  for (const order of orders || []) {
+    const name = cleanText(order?.name);
+    if (!name || byName.has(name)) continue;
+    byName.set(name, {
+      name,
+      cycleName: cleanText(order?.cycleName) || null,
+      cycleCreatedAt: cleanText(order?.cycleCreatedAt) || null,
+    });
+  }
+  if (!byName.size) return {};
+
+  const out = {};
+  const exportTypePlaceholders = EXPORT_TYPES.map(() => '?').join(',');
+
+  // ٢٠ أوردر لكل استعلام بتخلي عدد الباراميترات تحت سقف D1 بمسافة مريحة
+  // (على الأكثر 20 × 3 + 1 + EXPORT_TYPES).
+  for (const group of chunks([...byName.values()], 20)) {
+    const clauses = [];
+    const params = [];
+
+    for (const order of group) {
+      if (order.cycleName && order.cycleCreatedAt) {
+        clauses.push(`(order_name = ? AND (
+          json_extract(extra, '$.cycleName') = ?
+          OR (json_extract(extra, '$.cycleName') IS NULL AND timestamp >= ?)
+        ))`);
+        params.push(order.name, order.cycleName, order.cycleCreatedAt);
+      } else {
+        // مفيش هوية دورة في الـ payload — نرجع لسلوك ما قبل v5.3.0 بدل ما
+        // نقول «ما اتصدّرش قبل كده» في صمت.
+        clauses.push('(order_name = ?)');
+        params.push(order.name);
+      }
+    }
+
+    const sql = `
+      SELECT order_name, COUNT(*) AS export_count, MAX(timestamp) AS last_export_at
+      FROM logs
+      WHERE tool = ?
+        AND type IN (${exportTypePlaceholders})
+        AND (${clauses.join(' OR ')})
+      GROUP BY order_name
+      ORDER BY last_export_at DESC
+    `;
+
+    // ⚠️ `TOOL_NAME_RE` مش `TOOL_NAME` — صفوف التصدير التاريخية (٨٠ صف
+    //    `export_exchange`) كلها تحت القيمة دي، وقراءتها من القيمة التانية كانت
+    //    هتقول «مفيش تكرار» على أوردر اتصدّر امبارح.
+    const rows = (await db.prepare(sql).bind(TOOL_NAME_RE, ...EXPORT_TYPES, ...params).all()).results || [];
+    for (const row of rows) {
+      if (!row.order_name) continue;
+      out[row.order_name] = {
+        orderName: row.order_name,
+        cycleName: byName.get(row.order_name)?.cycleName || null,
+        exportCount: Number(row.export_count || 0),
+        lastExportAt: row.last_export_at || null,
+      };
+    }
+  }
+
+  return out;
+}
+
 // ─── §SHARED::AUTH_APPS ───
 // قايمة بيضاء مقفولة — appId جاي من العميل وجدول logs مشترك بين كل أدوات الستاك.
-const AUTH_APPS = new Set([TOOL_NAME]);
+// ⚠️ الأداة التانية لسه شغّالة بالتوازي أثناء التصفية (MERGE-BRIEF §٨)، فالـ
+//    `appId` بتاعها لازم يفضل مقبول — وإلا صفوف الدخول بتاعتها تروح تحت اسم
+//    الأداة دي وتاريخ الدخول يتلغبط في نص التصفية.
+const AUTH_APPS = new Set([TOOL_NAME, TOOL_NAME_RE]);
 function resolveAuthTool(appId) { return AUTH_APPS.has(appId) ? appId : TOOL_NAME; }
 
 // ══════════════════════════════════════════════════════════════
@@ -519,12 +787,23 @@ const ORDER_FIELDS = `
   shippingAddress { name firstName lastName phone address1 address2 city province provinceCode zip }
   mfStatus:   metafield(namespace: "custom", key: "manual_status")         { value }
   mfZone:     metafield(namespace: "custom", key: "zone")                  { value }
-  mfCourier:  metafield(namespace: "custom", key: "courier")               { value }
-  mfTracking: metafield(namespace: "custom", key: "bosta_tracking_number") { value }
+  mfCourier:  metafield(namespace: "custom", key: "courier")                  { value }
+  mfTrackS1:  metafield(namespace: "custom", key: "bosta_tracking_number_s1") { value }
+  # ⚠️ الميتافيلد القديم — مابيتكتبش من v2.0.0، بس لسه بيتقرا: الـ ٣٥٦ شحنة اللي
+  #    اترفعت قبل الدمج رقمها عايش هنا، وبدون قراءته كلها هتبان «مش مرفوعة».
+  mfTrackOld: metafield(namespace: "custom", key: "bosta_tracking_number")    { value }
   lineItems(first: ${LINE_ITEMS}) {
     nodes { currentQuantity sku title variantTitle }
   }
 `;
+
+// ─── §SHOPIFY::previousTrackingS1 ───
+// 🔴 الجديد **الأول**، والقديم fallback. الترتيب ده مقصود: أوردر اترفع تاني بعد
+//    الدمج بيبقى عنده الاتنين، والقيمة الصح هي الجديدة. عكس الترتيب كان بيعرض
+//    رقم شحنة قديمة ملغية على أوردر شحنته الحالية شغّالة.
+function previousTrackingS1(order) {
+  return cleanText(order?.mfTrackS1?.value) || cleanText(order?.mfTrackOld?.value) || null;
+}
 
 // ─── §SHOPIFY::buildOrdersQuery ───
 // 🔴 القيم حرفية: Other_Regions بـ _ ، و "Confirmed + Edit" بمسافات حوالين الـ +
@@ -605,68 +884,596 @@ async function filterGuard(env, token) {
 }
 
 // ─── §SHOPIFY::writeBackToShopify ───
-// بعد كل نجاح رفع فقط. تلات أكشنز على نفس الأوردر.
-// 🔴 bosta_tracking_number نوعه number_integer — أي type تاني بيسقّط النداء كله
-//    بما فيه كتابة courier اللي في نفس النداء.
-async function writeBackToShopify(env, token, order, trackingNumber, actions) {
+// بعد كل نجاح رفع فقط — الشحنة **موجودة عند بوسطة** لما الدالة دي بتتنده، فأي
+// فشل هنا `warning` مش `error` (اللي بينده بيتعامل مع الرمي).
+//
+// 🔴 الميتافيلد نوعه `number_integer` — `metafieldsSet` بيطلب تطابق النوع بالحرف
+//    مع التعريف الحي، واختلافه بيسقّط **النداء كله** بما فيه أي ميتافيلد تاني في
+//    نفس النداء. عشان كده بنتحقق `/^\d+$/` قبل الكتابة وبنسقّط الحقل لوحده.
+//
+// 🔴 الفرق بين النوعين (طلب أحمد، v2.0.0):
+//    s1   → `custom.courier = Bosta` + `custom.bosta_tracking_number_s1` + تاج S1
+//    R/E  → `custom.bosta_tracking_number_s2` + تاج S2 **بس**. الكوريَر
+//           **بيتتحقق منه** في حارس الدورات قبل الشحنة، ومابيتكتبش: شحنة استرجاع
+//           بتسحب من عند العميل، فكتابة الكوريَر هنا معناها إننا بنعيّن مندوب
+//           على أوردر مش بتاعنا بدل ما نتأكد إنه بتاعنا أصلًا.
+//    (حالة S2 نفسها `custom.status_2_r_e` بتتكتب مجمّعة بعد الدفعة — §SHOPIFY-RE.)
+async function writeBackToShopify(env, token, order, trackingNumber, actions, job) {
   const warnings = [];
   const tn = String(trackingNumber ?? '').trim();
   const numericTracking = /^\d+$/.test(tn);
+  const trackMf = job.trackingMf;
 
-  const metafields = [{
-    ownerId: order.id, namespace: 'custom', key: MF_COURIER.key,
-    type: MF_COURIER.type, value: 'Bosta',
-  }];
+  const metafields = [];
+  if (!job.isRE) {
+    metafields.push({
+      ownerId: order.id, namespace: 'custom', key: MF_COURIER.key,
+      type: MF_COURIER.type, value: COURIER_VALUE,
+    });
+  }
   if (numericTracking) {
     metafields.push({
-      ownerId: order.id, namespace: 'custom', key: MF_TRACKING.key,
-      type: MF_TRACKING.type, value: tn,     // metafieldsSet بياخد value نص دايمًا
+      ownerId: order.id, namespace: 'custom', key: trackMf.key,
+      type: trackMf.type, value: tn,     // metafieldsSet بياخد value نص دايمًا
     });
   } else {
-    warnings.push(`رقم التتبع "${tn}" مش أرقام بس — الميتافيلد نوعه number_integer فما اتكتبش`);
+    warnings.push(`رقم التتبع "${tn}" مش أرقام بس — الميتافيلد نوعه ${trackMf.type} فما اتكتبش`);
   }
 
-  const MUT_MF = `
-    mutation SetMf($metafields: [MetafieldsSetInput!]!) {
-      metafieldsSet(metafields: $metafields) {
-        metafields { key value namespace owner { ... on Order { id } } }
-        userErrors { field message }
+  if (metafields.length) {
+    const MUT_MF = `
+      mutation SetMf($metafields: [MetafieldsSetInput!]!) {
+        metafieldsSet(metafields: $metafields) {
+          metafields { key value namespace owner { ... on Order { id } } }
+          userErrors { field message }
+        }
       }
+    `;
+    const mfData = await shopifyGQL(env, token, MUT_MF, { metafields }, 'metafieldsSet');
+    const mfRes  = mfData.data?.metafieldsSet;
+    const mfErrs = mfRes?.userErrors || [];
+    if (mfErrs.length) throw new Error('metafieldsSet: ' + mfErrs.map(e => e.message).join(' | '));
+
+    // ③ تأكيد الـ payload — `userErrors:[]` معناها «مفيش اعتراض» مش «اتنفّذت»
+    const written = mfRes?.metafields || [];
+    const byKey   = new Map(written.map(m => [m.key, m]));
+
+    if (!job.isRE) {
+      const courierOk = byKey.get(MF_COURIER.key)?.value === COURIER_VALUE
+                     && byKey.get(MF_COURIER.key)?.owner?.id === order.id;
+      if (!courierOk) throw new Error('metafieldsSet: شوبيفاي ما أكدتش كتابة custom.courier');
+      actions.push(`كتابة custom.courier = ${COURIER_VALUE}`);
     }
-  `;
-  const mfData = await shopifyGQL(env, token, MUT_MF, { metafields }, 'metafieldsSet');
-  const mfRes  = mfData.data?.metafieldsSet;
-  const mfErrs = mfRes?.userErrors || [];
-  if (mfErrs.length) throw new Error('metafieldsSet: ' + mfErrs.map(e => e.message).join(' | '));
 
-  // ③ تأكيد الـ payload — userErrors:[] معناها "مفيش اعتراض" مش "اتنفّذت"
-  const written = mfRes?.metafields || [];
-  const byKey   = new Map(written.map(m => [m.key, m]));
-  const courierOk = byKey.get(MF_COURIER.key)?.value === 'Bosta'
-                 && byKey.get(MF_COURIER.key)?.owner?.id === order.id;
-  if (!courierOk) throw new Error('metafieldsSet: شوبيفاي ما أكدتش كتابة custom.courier');
-  actions.push('كتابة custom.courier = Bosta');
-
-  if (numericTracking) {
-    const trackOk = byKey.get(MF_TRACKING.key)?.value === tn;
-    if (!trackOk) throw new Error('metafieldsSet: شوبيفاي ما أكدتش كتابة custom.bosta_tracking_number');
-    actions.push(`كتابة custom.bosta_tracking_number = ${tn}`);
+    if (numericTracking) {
+      if (byKey.get(trackMf.key)?.value !== tn) {
+        throw new Error(`metafieldsSet: شوبيفاي ما أكدتش كتابة custom.${trackMf.key}`);
+      }
+      actions.push(`كتابة custom.${trackMf.key} = ${tn}`);
+    }
   }
 
-  // التاج — tagsAdd بيمنع التكرار تلقائيًا، والتاجات حساسة لحالة الحروف
+  // التاج — `tagsAdd` بيمنع التكرار تلقائيًا، والتاجات حساسة لحالة الحروف
   const MUT_TAG = `
     mutation AddTag($id: ID!, $tags: [String!]!) {
       tagsAdd(id: $id, tags: $tags) { node { id } userErrors { field message } }
     }
   `;
-  const tagData = await shopifyGQL(env, token, MUT_TAG, { id: order.id, tags: [UPLOAD_TAG] }, 'tagsAdd');
+  const tagData = await shopifyGQL(env, token, MUT_TAG, { id: order.id, tags: [job.tag] }, 'tagsAdd');
   const tagRes  = tagData.data?.tagsAdd;
   const tagErrs = tagRes?.userErrors || [];
   if (tagErrs.length) throw new Error('tagsAdd: ' + tagErrs.map(e => e.message).join(' | '));
   if (!tagRes?.node?.id) throw new Error('tagsAdd: شوبيفاي ما أكدتش إضافة التاج');
-  actions.push(`إضافة التاج ${UPLOAD_TAG}`);
+  actions.push(`إضافة التاج ${job.tag}`);
 
   return warnings;
+}
+
+// ══════════════════════════════════════════════════════════════
+// §SHOPIFY-RE — الاسترجاع/الاستبدال (S2)
+// كان في `Bosta-Return-Exchange-Exporter` v6.0.0، واتنقل كما هو في الدمج.
+// ⚠️ البلوك ده **مايتدمجش** مع بلوك S1 فوقه: مكنة الحالة تانية، الاستعلام تاني،
+//    وحساب الفلوس تاني (MERGE-BRIEF §٤).
+// ══════════════════════════════════════════════════════════════
+
+// ─── §SHOPIFY-RE::returnCycles ───
+// `ecommoda-order-lifecycle` Rule 15 ② — الدورة اللي بتسافر **دلوقتي** هي أحدث
+// دورة **مفتوحة**. ممنوع `.some()`/`.flatMap()` على `returns[]` كلها: ده بيجاوب
+// «هل ده حصل على الأوردر ده قبل كده؟» — سؤال تاني، وهو الغلط هنا.
+// 🔴 ده كان **الباج الأساسي لحد v5.2.0**، مقيس على `#51656`: تلات دورات طلّعت
+//    `Return #Items = 3` و`Goods Value = 6300` بدل قطعة واحدة و`1750` — يعني
+//    قطع رجعت المخزن خلاص اتشحنت تاني في ملف بوسطة.
+function sortedReturnCycles(order) {
+  return (order?.returns?.edges || [])
+    .map((edge) => edge?.node)
+    .filter(Boolean)
+    .filter((cycle) => !IGNORED_RETURN_STATUSES.includes(cycle.status))
+    .sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+}
+
+// state-machines.md §2.4 — دورة اتفتحت واللي قبلها لسه مفتوحة.
+// `closedAt === null` على دورة أقدم بتتقرا ∞ (لسه مفتوحة)، وعشان كده
+// CANCELED/DECLINED بتتشال قبل ما ده يشتغل.
+function hasHistoricalOverlap(cycles) {
+  return cycles.some((cycle, i) => i > 0 && (
+    cycles[i - 1].closedAt === null ||
+    String(cycle.createdAt || '') < String(cycles[i - 1].closedAt || '')
+  ));
+}
+
+// ─── §SHOPIFY-RE::outgoingItems ───
+// اللي بيخرج فعليًا من المخزن على الاستبدال.
+//
+// ⚠️ `return.exchangeLineItems` هو المصدر الصح بس **مش الكامل**. مقيس حيًا على
+// `#53531` و`#53701` (09-09-2026): لما قطعة الاستبدال اللي شوبيفاي عملتها
+// تتشال بتعديل أوردر وتتحط واحدة بالإيد — وده روتين لما المقاس/اللون يتغيّر بعد
+// حجز الاستبدال — الـ connection بتفضى **نهائيًا**. وشوبيفاي في الـ Admin لسه
+// بتطبع «Exchange item for return #X» على السطر المشال، يعني الشاشة والـ API
+// بيتناقضوا. النتيجة كانت صف استبدال من غير وصف ولا عدد قطع، و`Goods Value`
+// بيرجع لسعر القطعة **الراجعة** (`#53701`: 2600 بدل 2400 — غلط في الفلوس).
+//
+// مصدر الاسترداد، متحقَّق منه على ٢٥ أوردر بدورة مفتوحة: سطر
+// `currentQuantity > 0 && unfulfilledQuantity > 0` هو بالظبط القطعة المستنية
+// تتشحن. فاضي على كل استرجاع صافي، وبيطابق `exchangeLineItems` واحد بواحد على
+// استبدال سليم، وهو المكان الوحيد اللي القطعة المضافة بالإيد بتبان فيه.
+//
+// 🔴 الدورة تفضل **الأساس** والاسترداد **fallback مش merge** — الدمج بيعدّ
+// القطعة مرتين على استبدال سليم. والاسترداد بيشتغل على الاستبدال بس: على
+// الاسترجاع السطر غير المشحون غالبًا قطعة من الأوردر الأصلي ما اتشحنتش، و
+// `TYPE_MISMATCH` بتاع Rule 8 لازم يفضل بيقرا الدورة لوحدها.
+function itemsFromCycle(cycle) {
+  return (cycle?.exchangeLineItems?.edges || [])
+    .flatMap((edge) => {
+      const qty = edge?.node?.quantity || 1;
+      return (edge?.node?.lineItems || []).map((li) => ({
+        label: cleanText(li?.sku) || cleanText(li?.name) || null,
+        qty,
+        unitPrice: parseFloat(li?.originalUnitPriceSet?.shopMoney?.amount || 0) || 0,
+      }));
+    })
+    .filter((row) => !!row.label);
+}
+
+function itemsFromUnfulfilledLines(order) {
+  return (order?.lineItems?.edges || [])
+    .map((edge) => edge?.node)
+    .filter(Boolean)
+    // `currentQuantity > 0` بتشيل السطر اللي التعديل شاله، و`unfulfilledQuantity
+    // > 0` بتشيل اللي اتسلّم خلاص. الاتنين مطلوبين: السطر المشال بيحتفظ بـ
+    // `quantity` الأصلية، والاتنين دول بس هما اللي بينزلوا صفر.
+    .filter((node) => (node.currentQuantity || 0) > 0 && (node.unfulfilledQuantity || 0) > 0)
+    .map((node) => ({
+      label: cleanText(node.sku) || cleanText(node.name) || null,
+      qty: node.unfulfilledQuantity,
+      unitPrice: parseFloat(node.originalUnitPriceSet?.shopMoney?.amount || 0) || 0,
+    }))
+    .filter((row) => !!row.label);
+}
+
+function resolveOutgoingItems(order, cycle, jobType) {
+  const fromCycle = itemsFromCycle(cycle);
+  if (fromCycle.length) return { items: fromCycle, source: 'cycle' };
+  if (jobType !== JOB_EXCHANGE) return { items: [], source: 'none' };
+
+  const recovered = itemsFromUnfulfilledLines(order);
+  if (recovered.length) return { items: recovered, source: 'order_unfulfilled' };
+  return { items: [], source: 'none' };
+}
+
+// ─── §SHOPIFY-RE::analyzeReturnCycles ───
+// Rule 13 / Rule 14 — كل كود شايل: إيه الغلط، القيمة الغلط، والإجراء اللي
+// بيحلّها. الأكواد الحاجبة بتوقف الصف؛ الباقي تحذير: بيحرّك صفر صف وبيغيّر
+// صفر رقم (flag it, never move it).
+function analyzeReturnCycles(order, jobType) {
+  const cycles = sortedReturnCycles(order);
+  const openCycles = cycles.filter((cycle) => cycle.status !== 'CLOSED');
+  const truncated = !!order?.returns?.pageInfo?.hasNextPage;
+  const current = openCycles.length ? openCycles[openCycles.length - 1] : null;
+  const warnings = [];
+
+  let blockReason = null;
+  if (truncated) {
+    blockReason = {
+      code: 'CYCLES_TRUNCATED',
+      value: `> ${RETURNS_PAGE_SIZE} دورة`,
+      action: `الأوردر فيه أكتر من ${RETURNS_PAGE_SIZE} دورة إرجاع — مش قادرين نحدد الدورة المفتوحة بثقة. راجعه يدوي في شوبيفاي.`,
+    };
+  } else if (!openCycles.length) {
+    blockReason = {
+      code: 'NO_OPEN_CYCLE',
+      value: cleanText(order?.s2Status?.value),
+      action: 'الـ S2 بيقول فيه طلب استرجاع/استبدال لكن مفيش ولا دورة مفتوحة في شوبيفاي — خدمة العملاء تفتح الدورة أو تصلّح الـ S2.',
+    };
+  } else if (openCycles.length > 1) {
+    blockReason = {
+      code: 'CYCLE_OVERLAP_OPEN',
+      value: openCycles.map((cycle) => cycle.name).join(' · '),
+      action: 'أكتر من دورة مفتوحة في نفس الوقت — مش قادرين نعرف أنهي دورة اللي هتتشحن. خدمة العملاء تقفل الزيادة في شوبيفاي (قاعدة: دورة مفتوحة واحدة بس).',
+    };
+  }
+
+  if (!blockReason && hasHistoricalOverlap(cycles)) {
+    warnings.push({
+      code: 'CYCLE_OVERLAP',
+      value: cycles.map((cycle) => cycle.name).join(' · '),
+      action: 'دورة اتفتحت قبل ما اللي قبلها تقفل — اتحلّت دلوقتي، بس تستاهل مراجعة من خدمة العملاء.',
+    });
+  }
+
+  if (cycles.length > 1) {
+    warnings.push({
+      code: 'MULTI_CYCLE',
+      value: `${cycles.length} دورات`,
+      action: 'دورات متتابعة — قانونية. الرفع بيتم من الدورة المفتوحة بس، والدورات المقفولة مش داخلة.',
+    });
+  }
+
+  // Rule 8 فاضل متثبّت على **الدورة**: استرجاع-ولا-استبدال بيتجاوب من
+  // `exchangeLineItems`، ومصدر الاسترداد بتاع v5.5.0 ممنوع يعيد تصنيف أوردر.
+  const outgoing = resolveOutgoingItems(order, current, jobType);
+
+  if (current) {
+    const exchangeCount = (current.exchangeLineItems?.edges || []).length;
+    if (jobType === JOB_RETURN && exchangeCount > 0) {
+      warnings.push({
+        code: 'TYPE_MISMATCH',
+        value: `S2 = ${cleanText(order?.s2Status?.value)} · الدورة فيها قطع استبدال`,
+        action: 'الـ S2 بيقول استرجاع لكن الدورة المفتوحة فيها قطع استبدال — راجع نوع العملية قبل الرفع على بوسطة.',
+      });
+    }
+
+    if (jobType === JOB_EXCHANGE && outgoing.source === 'order_unfulfilled') {
+      warnings.push({
+        code: 'EXCHANGE_ITEMS_RECOVERED',
+        value: outgoing.items.map((row) => `${row.label} x${row.qty}`).join(' | '),
+        action: 'الدورة المفتوحة مالهاش قطع استبدال في شوبيفاي — القطع الخارجة اتقروا من سطور الأوردر اللي لسه ما اتشحنتش (غالبًا اتعدّلت بالإيد بعد فتح الاستبدال). راجع الوصف قبل الرفع، وخدمة العملاء تظبّط الاستبدال في شوبيفاي.',
+      });
+    }
+
+    // 🔴 حاجب (كان تحذير لحد v5.5.0) — قرار أحمد 09-09-2026. صف بوسطة من غير
+    // ولا قطعة خارجة مش شحنة أصلًا: المندوب بيستلم بلا وصف ولا عدد، و
+    // `Goods Value` بيتسلّف من القطعة الراجعة.
+    if (jobType === JOB_EXCHANGE && !outgoing.items.length && !blockReason) {
+      blockReason = {
+        code: 'EXCHANGE_WITHOUT_ITEMS',
+        value: `S2 = ${cleanText(order?.s2Status?.value)} · مفيش ولا قطعة خارجة`,
+        action: 'الـ S2 بيقول استبدال لكن مفيش قطع استبدال في الدورة ولا سطر لسه ما اتشحنش في الأوردر — مش عارفين هيتشحن للعميل إيه. خدمة العملاء تضيف قطعة الاستبدال في شوبيفاي أو تصلّح الـ S2.',
+      };
+    }
+  }
+
+  return {
+    current,
+    outgoing,
+    info: {
+      totalCycles: cycles.length,
+      openCycles: openCycles.length,
+      currentCycleName: current?.name || null,
+      truncated,
+      blocked: !!blockReason,
+      blockReason,
+      warnings,
+      outgoingSource: outgoing.source,
+    },
+  };
+}
+
+// ─── §SHOPIFY-RE::discoveryAndDetails ───
+// استعلام واحد للنوعين: الاسترجاع لسه محتاج `exchangeLineItems` عشان
+// `TYPE_MISMATCH` (Rule 8)، والاستبدال لسه محتاج `returnLineItems` للقطع الراجعة.
+function buildReDetailsQuery() {
+  return `
+    query FetchReDetails($ids: [ID!]!) {
+      nodes(ids: $ids) {
+        ... on Order {
+          id
+          legacyResourceId
+          name
+          phone
+          note
+          createdAt
+          tags
+          displayFinancialStatus
+          displayFulfillmentStatus
+          totalOutstandingSet { shopMoney { amount currencyCode } }
+          shippingAddress {
+            name firstName lastName phone
+            address1 address2 city province provinceCode zip
+          }
+          customer { firstName lastName email phone }
+          s2Status:  metafield(namespace: "custom", key: "status_2_r_e")             { value }
+          courier:   metafield(namespace: "custom", key: "courier")                  { value }
+          mfTrackS2: metafield(namespace: "custom", key: "bosta_tracking_number_s2") { value }
+          # مصدر استرداد القطع الخارجة — §SHOPIFY-RE::outgoingItems
+          lineItems(first: ${ORDER_LINE_ITEMS_PAGE_SIZE}) {
+            edges {
+              node {
+                sku name currentQuantity unfulfilledQuantity
+                originalUnitPriceSet { shopMoney { amount } }
+              }
+            }
+          }
+          returns(first: ${RETURNS_PAGE_SIZE}) {
+            pageInfo { hasNextPage }
+            edges {
+              node {
+                name status createdAt closedAt
+                returnLineItems(first: 25) {
+                  edges {
+                    node {
+                      quantity
+                      ... on ReturnLineItem {
+                        fulfillmentLineItem {
+                          lineItem { sku name originalUnitPriceSet { shopMoney { amount } } }
+                        }
+                      }
+                    }
+                  }
+                }
+                exchangeLineItems(first: 25) {
+                  edges {
+                    node {
+                      quantity
+                      lineItems { sku name originalUnitPriceSet { shopMoney { amount } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+}
+
+// 🔴 `metafields.custom.KEY:"value"` بنقطة واحدة. النقطتين بتتحوّل بصمت لبحث
+//    نصي كامل على المتجر كله.
+function reCandidateQuery(expectedStatus) {
+  return `metafields.custom.status_2_r_e:${JSON.stringify(String(expectedStatus))} `
+       + `AND metafields.custom.courier:${COURIER_VALUE}`;
+}
+
+async function fetchReDiscovery(env, token, job) {
+  const candidates = [];
+  let cursor = null, hasNextPage = true, page = 0;
+  const search = reCandidateQuery(job.expectedStatus);
+
+  const query = `
+    query FetchReCandidateIds($search: String!, $cursor: String) {
+      orders(first: ${DISCOVERY_PAGE_SIZE}, after: $cursor, query: $search, sortKey: CREATED_AT, reverse: true) {
+        pageInfo { hasNextPage endCursor }
+        edges {
+          node {
+            id name
+            s2Status: metafield(namespace: "custom", key: "status_2_r_e") { value }
+            courier:  metafield(namespace: "custom", key: "courier")      { value }
+          }
+        }
+      }
+    }
+  `;
+
+  while (hasNextPage && page < DISCOVERY_MAX_PAGES) {
+    page += 1;
+    const data = await shopifyGQL(env, token, query, { search, cursor }, 'fetchReDiscovery');
+    const conn = data?.data?.orders;
+    if (!conn?.edges) throw new Error('fetchReDiscovery: شوبيفاي ردّت من غير orders');
+
+    for (const edge of conn.edges) {
+      const order = edge.node;
+      const directStatus = cleanText(order?.s2Status?.value);
+      const courier = cleanText(order?.courier?.value);
+      // 🔴 إعادة الفحص على القيمة نفسها مقصودة — فلتر `metafields.custom.…`
+      //    ممكن يوسّع النتيجة، والقيمة اللي بترجع هي الحقيقة.
+      if (directStatus === job.expectedStatus && courier.toLowerCase() === COURIER_VALUE.toLowerCase()) {
+        candidates.push({ id: order.id, name: order.name });
+      }
+    }
+    hasNextPage = !!conn.pageInfo?.hasNextPage;
+    cursor = conn.pageInfo?.endCursor || null;
+  }
+
+  return {
+    candidates,
+    pageInfo: {
+      pagesFetched: page,
+      stoppedByLimit: hasNextPage && page >= DISCOVERY_MAX_PAGES,
+      searchQuery: search,
+      pageSize: DISCOVERY_PAGE_SIZE,
+      maxPages: DISCOVERY_MAX_PAGES,
+    },
+  };
+}
+
+// سقف تكلفة الاستعلام عند شوبيفاي بيترفض الدفعة كلها؛ التقسيم نُصّين وإعادة
+// المحاولة بترجّع الصفوف بدل ما الشاشة تفضى.
+async function fetchNodesWithCostFallback(env, token, query, ids, opName = 'fetchNodes') {
+  if (!ids.length) return [];
+  try {
+    const data = await shopifyGQL(env, token, query, { ids }, opName);
+    return (data?.data?.nodes || []).filter(Boolean);
+  } catch (err) {
+    if (!isShopifyCostError(err) || ids.length === 1) throw err;
+    const mid = Math.ceil(ids.length / 2);
+    const left  = await fetchNodesWithCostFallback(env, token, query, ids.slice(0, mid), opName);
+    const right = await fetchNodesWithCostFallback(env, token, query, ids.slice(mid), opName);
+    return [...left, ...right];
+  }
+}
+
+// ─── §SHOPIFY-RE::assertCyclesConfirmable ───
+// `ecommoda-order-lifecycle` Rule 15 ① — «reject + log، مش سماح صامت».
+// 🔴 الحارس ده واقف قدام **الشحنة** مش قدام الميتافيلد، وبيتعاد على القراءة
+//    الكاملة قبل أول نداء لبوسطة. مودال الواجهة مش البوابة الوحيدة.
+async function findBlockedCycleOrders(env, token, orders, jobType) {
+  const query = `
+    query FetchReCycleGuard($ids: [ID!]!) {
+      nodes(ids: $ids) {
+        ... on Order {
+          id name
+          s2Status: metafield(namespace: "custom", key: "status_2_r_e") { value }
+          courier:  metafield(namespace: "custom", key: "courier")      { value }
+          # الأسعار **مش** بتتجاب هنا عن قصد: الحارس بيسأل «فيه حاجة خارجة؟»
+          # مش «بتساوي كام». نتيجة resolveOutgoingItems بتتقرا بـ .length وتترمي.
+          lineItems(first: ${ORDER_LINE_ITEMS_PAGE_SIZE}) {
+            edges { node { sku name currentQuantity unfulfilledQuantity } }
+          }
+          returns(first: ${RETURNS_PAGE_SIZE}) {
+            pageInfo { hasNextPage }
+            edges {
+              node {
+                name status createdAt closedAt
+                exchangeLineItems(first: 25) { edges { node { quantity lineItems { sku name } } } }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const blocked = [];
+  const seen = new Set();
+
+  for (const group of chunks(orders.map((o) => o.id), CYCLE_GUARD_BATCH_SIZE)) {
+    for (const order of await fetchNodesWithCostFallback(env, token, query, group, 'cycleGuard')) {
+      seen.add(order.id);
+      const { info } = analyzeReturnCycles(order, jobType);
+      if (info.blocked) {
+        blocked.push({
+          id: order.id, name: order.name,
+          s2Status: cleanText(order?.s2Status?.value) || null,
+          code: info.blockReason.code, value: info.blockReason.value, action: info.blockReason.action,
+        });
+        continue;
+      }
+      // 🔴 طلب أحمد مع الدمج: في R/E **مابنكتبش** `custom.courier` — بنتأكد إنه
+      //    Bosta بالفعل. الفلتر بيعمل ده وقت الفحص، والحارس بيعيده وقت الرفع:
+      //    كوريَر اتغيّر بين الاتنين معناه إننا هنبعت مندوب بوسطة يسحب قطعة
+      //    مركبة على مندوب تاني.
+      const courier = cleanText(order?.courier?.value);
+      if (courier.toLowerCase() !== COURIER_VALUE.toLowerCase()) {
+        blocked.push({
+          id: order.id, name: order.name,
+          s2Status: cleanText(order?.s2Status?.value) || null,
+          code: 'COURIER_NOT_BOSTA',
+          value: courier || '(فاضي)',
+          action: `الكوريَر على الأوردر ده مش ${COURIER_VALUE} — الرفع اتوقف. الأداة دي مابتكتبش `
+                + `custom.courier على الاسترجاع/الاستبدال، فلازم يكون متظبّط صح قبل الرفع.`,
+        });
+      }
+    }
+  }
+
+  // أوردر شوبيفاي ما رجّعتهوش **مش** بيتعامل كأنه تمام — `worker-builder`
+  // Step 5A ④: «ما قدرناش نتأكد» عمرها ما تبقى «نجاح».
+  for (const order of orders) {
+    if (seen.has(order.id)) continue;
+    blocked.push({
+      id: order.id, name: order.name, s2Status: order.s2Status || null,
+      code: 'ORDER_NOT_READABLE', value: order.id,
+      action: 'شوبيفاي ما رجّعتش الأوردر ده وقت فحص الدورات — ما قدرناش نتأكد، فاتمنع التحديث. جرّب تاني أو راجعه يدوي.',
+    });
+  }
+
+  return blocked;
+}
+
+// Rule 15 ① / Rule 10 — «reject + log». صف لكل أوردر مرفوض، بيتكتب **قبل** ما
+// الـ 409 يرجع. فشل D1 مابيلغيش الرفض، بس لازم يبان: `logged: false` مش صمت.
+async function logCycleBlocks(db, blocked, job, employee) {
+  if (!blocked.length) return { logged: true, logError: null };
+  const now = new Date().toISOString();
+  try {
+    await writeLogsBatch(db, blocked.map((row) => ({
+      timestamp: now,
+      tool: job.tool,
+      type: CYCLE_BLOCK_TYPE,
+      employee,
+      orderId: row.id,
+      orderName: row.name,
+      // الكتابة اللي **ما حصلتش** — before و after نفس القيمة عن قصد: مفيش حاجة اتحركت.
+      valueBefore: row.s2Status || job.expectedStatus,
+      valueAfter:  row.s2Status || job.expectedStatus,
+      notes: `اتمنع الرفع/التحديث إلى ${job.nextStatus} — ${row.code}: ${row.value}`,
+      extra: {
+        jobType: job.jobType,
+        expectedStatus: job.expectedStatus,
+        blockedNextStatus: job.nextStatus,
+        code: row.code, value: row.value, action: row.action,
+      },
+    })));
+    return { logged: true, logError: null };
+  } catch (e) {
+    return { logged: false, logError: e.message };
+  }
+}
+
+// ─── §SHOPIFY-RE::writeAndVerifyS2 ───
+// كل أوردر بيكتب ميتافيلدين: `custom.status_2_r_e` و`custom.printing_time_s2`.
+// ١٢ أوردر في الدفعة = ٢٤ ميتافيلد — سقف `metafieldsSet` هو ٢٥.
+async function setS2Status(env, token, orders, newValue, printingTimeS2) {
+  const updated = [];
+  const mutation = `
+    mutation SetS2AndPrintingTime($metafields: [MetafieldsSetInput!]!) {
+      metafieldsSet(metafields: $metafields) {
+        metafields { id namespace key value owner { ... on Order { id name } } }
+        userErrors { field message code }
+      }
+    }
+  `;
+  for (const group of chunks(orders, 12)) {
+    const variables = {
+      metafields: group.flatMap((order) => ([
+        { ownerId: order.id, namespace: 'custom', key: MF_S2_STATUS.key,   type: MF_S2_STATUS.type,   value: newValue },
+        { ownerId: order.id, namespace: 'custom', key: MF_PRINTING_S2.key, type: MF_PRINTING_S2.type, value: printingTimeS2 },
+      ])),
+    };
+    const data = await shopifyGQL(env, token, mutation, variables, 'setS2Status');
+    const result = data?.data?.metafieldsSet;
+    if (result?.userErrors?.length) {
+      throw new Error('metafieldsSet: ' + result.userErrors
+        .map(e => `${e.field?.join('.') || 'field'}: ${e.message}`).join(' | '));
+    }
+    updated.push(...(result?.metafields || []));
+  }
+  return updated;
+}
+
+// ③ التحقق — `userErrors:[]` معناها «مفيش اعتراض» مش «اتنفّذت».
+async function verifyS2Status(env, token, orders, expectedValue, expectedPrintingTimeS2) {
+  const query = `
+    query VerifyS2AndPrintingTime($ids: [ID!]!) {
+      nodes(ids: $ids) {
+        ... on Order {
+          id name
+          s2Status:      metafield(namespace: "custom", key: "status_2_r_e")     { value }
+          printingTimeS2: metafield(namespace: "custom", key: "printing_time_s2") { value }
+        }
+      }
+    }
+  `;
+  const mismatches = [];
+  const expectedPrintingMs = Date.parse(expectedPrintingTimeS2);
+
+  for (const group of chunks(orders, 100)) {
+    const data = await shopifyGQL(env, token, query, { ids: group.map(o => o.id) }, 'verifyS2Status');
+    for (const node of (data?.data?.nodes || [])) {
+      if (!node?.id) continue;
+      const value = cleanText(node?.s2Status?.value);
+      const printingTimeS2 = cleanText(node?.printingTimeS2?.value);
+      const actualPrintingMs = Date.parse(printingTimeS2);
+      const printingTimeMatches =
+        Number.isFinite(expectedPrintingMs) &&
+        Number.isFinite(actualPrintingMs) &&
+        actualPrintingMs === expectedPrintingMs;
+      if (value !== expectedValue || !printingTimeMatches) {
+        mismatches.push({ id: node.id, name: node.name, value, printingTimeS2 });
+      }
+    }
+  }
+  return mismatches;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1141,7 +1948,7 @@ function buildDeliveryPayload(order, plan, mode) {
   if (sendSecond) receiver.secondPhone = second;      // بيقلّل فشل التوصيل (~3% من الأوردرات)
 
   const payload = {
-    type: BOSTA_TYPE,
+    type: BOSTA_TYPE_BY_JOB[JOB_S1],
     cod,
     // قيمة البضاعة — مش الفلوس المحصّلة.
     // ⚠️ وليها **تكلفة مباشرة**: بوسطة بتحسب `pricing.insuranceFee` = **١٪**
@@ -1220,19 +2027,58 @@ async function createDelivery(env, payload, documented) {
   };
 }
 
+// ─── §BOSTA::terminateDelivery ───
+// الرجوع الوحيد. 🔴 بالـ `trackingNumber` — مسار الـ `_id` بيرجّع 404.
+// بعد نجاحه الشحنة **بتختفي** (أي GET بعدها بيرجّع "400 Delivery not found.")،
+// و`uniqueBusinessReference` **بيتحرّر** — فإعادة الرفع بعد التصحيح بتعدّي.
+// الإقران ده (إلغاء ← إعادة رفع) هو سبب وجود الـ endpoint بدل زيارة الداشبورد.
+async function terminateDelivery(env, trackingNumber) {
+  const tn = cleanText(trackingNumber);
+  if (!tn) return { ok: false, status: 0, message: 'رقم التتبع فاضي' };
+  let resp, text;
+  try {
+    resp = await fetch(`${BOSTA_BASE}/deliveries/business/${encodeURIComponent(tn)}/terminate`, {
+      method: 'DELETE', headers: bostaHeaders(env),
+    });
+    text = await resp.text();
+  } catch (e) {
+    return { ok: false, status: 0, message: `فشل الاتصال ببوسطة — ${e.message}` };
+  }
+  let body = null;
+  try { body = text ? JSON.parse(text) : null; } catch { /* نص خام تحت */ }
+  if (resp.ok) return { ok: true, status: resp.status };
+  return {
+    ok: false,
+    status: resp.status,
+    errorCode: body?.errorCode != null ? String(body.errorCode) : null,
+    message: body?.message || body?.error || text.slice(0, 200) || `HTTP ${resp.status}`,
+  };
+}
+
 // ─── §BOSTA::humanizeBostaError ───
-function humanizeBostaError(res) {
+// ⚠️ الرسالة بتختلف بالوضع في حالتين بالذات — ومش تجميل:
+//    `11000` في s1 معناه «الأوردر ده مرفوع قبل كده»، وفي R/E معناه «الدورة دي
+//    ليها شحنة شغّالة» **والحل مختلف** (زرار الإلغاء بيحرّر المرجع). و`3008`
+//    مالوش معنى أصلًا في s1 (مفيش استرداد هناك).
+function humanizeBostaError(res, job = null) {
   const code = res.errorCode;
-  if (code === '11000') return 'بوسطة رافضة: رقم الأوردر ده مرفوع عندها قبل كده (uniqueBusinessReference مكرر)';
+  const isRE = !!job?.isRE;
+  if (code === '11000') {
+    return isRE
+      ? 'بوسطة رافضة: الدورة دي مرفوعة عندها بالفعل ومعاها شحنة شغّالة '
+        + '(uniqueBusinessReference مكرر). لو الشحنة القديمة غلط، ألغيها الأول بزرار «إلغاء الشحنة» وبعدين ارفع تاني.'
+      : 'بوسطة رافضة: رقم الأوردر ده مرفوع عندها قبل كده (uniqueBusinessReference مكرر)';
+  }
   if (code === '3003')  return 'بوسطة رافضة: المنطقة غير موجودة عندها (District Not Found)';
   if (code === '3002')  return 'بوسطة رافضة: المدينة غير موجودة عندها';
-  if (code === '3008')  return 'بوسطة رافضة: أقصى مبلغ استرداد عند الباب -2000 جنيه';
+  if (code === '3008')  return `بوسطة رافضة: أقصى مبلغ استرداد عند الباب ${COD_REFUND_MIN} جنيه`;
   if (code === '1028')  return 'بوسطة رافضة: مفتاح الـ API غير صالح — راجع BOSTA_API_KEY';
   // 🔴 مش كل فشل من بوسطة معاه `errorCode`. شكل العنوان الغلط بيرجّع
   //    **500 بلا كود خالص** (مقيس 10-09-2026 على عقد الاسترجاع). أي
   //    `humanizeBostaError` بيفترض وجود كود بيطلّع رسالة فاضية على الحالة دي.
   if (res.status >= 500) {
     return `بوسطة ردّت بخطأ داخلي (HTTP ${res.status}): ${res.message} — `
+         + (isRE ? 'غالبًا شكل العنوان غلط للنوع ده. ' : '')
          + 'بلّغ عن الأوردر ده بدل ما تعيد المحاولة.';
   }
   return `بوسطة رافضة (HTTP ${res.status}${code ? ` · كود ${code}` : ''}): ${res.message}`;
@@ -1242,6 +2088,10 @@ function humanizeBostaError(res) {
 // §UPLOAD — منطق الأداة
 // ══════════════════════════════════════════════════════════════
 
+// الوضع الوحيد اللي §UPLOAD بيخدمه — بيتحسب مرة عشان مايتبنيش في كل صف.
+const S1_JOB = getJob(JOB_S1);
+
+
 // ─── §UPLOAD::buildRow ───
 // صف واحد للواجهة — بيانات العرض + خطة العنوان + حالة الرفع السابق.
 function buildRow(order, catalog) {
@@ -1249,9 +2099,9 @@ function buildRow(order, catalog) {
   const plan = resolveAddress(order, catalog);
   const problems = validateOrder(order, plan);
 
-  const trackingBefore = order.mfTracking?.value || null;
+  const trackingBefore = previousTrackingS1(order);
   const tags = Array.isArray(order.tags) ? order.tags : [];
-  const hasTag = tags.includes(UPLOAD_TAG);
+  const hasTag = tags.includes(UPLOAD_TAG_BY_JOB[JOB_S1]);
 
   const lines = (order.lineItems?.nodes || []).filter(li => (li.currentQuantity || 0) > 0);
 
@@ -1416,7 +2266,7 @@ async function uploadOne(env, token, order, catalog, override) {
 
   // الرفع نجح فعلًا — أي فشل بعد كده warning مش error
   try {
-    const w = await writeBackToShopify(env, token, order, res.trackingNumber, actions);
+    const w = await writeBackToShopify(env, token, order, res.trackingNumber, actions, S1_JOB);
     row.warnings.push(...w);
     row.status = row.warnings.length ? 'warning' : 'success';
   } catch (e) {
@@ -1428,24 +2278,25 @@ async function uploadOne(env, token, order, catalog, override) {
 }
 
 // ─── §UPLOAD::logRow ───
-async function logRow(env, row, employee) {
-  // ⚠️ الترتيب مقصود: `skipped` قبل `error`، و`shopify_write_failed` منفصلة عن
-  //    `upload_failed` عمدًا — الأولى معناها الشحنة **موجودة فعلًا** عند بوسطة
+async function logRow(env, row, employee, job = S1_JOB) {
+  // ⚠️ الترتيب مقصود: `skipped` قبل `error`، و«الكتابة الرجعية فشلت» منفصلة عن
+  //    «الرفع فشل» عمدًا — الأولى معناها الشحنة **موجودة فعلًا** عند بوسطة
   //    والأوردر لسه مش عارف بيها؛ خلطهم بيخلي أي إعادة محاولة تعمل شحنة مكررة.
   const type = row.skipped                     ? 'skipped'
-             : row.shopifyWriteFailed          ? 'shopify_write_failed'
-             : row.status === 'error'          ? (row.trackingNumber ? 'shopify_write_failed' : 'upload_failed')
-             :                                   'uploaded';
+             : row.shopifyWriteFailed          ? job.writeFailType
+             : row.status === 'error'          ? (row.trackingNumber ? job.writeFailType : job.uploadFailType)
+             :                                   job.uploadedType;
   try {
     await writeLog(env.DB, {
-      tool: TOOL_NAME,
+      tool: job.tool,
       type,
       employee,
       orderId:   row.orderId,
       orderName: row.orderNumber,
       notes:     row.error || row.warnings.join(' · ') || `رقم التتبع ${row.trackingNumber || '—'}`,
       extra: {
-        result: row.status,
+        jobType:         job.jobType,
+        result:          row.status,
         contract_used:   row.contractUsed,
         tracking_number: row.trackingNumber,
         bosta_id:        row.bostaId,
@@ -1477,6 +2328,587 @@ async function runBatch(items, worker, concurrency) {
     }
   });
   await Promise.all(runners);
+  return out;
+}
+
+// ══════════════════════════════════════════════════════════════
+// §RE-UPLOAD — منطق الاسترجاع/الاستبدال
+// 🔴 البلوك ده **مايتدمجش** مع §UPLOAD فوقه. الفرق مش في if واحدة —
+//    اتجاه العنوان، إشارة الفلوس، المرجع الفريد، ومحتوى الطرد كلهم مختلفين،
+//    والخلط بينهم بيطلّع شحنة بفلوس في الاتجاه الغلط (MERGE-BRIEF §٤).
+// ══════════════════════════════════════════════════════════════
+
+// ─── §RE-UPLOAD::returnItems ───
+// اللي بيرجع فعليًا. صورة المرآة لـ §SHOPIFY-RE::outgoingItems، وبنفس الحماية:
+// بيتحسب سيرفر-سايد من الدورة المفتوحة **الواحدة**، فالواجهة عمرها ما بتشوف
+// `returns[]` ومش قادرة تعيد تجميعها بطريقة ما قبل v5.2.0 (Rule 15 ②).
+// بيغذّي `returnSpecs` في **النوعين** — مقيس حيًا: بوسطة بتخزّن الطرد الراجع
+// تحت `returnSpecs` في 25 و30 على السواء.
+function resolveReturnItems(cycle) {
+  return (cycle?.returnLineItems?.edges || [])
+    .map((edge) => {
+      const li  = edge?.node?.fulfillmentLineItem?.lineItem;
+      const qty = edge?.node?.quantity || 1;
+      if (!li) return null;
+      return {
+        label: cleanText(li.sku) || cleanText(li.name) || null,
+        qty,
+        unitPrice: parseFloat(li.originalUnitPriceSet?.shopMoney?.amount || 0) || 0,
+      };
+    })
+    .filter((row) => row && row.label);
+}
+
+// ⚠️ ملاحظة الأوردر بتتلمّ في سطر واحد. حقل `notes` عند بوسطة نص واحد والمندوب
+//    بيقراه؛ سطر جديد خام بيكسّر الصف.
+//    ⚠️ والـ `note` ملاحظات **داخلية** لخدمة العملاء — الكلام ده بيوصل للمندوب.
+function flattenNote(note) {
+  const text = cleanText(note).replace(/\s*\n+\s*/g, ' / ').replace(/\s{2,}/g, ' ').trim();
+  return text ? text.slice(0, 500) : null;
+}
+
+function describeItems(rows) {
+  return rows.map((r) => `${r.label} x${r.qty}`).join(' | ').slice(0, 900) || null;
+}
+function countItems(rows) {
+  return rows.reduce((sum, r) => sum + (r.qty || 1), 0);
+}
+function valueItems(rows) {
+  return rows.reduce((sum, r) => sum + (parseFloat(r.unitPrice) || 0) * (r.qty || 1), 0);
+}
+
+// ─── §RE-UPLOAD::uniqueRef ───
+// 🔴 مقيس حيًا 10-09-2026 — ده **بيناقض** اللي كان مكتوب في `bosta-api-helper`
+//    8.3 و`ecommoda-constants` §3.3، فاقرا الجدول مش النص القديم:
+//
+//   نفس الـ uref والشحنة الأصلية عايشة  → 400 · errorCode "11000"
+//   نفس الـ uref بعد terminate           → 201  (الإلغاء **بيحرّر** القيمة)
+//   نفس businessReference بـ uref مختلف  → 201  (ده اللي الإكسيل كان بيعمله)
+//   نفس الـ uref على **نوع شحنة تاني**   → 400 · "11000" (الفرادة على الحساب كله)
+//
+// فالحارس حقيقي، وهو بالظبط الحارس اللي عايزينه: بيمنع شحنة تانية بفلوس لدورة
+// ليها شحنة، وبيسمح بإعادة رفع مصححة بعد إلغاء الغلط.
+//
+// `businessReference` بيفضل `order.name` بالحرف — كل سكانرات الستاك بتدوّر بيه —
+// والفرادة لكل دورة عايشة في الحقل المخفي ده. **`#12345` لوحده ممنوع هنا**:
+// ده بالظبط اللي شحنة s1 بتبعته، فهيصطدم بيها.
+function buildUniqueRef(order, jobType) {
+  const cycleName = cleanText(order?.currentCycle?.name);
+  const n = cycleName.match(/-R(\d+)$/i)?.[1] || null;
+  if (!n) {
+    return {
+      ok: false,
+      code: 'CYCLE_NAME_UNPARSEABLE',
+      value: cycleName || '—',
+      // Rule 13/14 — مفيش رجوع صامت. رقم متخمّن معناه إن نفس الدورة تترفع
+      // مرتين تحت مرجعين مختلفين، والاتنين بفلوس.
+      action: 'اسم الدورة في شوبيفاي مش على الشكل المتوقع (#12345-R1) — مش قادرين نبني مرجع فريد '
+            + 'للشحنة، والرفع اتوقف بدل ما نخمّن رقم ونسمح برفع مكرر بفلوس. راجع الدورة في شوبيفاي.',
+    };
+  }
+  return { ok: true, uref: `${cleanText(order.name)}${jobType === JOB_EXCHANGE ? '-EX' : '-R'}${n}` };
+}
+
+// ─── §RE-UPLOAD::resolveCod ───
+// 🔴 §UPLOAD فوق بيلف القيمة دي في `Math.abs`. ده **صح هناك** (السالب في s1
+//    معناه العميل دفع زيادة) و**كارثة هنا**: بيحوّل «رجّعله ٢٠٠٠» لـ«حصّل منه
+//    ٢٠٠٠». الإشارة حمّالة معنى — من ٤ أوردرات R/E مقيسة **٣ سالبين**.
+//    ❌ ممنوع نسخ سطر الـ cod من §UPLOAD::buildDeliveryPayload لهنا. ❌
+function resolveCod(order) {
+  const raw = parseFloat(order?.totalOutstandingSet?.shopMoney?.amount || 0) || 0;
+  const cod = Math.max(raw, COD_REFUND_MIN);
+  return {
+    cod,
+    raw,
+    // بوسطة بترفض أي حاجة تحت -2000 (400 · errorCode "3008")، فالقص إلزامي —
+    // بس **معلَن**، مش صامت. الباقي بيتسوّى مكتبيًا، والموظف لازم يشوف الرقم.
+    // (`#53517`: مستحق 2700 · الملف كان بيكتب 2000 والفرق مايبانش لحد.)
+    clipped: raw < COD_REFUND_MIN,
+    remainder: raw < COD_REFUND_MIN ? Math.abs(raw - COD_REFUND_MIN) : 0,
+  };
+}
+
+// ─── §RE-UPLOAD::buildPayloadParts ───
+// كل اللي الـ payload محتاجه من الدورة في مكان واحد، عشان التحقق تحت وبنّاء
+// الـ payload مايختلفوش عليه أبدًا.
+function buildPayloadParts(order, jobType) {
+  const cycle    = order?.currentCycle || null;
+  const returns  = resolveReturnItems(cycle);
+  const outgoing = Array.isArray(order?.outgoingItems) ? order.outgoingItems : [];
+  const money    = resolveCod(order);
+
+  // قيمة البضاعة = اللي **بيسافر**. على الاستبدال ده الطرد الخارج؛ على
+  // الاسترجاع القطع الراجعة.
+  // ⚠️ وعليها تكلفة مباشرة: بوسطة بتحسب تأمين **١٪** منها تلقائيًا (2600 → 26).
+  const goodsValue = outgoing.length ? valueItems(outgoing) : valueItems(returns);
+
+  return {
+    ...money,
+    returnItems: returns,
+    returnCount: countItems(returns),
+    returnDescription: describeItems(returns),
+    outgoingCount: countItems(outgoing),
+    outgoingDescription: describeItems(outgoing),
+    goodsValue: Math.round(goodsValue * 100) / 100,
+  };
+}
+
+// ─── §RE-UPLOAD::buildRePayload ───
+// 🔴 **الاتجاه بيتقلب حسب النوع.** مقيس حيًا 10-09-2026:
+//
+//              CRP (25)                    Exchange (30)
+//   العميل     pickupAddress               dropOffAddress
+//   المخزن     dropOffAddress (تلقائي)      pickupAddress (تلقائي)
+//
+// بوسطة بتملا ناحية المخزن لوحدها من `businessLocationId`. بعت عنوان العميل في
+// `dropOffAddress` على CRP بيرجّع HTTP 500
+// ("Cannot read properties of undefined (reading 'city')") — **مش 400 نضيف**.
+function buildRePayload(order, plan, mode, jobType, parts) {
+  const sa = order.shippingAddress || {};
+
+  const fullName  = cleanText(sa.name) || `${cleanText(sa.firstName)} ${cleanText(sa.lastName)}`.trim();
+  const nameParts = fullName.split(/\s+/).filter(Boolean);
+  const firstName = cleanText(sa.firstName) || nameParts[0] || '';
+  const lastName  = cleanText(sa.lastName)  || nameParts.slice(1).join(' ');
+
+  // 🔴 `wirePhone` مش `normPhone` — الأخيرة مفتاح **مقارنة** بس. المتجر فيه
+  //    تلات أشكال مقيسة، منها `+20 12 71043044` **بمسافات** (`#53849`).
+  const phone  = wirePhone(sa.phone);
+  const second = wirePhone(order?.customer?.phone || order?.phone);
+  const sendSecond = second && normPhone(second) !== normPhone(phone);
+
+  const firstLine = [
+    [sa.address1, sa.address2].filter(Boolean).join(' - '),
+    `${cleanText(sa.city)}- ${cleanText(sa.province)}`,
+  ].filter(Boolean).join(', ').trim();
+
+  // 🔴 الحقل `city` — **مش `cityName`**. الڤاليديتور مش شايف `cityName` أصلًا
+  //    وبيتجاهله بصمت، فأي نسخ حرفي من داشبورد بوسطة بيقع في الفخ ده.
+  const address = { city: plan.cityName, firstLine };
+  if (mode === 'district') { address.districtId = plan.districtId; }
+  if (mode === 'zoneName') { address.cityId = plan.cityId; address.districtName = plan.districtName; }
+
+  const receiver = { firstName, phone };            // الإلزامي الموثّق
+  if (lastName)   receiver.lastName    = lastName;
+  if (fullName)   receiver.fullName    = fullName;  // اختياري — **مع** firstName مش بدلها
+  if (sendSecond) receiver.secondPhone = second;
+
+  const payload = {
+    type: BOSTA_TYPE_BY_JOB[jobType],
+    cod: parts.cod,                                  // 🔴 بإشارتها — §RE-UPLOAD::resolveCod
+    goodsInfo: { amount: parts.goodsValue },         // ⚠️ عليها تأمين ١٪ تلقائي عند بوسطة
+    receiver,
+    // الطرد الراجع — موجود في **النوعين**.
+    returnSpecs: {
+      packageType: 'Parcel',
+      size: 'SMALL',
+      packageDetails: { itemsCount: parts.returnCount, description: parts.returnDescription },
+    },
+    businessLocationId: BOSTA_LOCATION_ID,
+    businessReference: cleanText(order.name),        // ق-١ — بالحرف، بالهاش
+    uniqueBusinessReference: parts.uref,             // ق-٢ — لكل دورة، مخفي عن أي بحث
+    allowToOpenPackage: ALLOW_OPEN_PKG,
+  };
+
+  if (jobType === JOB_EXCHANGE) {
+    payload.dropOffAddress = address;
+    // الطرد الخارج. `analyzeReturnCycles` بترفض استبدال من غير حاجة خارجة
+    // (`EXCHANGE_WITHOUT_ITEMS`)، فده عمره ما بيبقى فاضي.
+    payload.specs = {
+      packageType: 'Parcel',
+      size: 'SMALL',
+      packageDetails: { itemsCount: parts.outgoingCount, description: parts.outgoingDescription },
+    };
+  } else {
+    payload.pickupAddress = address;
+    // مفيش `specs` على CRP — مفيش حاجة خارجة من المخزن. متحقَّق: مقبول (201).
+  }
+
+  // ⚠️ `flexShippingInfo` **مابيتبعتش** هنا عن قصد (بعكس s1). بوسطة بتحطها
+  //    لوحدها وبتعلّمها `status: "Not Applicable"` على شحنات R/E، فبعتها
+  //    مابيغيّرش حاجة.
+  const notes = flattenNote(order.note);
+  if (notes) payload.notes = notes;                  // `notes` الاسم الرسمي؛ `deliveryNotes` مش موجود
+  return payload;
+}
+
+// ─── §RE-UPLOAD::validateReOrder ───
+// `worker-builder` ⑩① — كل فحص رخيص بيشتغل **قبل** النداء اللي مافيش رجوع منه.
+// إنشاء الشحنة بيكلّف فلوس حقيقية؛ رفض بعده بيسيب شحنة مدفوعة محدش طلبها.
+function validateReOrder(order, plan, parts, jobType) {
+  const problems = [];
+  const sa = order.shippingAddress || {};
+
+  if (!plan.ok) { problems.push(plan.error); return problems; }
+
+  if (!wirePhone(sa.phone) || normPhone(sa.phone).length < 8) {
+    problems.push('رقم تليفون الشحن ناقص أو غير صالح');
+  }
+  const fullName = cleanText(sa.name) || `${cleanText(sa.firstName)} ${cleanText(sa.lastName)}`.trim();
+  if (!fullName) problems.push('اسم المستلم فاضي — firstName إلزامي عند بوسطة');
+
+  const firstLineLen = [sa.address1, sa.address2, sa.city, sa.province].filter(Boolean).join(' ').length;
+  if (firstLineLen <= 5) problems.push('العنوان أقصر من الحد الأدنى (أكتر من ٥ حروف)');
+
+  if (parts.cod > COD_MAX) {
+    problems.push(`قيمة التحصيل ${parts.cod.toLocaleString('en-US')} أعلى من الحد الموثّق ${COD_MAX.toLocaleString('en-US')}`);
+  }
+
+  // شحنة من غير طرد على أي من الناحيتين مش شحنة. ناحية الاستبدال متمنوعة فوق
+  // (`EXCHANGE_WITHOUT_ITEMS`)؛ ده بيمسك ناحية الاسترجاع، اللي مفيش حاجة تانية بتفحصها.
+  if (!parts.returnCount) {
+    problems.push('مفيش ولا قطعة راجعة في الدورة المفتوحة — الشحنة مالهاش محتوى، الرفع اتوقف');
+  }
+  if (jobType === JOB_EXCHANGE && !parts.outgoingCount) {
+    problems.push('مفيش ولا قطعة خارجة على الاستبدال — الرفع اتوقف');
+  }
+  return problems;
+}
+
+// ─── §RE-UPLOAD::uploadOneRE ───
+// أربع حالات مش اتنين — `worker-builder` Step 5A ④.
+// 🔴 `warning` هنا معناها **الشحنة موجودة عند بوسطة ومعاها رقم تتبع** وحاجة
+//    بعدها ما تمّتش. ممنوع تتعرض كفشل: إعادة الرفع بتشتري شحنة تانية بفلوس.
+async function uploadOneRE(env, token, order, catalog, job, override) {
+  const actions = [];
+  const row = {
+    orderId: cleanText(order.id),
+    orderGid: cleanText(order.id),
+    orderNumber: cleanText(order.name),
+    status: 'error',
+    actions,
+    trackingNumber: null,
+    bostaId: null,
+    uref: null,
+    contractUsed: null,
+    citySent: null,
+    cityAuto: null,
+    districtSent: null,
+    cityOverridden: false,
+    codSent: null,
+    codClipped: false,
+    codRemainder: 0,
+    warnings: [],
+    error: null,
+    logged: true,
+  };
+
+  const plan  = resolveAddress(order, catalog);
+  const parts = buildPayloadParts(order, job.jobType);
+
+  const problems = validateReOrder(order, plan, parts, job.jobType);
+  if (problems.length) { row.error = problems.join(' · '); return row; }
+
+  const ref = buildUniqueRef(order, job.jobType);
+  if (!ref.ok) { row.error = `${ref.code}: ${ref.action}`; return row; }
+  row.uref = ref.uref;
+
+  // ─── تعديل الموظف اليدوي — بيغلب المطابقة التلقائية ───
+  // 🔴 ممكن يغيّر **المدينة** مش المنطقة بس: تصنيف بوسطة مش التقسيم الإداري،
+  //    والعميل بيغلط في اختيار المحافظة. من غيره الصفوف دي مالهاش حل يدوي —
+  //    والمدينة الغلط مش fallback محايد زي المنطقة الناقصة، هي بتحدد الفرع
+  //    والتسعيرة.
+  // ⚠️ التعديل بيتكتب في `planUsed` نفسه عن قصد: الـ payload وحقول الصف
+  //    **ورجوع 3003** كلهم بيقروا منه، فالرجوع بيفضل ماسك المدينة المصححة.
+  //    متغير جنبي كان هيبعت الغلط تاني في صمت.
+  let mode = plan.mode;
+  const planUsed = { ...plan };
+
+  const ovCityId = override?.cityId || null;
+  if (ovCityId && ovCityId !== plan.cityId) {
+    const ovCity = catalog.cities.find((c) => c.cityId === ovCityId);
+    if (!ovCity) {
+      row.error = `المدينة المختارة يدويًا (${ovCityId}) مش موجودة في كتالوج بوسطة — `
+                + 'الرفع اتوقف بدل ما يتبعت على المدينة الأصلية';
+      return row;
+    }
+    planUsed.cityId   = ovCity.cityId;
+    planUsed.cityName = ovCity.cityName;
+    row.cityOverridden = true;
+  }
+
+  if (override?.districtId) {
+    const city = catalog.cities.find((c) => c.cityId === planUsed.cityId);
+    const { list } = availableDistricts(city);
+    const d = list.find((x) => x.id === override.districtId);
+    // 🔴 مش لاقيينها = **وقف**، مش رجوع صامت للمطابقة التلقائية. الموظف اختار
+    //    منطقة صراحةً؛ الشحن على حاجة تانية من غير ما يعرف = شحنة بفلوس على
+    //    عنوان مش اللي وافق عليه.
+    if (!d) {
+      row.error = `المنطقة المختارة يدويًا مش موجودة (أو مش متاحة للتسليم) في `
+                + `مدينة ${planUsed.cityName} عند بوسطة — الرفع اتوقف. افتح النافذة واختر من الأول.`;
+      return row;
+    }
+    mode = 'district';
+    planUsed.districtId   = d.id;
+    planUsed.districtName = d.name;
+  } else if (override?.forceProvince || row.cityOverridden) {
+    mode = 'province';
+  }
+
+  const parts2 = { ...parts, uref: ref.uref };
+  let documented = mode === 'district' || mode === 'zoneName';
+  let payload = buildRePayload(order, planUsed, mode, job.jobType, parts2);
+
+  let res;
+  try {
+    res = await createDelivery(env, payload, documented);
+  } catch (e) {
+    row.error = e.message;
+    return row;
+  }
+
+  row.contractUsed = documented ? 'documented' : 'undocumented';
+  row.citySent     = planUsed.cityName;
+  row.cityAuto     = plan.cityName;
+  row.districtSent = (mode === 'district' || mode === 'zoneName') ? planUsed.districtName : null;
+  row.codSent      = parts.cod;
+  row.codClipped   = parts.clipped;
+  row.codRemainder = parts.remainder;
+
+  // 🔴 `errorCode` **نص** — مقارنته بالرقم 3003 معناها إن الرجوع ده عمره ما يشتغل.
+  if (!res.ok && String(res.errorCode) === '3003' && documented) {
+    row.warnings.push(`بوسطة رفضت المنطقة "${row.districtSent}" — اترفعت على مستوى المحافظة بدلها`);
+    mode = 'province';
+    documented = false;
+    payload = buildRePayload(order, planUsed, 'province', job.jobType, parts2);
+    try {
+      res = await createDelivery(env, payload, false);
+    } catch (e) {
+      row.error = e.message;
+      return row;
+    }
+    row.contractUsed = 'undocumented';
+    row.districtSent = null;
+  }
+
+  if (!res.ok) { row.error = humanizeBostaError(res, job); return row; }
+
+  actions.push(`رفع شحنة ${job.label} على بوسطة (${row.contractUsed === 'documented' ? 'بالمنطقة' : 'بالمحافظة'})`);
+  row.trackingNumber = res.trackingNumber;
+  row.bostaId        = res.bostaId;
+
+  if (parts.clipped) {
+    row.warnings.push(
+      `العميل ليه ${Math.abs(parts.raw).toLocaleString('en-US')} — بوسطة هترجّع `
+      + `${Math.abs(COD_REFUND_MIN).toLocaleString('en-US')} بس (حد بوسطة)، والباقي `
+      + `${parts.remainder.toLocaleString('en-US')} يتسوّى مكتبيًا`,
+    );
+  }
+  if (row.cityOverridden) {
+    row.warnings.push(`المدينة اتغيّرت يدويًا من ${row.cityAuto} إلى ${row.citySent}`);
+  }
+
+  // 🔴 من هنا ورايح الشحنة **موجودة وبتكلّف فلوس**. أي حاجة بعدها warning،
+  //    عمرها ما تبقى error (`worker-builder` ⑩②).
+  if (!res.trackingNumber) {
+    row.status = 'warning';
+    row.warnings.push('بوسطة قبلت الشحنة بس ما رجّعتش رقم تتبع — دوّر عليها على الداشبورد برقم الأوردر قبل أي إعادة رفع');
+    return row;
+  }
+
+  // رقم تتبع S2 بقى ليه ميتافيلد من v2.0.0 (`custom.bosta_tracking_number_s2`)
+  // + تاج `Bosta_Uploaded_S2`. 🔴 `custom.courier` **مابيتكتبش** هنا — اتتحقّق
+  // منه في حارس الدورات قبل الشحنة.
+  try {
+    const w = await writeBackToShopify(env, token, order, res.trackingNumber, actions, job);
+    row.warnings.push(...w);
+  } catch (e) {
+    row.warnings.push(
+      `الشحنة اترفعت (${res.trackingNumber}) لكن كتابة رقم التتبع/التاج على شوبيفاي فشلت: ${e.message} — `
+      + '**متعيدش الرفع**، ده بيعمل شحنة تانية بفلوس.',
+    );
+    row.shopifyWriteFailed = true;
+  }
+
+  row.status = row.warnings.length ? 'warning' : 'success';
+  return row;
+}
+
+// ─── §RE-UPLOAD::runUploadBatch ───
+// توازي متحفّظ — بوسطة مابتنشرش حدود استهلاك في أي مصدر رسمي، فالرقم بيتقاس
+// مش بيتخمّن.
+// ⚠️ النتايج بترجع بترتيب **المدخل** مهما كان ترتيب الانتهاء — الواجهة بتقرن
+//    الصفوف بالفهرس (`worker-builder` ⑬).
+async function runUploadBatchRE(env, token, orders, catalog, job, overrides) {
+  const out = new Array(orders.length);
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < orders.length) {
+      const i = cursor++;
+      const order = orders[i];
+      try {
+        out[i] = await uploadOneRE(env, token, order, catalog, job, overrides[cleanText(order.id)] || null);
+      } catch (e) {
+        out[i] = {
+          orderId: cleanText(order.id), orderNumber: cleanText(order.name),
+          status: 'error', actions: [], warnings: [],
+          trackingNumber: null, error: `خطأ غير متوقع: ${e.message}`, logged: true,
+        };
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(UPLOAD_CONC, orders.length) }, worker));
+  return out;
+}
+
+// ─── §RE-UPLOAD::buildReRow ───
+// صف واحد للواجهة — **نفس شكل** `§UPLOAD::buildRow` عشان الجدول وفلاتره ونافذة
+// المنطقة يبقوا كود واحد للتلات أوضاع، وزيادة عليه حقول R/E.
+function buildReRow(order, catalog, job, cycleAnalysis) {
+  const sa = order.shippingAddress || {};
+  const { current, outgoing, info } = cycleAnalysis;
+  const enriched = { ...order, currentCycle: current, outgoingItems: outgoing.items };
+  const parts = buildPayloadParts(enriched, job.jobType);
+
+  let plan;
+  if (!catalog) {
+    // 🔴 الكتالوج مش متحمّل ≠ «مفيش مطابقة منطقة». الرسالة لازم تقول السبب
+    //    الحقيقي، وإلا الموظف بيفتح النافذة يدوّر على منطقة والقايمة فاضية
+    //    وهو فاكر إن العنوان هو المشكلة.
+    plan = { ok: false, error: 'كتالوج بوسطة مش متحمّل — مسار الرفع المباشر مقفول. تصدير الإكسيل شغّال عادي.' };
+  } else {
+    // عزل لكل أوردر: خطة بترمي لازم تكلّف **الصف ده** خطته، مش الدفعة كلها.
+    try { plan = resolveAddress(order, catalog); }
+    catch (e) { plan = { ok: false, error: `فشل حساب خطة العنوان: ${e.message}` }; }
+  }
+
+  const problems = info.blocked
+    ? [`${info.blockReason.code}: ${info.blockReason.action}`]
+    : validateReOrder(enriched, plan, parts, job.jobType);
+
+  const ref = buildUniqueRef(enriched, job.jobType);
+  if (!ref.ok && !problems.length) problems.push(`${ref.code}: ${ref.action}`);
+
+  const tags = Array.isArray(order.tags) ? order.tags : [];
+  const prevTracking = cleanText(order?.mfTrackS2?.value) || null;
+  const hasTag = tags.includes(job.tag);
+
+  return {
+    jobType:     job.jobType,
+    orderId:     String(order.legacyResourceId || String(order.id).split('/').pop()),
+    orderGid:    order.id,
+    orderNumber: order.name,
+    createdAt:   order.createdAt,
+    customer:    (sa.name || `${sa.firstName || ''} ${sa.lastName || ''}`).trim(),
+    phone:       sa.phone || '',
+    secondPhone: (order.customer?.phone && normPhone(order.customer.phone) !== normPhone(sa.phone))
+                   ? order.customer.phone : '',
+    province:    sa.province || '',
+    provinceCode: sa.provinceCode || '',
+    addressCity: sa.city || '',
+    address1:    sa.address1 || '',
+    address2:    sa.address2 || '',
+    s2:          cleanText(order?.s2Status?.value),
+    courier:     cleanText(order?.courier?.value),
+    // 🔴 بإشارتها. الجدول بيعرض «استرداد» لما تكون سالبة — الموظف لازم يشوف
+    //    الاتجاه قبل ما يضغط.
+    cod:         parts.cod,
+    codRaw:      parts.raw,
+    codClipped:  parts.clipped,
+    codRemainder: parts.remainder,
+    goodsValue:  parts.goodsValue,
+    itemsCount:  job.jobType === JOB_EXCHANGE ? parts.outgoingCount : parts.returnCount,
+    note:        order.note || '',
+    // R/E — الدورة والقطع
+    cycleName:      info.currentCycleName,
+    cycleCreatedAt: current?.createdAt || null,
+    cycleInfo:      info,
+    returnItems:      parts.returnItems,
+    returnCount:      parts.returnCount,
+    returnDescription: parts.returnDescription,
+    outgoingItems:    outgoing.items,
+    outgoingSource:   outgoing.source,
+    outgoingCount:    parts.outgoingCount,
+    outgoingDescription: parts.outgoingDescription,
+    uref:        ref.ok ? ref.uref : null,
+    // حالة الرفع السابق — الصف بيفضل ظاهر ومعاه تنبيه، مش بيتشال
+    alreadyUploaded: !!(prevTracking || hasTag),
+    previousTracking: prevTracking,
+    hasUploadTag: hasTag,
+    // خطة العنوان — نفس المفاتيح بالظبط بتاعة s1
+    addressOk:    plan.ok,
+    addressError: plan.ok ? null : plan.error,
+    cityName:     plan.ok ? plan.cityName : '',
+    cityId:       plan.ok ? plan.cityId : '',
+    mode:         plan.ok ? plan.mode : 'blocked',
+    districtId:   plan.ok ? (plan.districtId || null) : null,
+    districtName: plan.ok ? (plan.districtName || null) : null,
+    ambiguous:    plan.ok ? !!plan.ambiguous : false,
+    candidates:   plan.ok ? (plan.candidates || []) : [],
+    cityDoubt:    plan.ok ? !!plan.cityDoubt : false,
+    crossCity:    plan.ok ? (plan.crossCity || []) : [],
+    localZones:   plan.ok ? (plan.localZones || []) : [],
+    catalogWarning: plan.ok ? plan.catalogWarning : null,
+    problems,
+    uploadable:  problems.length === 0,
+  };
+}
+
+// ─── §RE-UPLOAD::fetchReRows ───
+async function fetchReRows(env, token, job, catalog) {
+  const discovery = await fetchReDiscovery(env, token, job);
+  const ids = discovery.candidates.map(o => o.id);
+  const rows = [];
+  let fallbackPossible = false, blockedCount = 0, warnedCount = 0;
+
+  for (const group of chunks(ids, DETAILS_BATCH_SIZE)) {
+    const details = await fetchNodesWithCostFallback(env, token, buildReDetailsQuery(), group, 'fetchReDetails');
+    if (details.length !== group.length) fallbackPossible = true;
+
+    for (const order of details) {
+      // إعادة الفحص على القيم نفسها — فلتر الميتافيلد ممكن يوسّع النتيجة.
+      if (cleanText(order?.s2Status?.value) !== job.expectedStatus) continue;
+      if (cleanText(order?.courier?.value).toLowerCase() !== COURIER_VALUE.toLowerCase()) continue;
+
+      const analysis = analyzeReturnCycles(order, job.jobType);
+      if (analysis.info.blocked) blockedCount += 1;
+      else if (analysis.info.warnings.length) warnedCount += 1;
+
+      // 🔴 `returns` و`lineItems` **مش** بيرجعوا للواجهة عن قصد: الصفحة بتاخد
+      //    الدورة المفتوحة الواحدة والقطع المحسوبة، فالتجميع الغلط بتاع ما قبل
+      //    v5.2.0 بقى **مستحيل** من الفرونت إند (Rule 15 ②).
+      rows.push(buildReRow(order, catalog, job, analysis));
+    }
+  }
+
+  return {
+    rows,
+    pageInfo: {
+      ...discovery.pageInfo,
+      discoveryCount: discovery.candidates.length,
+      detailBatchSize: DETAILS_BATCH_SIZE,
+      detailsFetched: rows.length,
+      detailsFallbackPossible: fallbackPossible,
+      blockedByCycles: blockedCount,
+      warnedByCycles: warnedCount,
+    },
+  };
+}
+
+// ─── §RE-UPLOAD::normalizeOrderPayload ───
+// الواجهة بتبعت IDs وأسماء بس؛ العنوان والفلوس ومحتوى الدورة كلهم بيتقروا من
+// شوبيفاي **وقت الرفع**، مش من شاشة ممكن تكون بقالها دقايق.
+function normalizeOrderPayload(orders) {
+  if (!Array.isArray(orders)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const o of orders) {
+    const id = cleanText(o?.id || o?.orderGid);
+    const name = cleanText(o?.name || o?.orderNumber);
+    if (!id || !name || seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      id, name,
+      s2Status: cleanText(o?.s2Status || o?.s2),
+      courier:  cleanText(o?.courier),
+      // الدورة المفتوحة اللي الصف ده بتاعها — نص مفتاح فحص تكرار الإكسيل (v5.3.0)
+      cycleName:      cleanText(o?.cycleName) || null,
+      cycleCreatedAt: cleanText(o?.cycleCreatedAt) || null,
+    });
+  }
   return out;
 }
 
@@ -1636,7 +3068,7 @@ export default {
             query { metafieldDefinitions(first: 50, ownerType: ORDER, namespace: "custom") {
               nodes { key type { name } } } }`, {}, 'diagMfDefs');
           const defs = new Map((md.data?.metafieldDefinitions?.nodes || []).map(n => [n.key, n.type?.name]));
-          for (const mf of [MF_COURIER, MF_TRACKING]) {
+          for (const mf of [MF_COURIER, MF_TRACKING_S1, MF_TRACKING_S2, MF_S2_STATUS, MF_PRINTING_S2]) {
             const live = defs.get(mf.key) || null;
             checks.push({
               ok: live === mf.type,
@@ -1696,6 +3128,34 @@ export default {
                                    : `${PROVINCE_TABLE.length} محافظة كلها متطابقة`,
           });
         } catch { /* الكتالوج فشل فوق وبيتعرض هناك */ }
+
+        // ─── الاسترجاع/الاستبدال (v2.0.0) ───
+        // 🔴 مسار `upload_re` **ما اشتغلش حي ولا مرة** لحد 13-09-2026. الفحص
+        //    هنا بيقول إن الفلتر شغّال وبيرجّع عدد — مش إنه اتجرّب.
+        try {
+          const token = await getAccessToken(env);
+          const Q = `query CountS2($q: String!) { ordersCount(query: $q, limit: 10000) { count precision } }`;
+          for (const jt of [JOB_RETURN, JOB_EXCHANGE]) {
+            const j = getJob(jt);
+            const d = await shopifyGQL(env, token, Q, { q: reCandidateQuery(j.expectedStatus) }, `diagS2_${jt}`);
+            const n = d.data?.ordersCount?.count;
+            checks.push({
+              ok: n != null,
+              label: `فلتر ${j.label} (S2)`,
+              detail: n != null
+                ? `${n} أوردر · ${j.expectedStatus} + courier:${COURIER_VALUE} → ${j.nextStatus}`
+                : 'ordersCount رجّع قيمة فاضية',
+            });
+          }
+        } catch (e) { checks.push({ ok: false, label: 'فلاتر S2', detail: e.message }); }
+
+        // قيم `tool` اللي الأداة بتكتب تحتها — الدمج ساب **قيمتين** عن قصد،
+        // والفحص ده هو اللي بيخلي ده مكتوب بدل ما يتكشف من صف سجل غريب.
+        checks.push({
+          ok: true, label: 'قيم tool في D1',
+          detail: `s1 → ${TOOL_NAME} · استرجاع/استبدال → ${TOOL_NAME_RE} · `
+                + `تاب السجل بيقرا الاتنين (MERGE-BRIEF §٥ اختيار «أ»، مؤقت)`,
+        });
 
         checks.push({ ok: true, label: 'الـ Origin', detail: request.headers.get('Origin') || '—' });
         checks.push({ ok: true, label: 'نسخة الـ Worker', detail: WORKER_VERSION });
@@ -1783,8 +3243,8 @@ export default {
           // 🔴 الرفع المكرر: تحذير + تأكيد صريح من الموظف، والمنع الفعلي عند بوسطة
           //    عبر uniqueBusinessReference. المنع الكامل من عندنا بيقفل حالات
           //    حقيقية (شحنة اتلغت عند بوسطة والأوردر لسه شايل رقم قديم).
-          const prevTracking = order.mfTracking?.value || null;
-          const hasTag = (order.tags || []).includes(UPLOAD_TAG);
+          const prevTracking = previousTrackingS1(order);
+          const hasTag = (order.tags || []).includes(UPLOAD_TAG_BY_JOB[JOB_S1]);
           if ((prevTracking || hasTag) && !item.allowDuplicate) {
             const row = {
               orderId: String(order.legacyResourceId), orderNumber: order.name,
@@ -1820,9 +3280,450 @@ export default {
       }
       // ──────────────────────────────────────────────────────────────
 
+      // ─── §RE-ENDPOINTS — الاسترجاع/الاستبدال ──────────────────────
+      // 🔴 الأربعة دول اتنقلوا من `Bosta-Return-Exchange-Exporter` v6.0.0.
+      //    `upload_re` **بينشئ شحنات حقيقية بفلوس**.
+
+      if (action === 'fetch_candidates') {
+        if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
+        assertEnv(env, 'shopify');
+        const body = await request.json().catch(() => ({}));
+        const job  = getJob(body.jobType, { allow: RE_JOBS });
+        const employee = cleanText(body.employee) || null;
+        const token = await getAccessToken(env);
+
+        // ⚠️ الكتالوج best-effort: بوسطة مش شغّالة **مايوقفش** مسار الإكسيل.
+        //    الفشل بيترجع بدل ما يترمي، والصفوف بتوصل من غير خطة عنوان وزرار
+        //    الرفع المباشر بيتقفل مع السبب. `addressPlan: null` في صمت كان
+        //    هيتقرا «مفيش مطابقة منطقة» وده معنى تاني خالص.
+        let catalog = null, catalogError = null;
+        try { catalog = await getCatalog(env, { force: url.searchParams.get('refresh') === '1' }); }
+        catch (e) { catalogError = e.message; }
+
+        const result = await fetchReRows(env, token, job, catalog);
+
+        let logged = true;
+        try {
+          await writeLog(env.DB, {
+            tool: job.tool, type: 'scan', employee,
+            notes: `فحص ${job.label}: ${result.rows.length} أوردر مطابق`,
+            extra: {
+              jobType: job.jobType, expectedStatus: job.expectedStatus,
+              courier: COURIER_VALUE, catalogLoaded: !!catalog, catalogError,
+              pageInfo: result.pageInfo,
+            },
+          });
+        } catch (e) { logged = false; }
+
+        return json({
+          ok: true,
+          version: WORKER_VERSION,
+          jobType: job.jobType,
+          expectedStatus: job.expectedStatus,
+          nextStatus: job.nextStatus,
+          fetchedAt: new Date().toISOString(),
+          query: result.pageInfo.searchQuery,
+          catalogLoaded: !!catalog,
+          catalogError,
+          catalogFetchedAt: catalog?.fetchedAt || null,
+          truncated: result.pageInfo.stoppedByLimit,
+          pages: result.pageInfo.pagesFetched,
+          pageInfo: result.pageInfo,
+          logged,
+          rows: result.rows,
+        }, 200, request);
+      }
+
+      // 🔴 بينشئ شحنات **حقيقية ومدفوعة**. ترتيب الأفعال مثبّت بـ
+      //    `worker-builder` ⑩: كل فحص رخيص الأول، النداء اللي مافيش رجوع منه
+      //    بعده، وكل حاجة بعده **تحذير مش خطأ**.
+      if (action === 'upload_re') {
+        if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
+        assertEnv(env, 'shopify', 'bosta');
+        const body = await request.json().catch(() => ({}));
+        const job  = getJob(body.jobType, { allow: RE_JOBS });
+        const employee = cleanText(body.employee) || null;
+        const orders = normalizeOrderPayload(body.orders || body.items);
+        const overrides = body.overrides && typeof body.overrides === 'object' ? body.overrides : {};
+
+        if (!employee)     return json({ ok: false, error: 'employee مطلوب' }, 400, request);
+        if (!orders.length) return json({ ok: false, error: 'مفيش أوردرات محددة' }, 400, request);
+        // ② من سلسلة السقوف التلاتة — حارس لصق وسقف الـ subrequests بتاع
+        //    Cloudflare، **مش** حجم الـ chunk بتاع الصفحة ولا سقف تكلفة الاستعلام.
+        if (orders.length > MAX_BATCH) {
+          return json({ ok: false, error: `أقصى عدد في الدفعة ${MAX_BATCH} أوردر — قسّم الرفع` }, 400, request);
+        }
+
+        const token = await getAccessToken(env);
+
+        // ① دورة مفتوحة واحدة، **متقرية من شوبيفاي** مش متصدّقة من الصفحة —
+        //    والكوريَر بيتتأكد هنا كمان (طلب أحمد: بنتحقق مش بنكتب).
+        //    الحارس ده كان قدام ميتافيلد؛ دلوقتي قدام شحنة مدفوعة.
+        const blockedCycles = await findBlockedCycleOrders(env, token, orders, job.jobType);
+        if (blockedCycles.length) {
+          const { logged, logError } = await logCycleBlocks(env.DB, blockedCycles, job, employee);
+          return json({
+            ok: false, code: 'CYCLE_BLOCKED',
+            error: 'فيه أوردرات حالتها مش واضحة (دورات الاسترجاع أو الكوريَر) — اتمنع الرفع على بوسطة لحد ما تتصلّح في شوبيفاي',
+            blocked: blockedCycles, logged, logError,
+          }, 409, request);
+        }
+
+        // ② إعادة قراءة الصفوف كاملة من شوبيفاي.
+        const catalog = await getCatalog(env);
+        const fresh = await fetchNodesWithCostFallback(
+          env, token, buildReDetailsQuery(), orders.map((o) => o.id), 'uploadReDetails');
+        const byId = new Map();
+        const lateBlocks = [];
+        for (const order of fresh) {
+          const { current, outgoing, info } = analyzeReturnCycles(order, job.jobType);
+          // الحارس فوق اشتغل على استعلام تاني أرخص. إعادة الفحص على القراءة
+          // الكاملة بتقفل الشباك بين الاتنين: دورة اتغيّرت في الثواني دي كانت
+          // هتتشحن برضه. رخيص هنا لأن التحليل ده بيتحسب على أي حال.
+          if (info.blocked) {
+            lateBlocks.push({
+              id: order.id, name: order.name,
+              s2Status: cleanText(order?.s2Status?.value) || null,
+              code: info.blockReason.code, value: info.blockReason.value, action: info.blockReason.action,
+            });
+            continue;
+          }
+          byId.set(order.id, { ...order, currentCycle: current, outgoingItems: outgoing.items });
+        }
+        if (lateBlocks.length) {
+          const { logged, logError } = await logCycleBlocks(env.DB, lateBlocks, job, employee);
+          return json({
+            ok: false, code: 'CYCLE_BLOCKED',
+            error: 'حالة الدورات اتغيّرت بين الفحص والرفع — الرفع اتوقف قبل أي شحنة',
+            blocked: lateBlocks, logged, logError,
+          }, 409, request);
+        }
+
+        const missing = orders.filter((o) => !byId.has(o.id));
+        if (missing.length) {
+          // `worker-builder` Step 5A ④ — «ما قدرناش نقراه» عمرها ما تبقى «تمام».
+          return json({
+            ok: false, code: 'ORDER_NOT_READABLE',
+            error: 'شوبيفاي ما رجّعتش كل الأوردرات وقت الرفع — الرفع اتوقف كله بدل ما يتم على جزء',
+            missing: missing.map((o) => o.name),
+          }, 409, request);
+        }
+
+        // ③ الجزء اللي مافيش رجوع منه.
+        const ordered = orders.map((o) => byId.get(o.id));
+        const results = await runUploadBatchRE(env, token, ordered, catalog, job, overrides);
+
+        // ④ حالة S2 بتتكتب **بس** للصفوف اللي شحنتها موجودة فعلًا.
+        const uploaded = results
+          .map((r, i) => ({ r, order: orders[i] }))
+          .filter(({ r }) => r.status !== 'error' && r.trackingNumber);
+
+        const now = nowToSecond();
+        let s2Error = null;
+        // 🔴 **لكل أوردر**، مش للدفعة. `verifyS2Status` بترد لكل أوردر أصلًا،
+        //    وتعارض واحد كان بيعلّم كل الصفوف المرفوعة كفشل كتابة — فيتسجّل
+        //    الحالة القديمة لأوردرات اتحركت فعلًا، ويتلغي صف
+        //    `metafields_change` بتاعها، فتحديث سليم يختفي من KPIs زمن الدورة.
+        const s2Failed = new Set();
+
+        if (uploaded.length) {
+          const targets = uploaded.map(({ order }) => order);
+          try {
+            await setS2Status(env, token, targets, job.nextStatus, now);
+            const mismatches = await verifyS2Status(env, token, targets, job.nextStatus, now);
+            for (const m of mismatches) s2Failed.add(m.id);
+            if (mismatches.length) {
+              s2Error = `التحقق رجّع قيم غير متوقعة على: ${mismatches.map((m) => m.name).join('، ')}`;
+            }
+          } catch (e) {
+            // الكتابة نفسها فشلت — مش عارفين أنهي أوردرات وصلت، فكل صف مرفوع
+            // بيتعامل كغير متحقَّق منه.
+            s2Error = e.message;
+            for (const { order } of uploaded) s2Failed.add(order.id);
+          }
+
+          for (const { r, order } of uploaded) {
+            if (!s2Failed.has(order.id)) { r.actions.push(`تحديث S2 إلى ${job.nextStatus}`); continue; }
+            // 🔴 الفشل هنا **عمره ما يلوّن الصف أحمر**. الشحنة موجودة ومدفوعة؛
+            //    الأحمر بيخلي الموظف يرفع تاني ويشتري واحدة تانية.
+            r.status = 'warning';
+            r.warnings.push(
+              `الشحنة اترفعت (${r.trackingNumber}) لكن تحديث الحالة إلى ${job.nextStatus} فشل: ${s2Error} — `
+              + 'غيّر الحالة يدويًا. **متعيدش الرفع** — ده بيعمل شحنة تانية بفلوس.',
+            );
+            r.shopifyWriteFailed = true;
+          }
+        }
+        const s2Written = uploaded.length > 0 && s2Failed.size === 0;
+
+        // ⑤ السجل. `type` بيتقسم **بالأثر الخارجي** (`worker-builder` ⑭) —
+        //    عشان كده رفع فاشل وكتابة رجعية فاشلة قيمتين مختلفتين: واحدة آمنة
+        //    لإعادة المحاولة والتانية لأ.
+        const logRows = results.map((r, i) => {
+          const order = orders[i];
+          const type = r.status === 'error' ? job.uploadFailType
+                     : r.shopifyWriteFailed ? job.writeFailType
+                     : job.uploadedType;
+          return {
+            timestamp: now,
+            tool: job.tool,
+            type,
+            employee,
+            orderId: order.id,
+            orderName: order.name,
+            valueBefore: order.s2Status || job.expectedStatus,
+            // الحالة اتحركت بس للصفوف اللي وصلت فعلًا.
+            valueAfter: (r.status !== 'error' && !r.shopifyWriteFailed) ? job.nextStatus : (order.s2Status || job.expectedStatus),
+            notes: r.status === 'error'
+              ? `فشل رفع ${job.label} على بوسطة — ${r.error}`
+              : `رفع ${job.label} على بوسطة · تتبع ${r.trackingNumber || '—'}${r.warnings.length ? ` · ${r.warnings.join(' · ')}` : ''}`,
+            extra: {
+              jobType: job.jobType,
+              result: r.status,
+              tracking_number: r.trackingNumber,
+              bosta_id: r.bostaId,
+              uniqueBusinessReference: r.uref,
+              businessReference: order.name,
+              contract_used: r.contractUsed,
+              city_sent: r.citySent,
+              city_auto: r.cityAuto,
+              // القياس اللي بيقول أنهي مدن تستاهل صف في جدول المحافظات بدل
+              // تدخّل يدوي كل مرة.
+              city_overridden: !!r.cityOverridden,
+              district_sent: r.districtSent,
+              codSent: r.codSent,
+              codClipped: r.codClipped,
+              codRemainder: r.codRemainder,
+              cycleName: order.cycleName || null,
+              actions: r.actions,
+              warnings: r.warnings,
+              error: r.error,
+            },
+          };
+        });
+
+        let logged = true, logError = null;
+        try {
+          await writeLogsBatch(env.DB, logRows);
+        } catch (e) {
+          // Step 5A ⑦ — فشل D1 مابيلغيش الشحنات، بس ممنوع يبقى صامت.
+          logged = false; logError = e.message;
+        }
+
+        // تاريخ الحالة عبر الأدوات — KPIs زمن الدورة بتقرا `tool='metafields_change'`
+        // **بس**، فنقلة S2 دي لازم تبان هناك كمان.
+        const s2Landed = uploaded.filter(({ order }) => !s2Failed.has(order.id));
+        if (s2Landed.length) {
+          try {
+            await writeLogsBatch(env.DB, s2Landed.map(({ order }) => ({
+              timestamp: now,
+              tool: 'metafields_change',
+              type: 'update',
+              employee,
+              orderId: order.id,
+              orderName: order.name,
+              valueBefore: order.s2Status || job.expectedStatus,
+              valueAfter: job.nextStatus,
+              notes: `status_2_r_e: ${order.s2Status || job.expectedStatus} → ${job.nextStatus} (via ${job.tool} upload_re)`,
+              extra: { metafieldKey: 'custom.status_2_r_e', sourceTool: job.tool, jobType: job.jobType },
+            })));
+          } catch (e) {
+            logged = false;
+            logError = `${logError ? logError + ' | ' : ''}metafields_change: ${e.message}`;
+          }
+        }
+
+        const summary = {
+          success: results.filter(r => r.status === 'success').length,
+          warning: results.filter(r => r.status === 'warning').length,
+          error:   results.filter(r => r.status === 'error').length,
+          skipped: 0,
+        };
+        return json({
+          ok: true, version: WORKER_VERSION, jobType: job.jobType, nextStatus: job.nextStatus,
+          // ⚠️ عقد الترتيب: `results[i]` بتاع `orders[i]` من الطلب، مهما كان
+          //    ترتيب انتهاء الرفع.
+          results, summary, counts: summary, s2Written, s2Error, logged, logError,
+        }, 200, request);
+      }
+
+      // الرجوع. الإلغاء **بيحرّر** `uniqueBusinessReference` فإعادة الرفع بعد
+      // التصحيح بتعدّي — الإقران ده هو سبب وجود الـ endpoint بدل زيارة الداشبورد.
+      if (action === 'cancel_re') {
+        if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
+        assertEnv(env, 'bosta');
+        const body = await request.json().catch(() => ({}));
+        const employee       = cleanText(body.employee);
+        const trackingNumber = cleanText(body.trackingNumber);
+        const orderId  = cleanText(body.orderId)   || null;
+        const orderName = cleanText(body.orderName) || null;
+        const reason   = cleanText(body.reason)    || null;
+        const job = getJob(body.jobType || JOB_RETURN, { allow: RE_JOBS });
+
+        if (!employee)       return json({ ok: false, error: 'employee مطلوب' }, 400, request);
+        if (!trackingNumber) return json({ ok: false, error: 'trackingNumber مطلوب' }, 400, request);
+
+        const res = await terminateDelivery(env, trackingNumber);
+
+        let logged = true, logError = null;
+        try {
+          await writeLog(env.DB, {
+            tool: job.tool, type: CANCEL_TYPE, employee, orderId, orderName,
+            notes: res.ok
+              ? `إلغاء شحنة بوسطة ${trackingNumber}${reason ? ` — ${reason}` : ''}`
+              : `فشل إلغاء شحنة بوسطة ${trackingNumber} — ${res.message}`,
+            extra: {
+              jobType: job.jobType, trackingNumber,
+              result: res.ok ? 'success' : 'error', status: res.status,
+              errorCode: res.errorCode || null, message: res.message || null, reason,
+            },
+          });
+        } catch (e) { logged = false; logError = e.message; }
+
+        if (!res.ok) {
+          return json({ ok: false, error: `فشل الإلغاء: ${res.message}`, status: res.status, logged, logError }, 502, request);
+        }
+        return json({
+          ok: true, trackingNumber,
+          // 🔴 حالة S2 **مابترجعش** هنا عن قصد. إرجاع نقلة حالة قرار تاني غير
+          //    إلغاء شحنة، وتخمين اللي الموظف قصده بيعيد كتابة حالة حية.
+          //    وكمان رقم التتبع في `custom.bosta_tracking_number_s2` بيفضل —
+          //    امسحه بالإيد لو الشحنة مش هتترفع تاني.
+          note: 'الشحنة اتلغت عند بوسطة. حالة الأوردر على شوبيفاي ما اتغيّرتش — غيّرها يدويًا لو محتاج.',
+          logged, logError,
+        }, 200, request);
+      }
+
+      // ─── §EXCEL-ENDPOINTS — الخطة البديلة (اتسابت بقرار أحمد) ──────
+      // ⚠️ الإكسيل **مش** طريق ميت: عقد بوسطة ممكن يتغيّر، والمفتاح ممكن ما
+      //    يكونش متاح، والـ API ممكن يرفض أوردر معيّن. الصفوف اللي بتتكتب من
+      //    هنا لسه بتتقرا في فحص التكرار.
+      if (action === 'check_export_duplicates') {
+        if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
+        const body = await request.json().catch(() => ({}));
+        getJob(body.jobType, { allow: RE_JOBS });
+        const orders = normalizeOrderPayload(body.orders);
+        if (!orders.length) return json({ ok: false, error: 'مفيش أوردرات لفحص التكرار' }, 400, request);
+        const duplicates = await findExportDuplicateStats(env.DB, orders);
+        return json({ ok: true, count: Object.keys(duplicates).length, duplicates }, 200, request);
+      }
+
+      if (action === 'record_export') {
+        if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
+        const body = await request.json().catch(() => ({}));
+        const job = getJob(body.jobType, { allow: RE_JOBS });
+        const employee = cleanText(body.employee);
+        const orders = normalizeOrderPayload(body.orders);
+        const allowRepeat = !!body.allowRepeat;
+
+        if (!employee)      return json({ ok: false, error: 'employee مطلوب' }, 400, request);
+        if (!orders.length) return json({ ok: false, error: 'مفيش أوردرات للتسجيل' }, 400, request);
+
+        const duplicateMap = await findExportDuplicateStats(env.DB, orders);
+        const blocked = Object.keys(duplicateMap);
+        if (blocked.length && !allowRepeat) {
+          return json({
+            ok: false, code: 'DUPLICATES_FOUND',
+            error: 'فيه أوردرات نفس دورتها اتصدّرت Excel قبل كده — راجع نافذة التكرار واسمح بالتصدير لو عايز تكمل',
+            duplicates: duplicateMap,
+          }, 409, request);
+        }
+
+        const now = new Date().toISOString();
+        await writeLogsBatch(env.DB, orders.map((order) => ({
+          timestamp: now, tool: job.tool, type: job.exportType, employee,
+          orderId: order.id, orderName: order.name,
+          valueBefore: order.s2Status || job.expectedStatus,
+          valueAfter:  order.s2Status || job.expectedStatus,
+          notes: `${allowRepeat && duplicateMap[order.name] ? 'تصدير مكرر مسموح' : 'تصدير'} ملف بوسطة — ${job.label}`,
+          extra: {
+            jobType: job.jobType, expectedStatus: job.expectedStatus, courier: order.courier || COURIER_VALUE,
+            // نص مفتاح التكرار — بيتقرا في كل تصدير لاحق للأوردر ده (v5.3.0).
+            cycleName: order.cycleName, cycleCreatedAt: order.cycleCreatedAt,
+            duplicateBeforeExport: !!duplicateMap[order.name],
+            exportHistoryBefore: duplicateMap[order.name] || null,
+          },
+        })));
+
+        return json({ ok: true, count: orders.length, duplicatesAllowed: allowRepeat, duplicateCount: blocked.length }, 200, request);
+      }
+
+      // تحديث S2 بعد تصدير الإكسيل ورفعه يدويًا على داشبورد بوسطة.
+      // ⚠️ المسار ده مالوش رقم تتبع — الشحنة اتعملت من الداشبورد، فمفيش
+      //    `custom.bosta_tracking_number_s2` ولا تاج. ده الفرق الحقيقي بينه
+      //    وبين `upload_re`، ومكتوب هنا عشان محدش يفتكرهم نفس الحاجة.
+      if (action === 'confirm_upload') {
+        if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
+        assertEnv(env, 'shopify');
+        const body = await request.json().catch(() => ({}));
+        const job = getJob(body.jobType, { allow: RE_JOBS });
+        const employee = cleanText(body.employee);
+        const orders = normalizeOrderPayload(body.orders);
+        // checklist من مودال التأكيد — **للتوثيق بس**، البوابة الحقيقية هي زرار
+        // الواجهة. (⚠️ ده مابينطبقش على حارس الدورات تحت — ده سيرفر-سايد فعلًا.)
+        const checklist = body.checklist && typeof body.checklist === 'object' ? body.checklist : null;
+        const checklistNote = checklist
+          ? ` | Checklist: بوسطة=${checklist.bostaUploaded ? '✓' : '✗'}${job.jobType === JOB_EXCHANGE ? `, فواتير=${checklist.invoicesSent ? '✓' : '✗'}` : ''}`
+          : '';
+
+        if (!employee)      return json({ ok: false, error: 'employee مطلوب' }, 400, request);
+        if (!orders.length) return json({ ok: false, error: 'مفيش أوردرات للتأكيد' }, 400, request);
+
+        const token = await getAccessToken(env);
+
+        const blockedCycles = await findBlockedCycleOrders(env, token, orders, job.jobType);
+        if (blockedCycles.length) {
+          const { logged, logError } = await logCycleBlocks(env.DB, blockedCycles, job, employee);
+          return json({
+            ok: false, code: 'CYCLE_BLOCKED',
+            error: 'فيه أوردرات حالتها مش واضحة — اتمنع تحديث الحالة لحد ما تتصلّح في شوبيفاي',
+            blocked: blockedCycles, logged, logError,
+          }, 409, request);
+        }
+
+        const now = nowToSecond();
+        await setS2Status(env, token, orders, job.nextStatus, now);
+        const mismatches = await verifyS2Status(env, token, orders, job.nextStatus, now);
+        if (mismatches.length) {
+          return json({
+            ok: false, code: 'VERIFY_FAILED',
+            error: 'التحديث اتنفّذ لكن التحقق المباشر رجّع قيم غير متوقعة لبعض الأوردرات',
+            mismatches,
+          }, 500, request);
+        }
+
+        await writeLogsBatch(env.DB, orders.map((order) => ({
+          timestamp: now, tool: job.tool, type: job.confirmType, employee,
+          orderId: order.id, orderName: order.name,
+          valueBefore: order.s2Status || job.expectedStatus,
+          valueAfter: job.nextStatus,
+          notes: (job.jobType === JOB_RETURN
+            ? 'تأكيد رفع بوسطة وتحديث S2 إلى In-Return — استرجاع'
+            : 'تأكيد رفع بوسطة + إرسال فواتير للمخزن، وتحديث S2 إلى Ready — استبدال') + checklistNote,
+          extra: {
+            jobType: job.jobType, expectedStatus: job.expectedStatus, nextStatus: job.nextStatus,
+            courier: order.courier || COURIER_VALUE, source: 'excel', checklist,
+          },
+        })));
+
+        // تاريخ الحالة عبر الأدوات — مطلوب عشان KPIs زمن الدورة (بتتقرا من
+        // `metafields_change` بس) تشوف النقلة دي.
+        await writeLogsBatch(env.DB, orders.map((order) => ({
+          timestamp: now, tool: 'metafields_change', type: 'update', employee,
+          orderId: order.id, orderName: order.name,
+          valueBefore: order.s2Status || job.expectedStatus,
+          valueAfter: job.nextStatus,
+          notes: `status_2_r_e: ${order.s2Status || job.expectedStatus} → ${job.nextStatus} (via ${job.tool})`,
+          extra: { metafieldKey: 'custom.status_2_r_e', sourceTool: job.tool, jobType: job.jobType },
+        })));
+
+        return json({ ok: true, count: orders.length, updatedTo: job.nextStatus }, 200, request);
+      }
+      // ──────────────────────────────────────────────────────────────
+
       // ─── §LOG-ENDPOINTS ───────────────────────────────────────────
       if (action === 'get_logs') {
-        const p      = logParamsFrom(url, TOOL_NAME);
+        const p      = logParamsFrom(url, LOG_TOOLS);
         // 🔴 `parseInt('abc')` = NaN، والـ NaN بيعدّي Math.min/Math.max زي ما هو
         //    ويوصل لـ D1 كـ bind فيرجّع خطأ غامض. البند ده رجع أكتر من مرة في
         //    الستاك — الحراسة بـ Number.isFinite مش اختيارية.
@@ -1837,12 +3738,12 @@ export default {
       }
 
       if (action === 'get_logs_count') {
-        const total = await getLogsCount(env.DB, logParamsFrom(url, TOOL_NAME));
+        const total = await getLogsCount(env.DB, logParamsFrom(url, LOG_TOOLS));
         return json({ ok: true, total }, 200, request);
       }
 
       if (action === 'get_logs_export') {
-        const p = logParamsFrom(url, TOOL_NAME);
+        const p = logParamsFrom(url, LOG_TOOLS);
         const [entries, total] = await Promise.all([
           getLogsExport(env.DB, p),
           getLogsCount(env.DB, p),
@@ -1855,7 +3756,11 @@ export default {
       return json({ error: 'Unknown action' }, 404, request);
     } catch (err) {
       console.error(err);
-      return json({ error: err.message }, 500, request);
+      // ⚠️ `getJob` و`assertEnv` بيعلّموا الخطأ بـ `status` — 400 على مدخل غلط
+      //    و500 على إعداد ناقص. من غير السطر ده كل الاتنين كانوا بيرجعوا 500،
+      //    والواجهة مش قادرة تفرّق بين «الموظف بعت قيمة غلط» و«الـ Worker مكسور».
+      const status = Number.isInteger(err?.status) ? err.status : 500;
+      return json({ error: err.message }, status, request);
     }
   },
 };
