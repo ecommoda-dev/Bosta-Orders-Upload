@@ -645,13 +645,15 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .job-hint code{background:var(--surface);padding:1px 4px;border-radius:3px;font-size:11px;}
 .job-hint b{color:var(--amber);}
 /* صف الاسترداد — الاتجاه لازم يبان في الجدول نفسه، مش في النافذة بس */
-.cod-refund{color:var(--danger);font-weight:800;}
+.cod-refund{color:var(--red);font-weight:800;}
 .cod-collect{font-weight:700;}
 .cycle-badge{display:inline-block;font-size:11px;font-weight:800;padding:2px 7px;border-radius:999px;
   background:var(--surface-2);border:1px solid var(--border-strong);color:var(--text-secondary);}
-.cycle-badge.blocked{background:var(--danger-light);border-color:var(--danger);color:var(--danger);}
+.cycle-badge.blocked{background:var(--red-light);border-color:var(--red);color:var(--red);}
 .cycle-badge.warn{background:var(--amber-light);border-color:var(--amber);color:var(--amber);}
-.items-cell{font-size:11.5px;font-weight:600;line-height:1.6;color:var(--text-secondary);}
+.cycle-badge.ok{background:var(--green-light);border-color:var(--green-border);color:var(--green);}
+/* اسم الدورة وعدد الدورات تحت البادج — البادج بيقول «الحالة» والسطر ده بيقول «أنهي دورة» */
+.cycle-sub{color:var(--text-muted);font-size:11px;font-weight:700;margin-top:3px;white-space:nowrap;}
 </style>
 
 <!-- ⚠️ الـ wrapper ده لازم يلف كل المحتوى — تعريف المتغيّر لوحده من غير الـ div مالوش أي تأثير -->
@@ -733,6 +735,19 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">14-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>عمود «القطع» اتشال من الجدول.</b> كان بياخد عرض كبير في كل صف استرجاع/استبدال بوصف القطع الراجعة والخارجة. الوصف ده <b>لسه بيتبعت لبوسطة زي ما هو</b> (هو اللي المندوب بيقراه)، ولسه موجود في <b>تصدير XLSX</b> وفي <b>ملف بوسطة (Excel)</b> — العرض في الجدول بس هو اللي اتشال.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>عمود «الدورة المفتوحة» بقى سطرين — زي أداة التصدير القديمة.</b> فوق <b>بادج الحالة</b>: <code>دورة واحدة</code> (أخضر) · تحذير بالبرتقالي · <b>⛔ موقوف</b> بالأحمر. وتحته <b>اسم الدورة</b> ومعاه <b>«من كام دورة»</b> لو الأوردر عليه أكتر من دورة. قبل كده الخلية كانت بتقول اسم الدورة بس، فالأوردر اللي عدّى بتلات دورات كان شكله زي اللي ليه دورة واحدة.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>سبب التوقيف بقى بالعربي.</b> الخلية كانت بتعرض الكود الخام (<code>CYCLE_OVERLAP_OPEN</code>) للموظف. دلوقتي بتعرض <b>«أكتر من دورة مفتوحة»</b>، والقيمة اللي وقّفت الصف بتبان تحتها — والكود نفسه فاضل في الـ tooltip عشان التتبع مع الدعم.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>تلات إشارات لونية كانت مش ظاهرة خالص.</b> «<b>↩ استرداد</b>» في عمود المبلغ، وبادج الدورة الموقوفة، وسطر «<b>✅ مفيش ولا شحنة اتعملت</b>» في نافذة الرفض — كلهم كانوا بيقروا ألوان مش معرّفة في الصفحة (<code>--danger</code> / <code>--success</code>، اتنقلوا مع كود الدمج)، فكانوا بيطلعوا بلون عادي. اللون هو الإشارة نفسها هنا: المبلغ السالب معناه <b>بوسطة بتدفع للعميل عند الباب</b>.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.0.1</span>
           <span class="cl-ver-date">13-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -1666,7 +1681,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.0.1';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.1.0';   // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2969,8 +2984,6 @@ function tableColumns() {
     // الدورة المفتوحة — نص مفتاح كل حاجة في R/E. الصف الموقوف بسبب الدورة
     // بيقول السبب هنا، مش في tooltip على عمود تاني.
     cols.push({ key: 'cycle', label: 'الدورة المفتوحة', sort: 'cycle', cell: cycleCell });
-    // القطع الراجعة/الخارجة — الموظف بيراجع الوصف اللي المندوب هيقراه
-    cols.push({ key: 'items', label: 'القطع', cls: 'cell-wrap', cell: itemsCell });
     // 🔴 المبلغ بإشارته. «استرداد» بالأحمر لأن السالب معناه **بوسطة بتدفع
     //    للعميل عند الباب** — لو ده باين غلط، الغلط بيتصرف فلوس.
     cols.push({ key: 'cod', label: 'المبلغ', sort: 'cod', cls: 'col-num', cell: codCell });
@@ -2998,29 +3011,56 @@ function renderTableHead() {
 }
 
 // ─── خلايا خاصة بالاسترجاع/الاستبدال ───
+// 🔴 أكواد الدورات بتتعرض **بالعربي**. الكود الخام (`CYCLE_OVERLAP_OPEN`) كان
+//    بيتحط في الخلية زي ما هو، والموظف بيقرا كود مالوش معنى عنده ويعدّي الصف.
+//    الكود نفسه بيفضل في الـ tooltip — التتبع مع الدعم لازم يفضل ممكن.
+const CYCLE_CODE_LABEL = {
+  CYCLES_TRUNCATED:         'دورات كتير',
+  NO_OPEN_CYCLE:            'مفيش دورة مفتوحة',
+  CYCLE_OVERLAP_OPEN:       'أكتر من دورة مفتوحة',
+  EXCHANGE_WITHOUT_ITEMS:   'من غير قطع استبدال',
+  ORDER_NOT_READABLE:       'الأوردر مش مقروء',
+  COURIER_NOT_BOSTA:        'الكوريَر مش بوسطة',
+  CYCLE_OVERLAP:            'تداخل دورات',
+  MULTI_CYCLE:              'دورات متتابعة',
+  TYPE_MISMATCH:            'نوع مختلف',
+  EXCHANGE_ITEMS_RECOVERED: 'قطع اتقروا من الأوردر',
+};
+function cycleCodeLabel(code) { return CYCLE_CODE_LABEL[code] || code || '—'; }
+
+// عمود الدورة المفتوحة — سطرين زي أداة التصدير:
+//   ① بادج بيقول **حالة** الدورات (دورة واحدة · تحذير · موقوف + السبب)
+//   ② سطر تحته بيقول **أنهي** دورة، ومن كام دورة على الأوردر
+// 🔴 البادج لوحده كان بيخفي إن الأوردر عليه دورات تانية مقفولة: الصف كله
+//    متحسب من الدورة المفتوحة بس، وعدد الدورات هو الإشارة الوحيدة على إن
+//    فيه تاريخ تاني على الأوردر الموظف ممكن يحتاج يراجعه.
 function cycleCell(r) {
   const info = r.cycleInfo || {};
+  const total = Number(info.totalCycles || 0);
+  const name  = r.cycleName || info.currentCycleName || '';
+  const sub   = (txt, title) => txt
+    ? `<div class="cycle-sub"${title ? ` title="${esc(title)}"` : ''}>${esc(txt)}</div>` : '';
+  const countTxt = total > 1 ? ` — من ${fmtNum(total)} دورات` : '';
+
   if (info.blocked) {
     const b = info.blockReason || {};
-    return `<span class="cycle-badge blocked" title="${esc(b.action || '')}">⛔ ${esc(b.code || 'موقوف')}</span>`;
+    // الصف الموقوف بيقول السبب في البادج، والقيمة اللي وقفته تحته — من غيرها
+    // «أكتر من دورة مفتوحة» مابتقولش **أنهي** دورات.
+    const badge = `<span class="cycle-badge blocked" title="${esc(`${b.code || ''}: ${b.action || ''}`)}">`
+                + `⛔ ${esc(cycleCodeLabel(b.code))}</span>`;
+    return badge + sub((name || b.value || '') + (name ? countTxt : ''), b.action || '');
   }
-  const warn = (info.warnings || [])[0];
-  const cls = warn ? 'cycle-badge warn' : 'cycle-badge';
-  const title = warn ? `${warn.code}: ${warn.action}` : 'الدورة المفتوحة الوحيدة — كل أرقام الصف دي متحسبة منها';
-  return `<span class="${cls}" title="${esc(title)}">${esc(r.cycleName || '—')}${warn ? ' ⚠' : ''}</span>`;
-}
 
-function itemsCell(r) {
-  // الاستبدال: اللي **خارج** هو اللي المندوب شايله. الاسترجاع: مفيش حاجة خارجة.
-  const out = r.outgoingDescription;
-  const back = r.returnDescription;
-  const recovered = r.outgoingSource === 'order_unfulfilled';
-  const parts = [];
-  if (currentJobKey === 'exchange') {
-    parts.push(`<div><b>خارج:</b> ${esc(out || '—')}${recovered ? ' <span title="القطع اتقروا من سطور الأوردر مش من الدورة — اتعدّلت بالإيد. راجع الوصف.">⚠</span>' : ''}</div>`);
-  }
-  parts.push(`<div><b>راجع:</b> ${esc(back || '—')}</div>`);
-  return `<div class="items-cell">${parts.join('')}</div>`;
+  const warns = info.warnings || [];
+  const warn  = warns[0];
+  const extra = warns.length > 1 ? ` +${fmtNum(warns.length - 1)}` : '';
+  const badge = warn
+    ? `<span class="cycle-badge warn" title="${esc(warns.map(w => `${w.code}: ${w.action}`).join('\n'))}">`
+      + `⚠️ ${esc(cycleCodeLabel(warn.code))}${extra}</span>`
+    : `<span class="cycle-badge ok" title="الدورة المفتوحة الوحيدة — كل أرقام الصف دي متحسبة منها">`
+      + `دورة واحدة</span>`;
+  return badge + sub(name ? name + countTxt : '—',
+    total > 1 ? `الأوردر عليه ${total} دورات — الرفع من الدورة المفتوحة دي بس` : '');
 }
 
 function codCell(r) {
@@ -3796,7 +3836,7 @@ function openCycleBlockModal(d, j) {
   parts.push(`<p style="font-weight:700;line-height:1.9;">${esc(d.error || 'الرفع اتوقف')}</p>`);
   // ⚠️ السطر ده مهم أكتر من القايمة نفسها: الموظف لازم يعرف إنه **مش** محتاج
   //    يروح يلغي حاجة عند بوسطة.
-  parts.push(`<p style="color:var(--success);font-weight:800;">✅ مفيش ولا شحنة اتعملت — الرفع اتوقف قبل أي نداء لبوسطة.</p>`);
+  parts.push(`<p style="color:var(--green);font-weight:800;">✅ مفيش ولا شحنة اتعملت — الرفع اتوقف قبل أي نداء لبوسطة.</p>`);
   if (rows.length) {
     parts.push('<div class="dup-list">' + rows.map(b =>
       `<div style="padding:7px 0;border-bottom:1px solid var(--border);">

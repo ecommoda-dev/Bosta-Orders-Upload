@@ -25,7 +25,7 @@ const win = { addEventListener(){}, matchMedia:()=>({matches:false,addEventListe
 const ls  = { getItem:()=>null, setItem(){}, removeItem(){} };
 
 const tail = `
-return { tableColumns, renderTable, codCell, cycleCell, itemsCell, upCell, JOBS, sortConfig,
+return { tableColumns, renderTable, codCell, cycleCell, upCell, JOBS, sortConfig,
          LOG_TYPE_ITEMS, MIN_WORKER_VERSION, setJob(k){ currentJobKey = k; },
          getJob(){ return currentJobKey; }, setRows(r){ allRows = r; } };`;
 const api = new Function('document','window','localStorage','Chart','ExcelJS', src + tail)(doc, win, ls, undefined, undefined);
@@ -46,9 +46,12 @@ console.log('\n① أعمدة الجدول بتتغيّر بالوضع');
 
   ok('الشحن العادي فيه عمود حالة S1', s1.includes('s1'));
   ok('ومفيهوش أعمدة الدورة والمبلغ', !s1.includes('cycle') && !s1.includes('cod'));
-  ok('الاسترجاع فيه الدورة والقطع والمبلغ',
-     re.includes('cycle') && re.includes('items') && re.includes('cod'), re);
+  ok('الاسترجاع فيه الدورة والمبلغ',
+     re.includes('cycle') && re.includes('cod'), re);
   ok('ومفيهوش حالة S1', !re.includes('s1'));
+  // عمود «القطع» اتشال من الجدول (واجهة v2.1.0) — الوصف لسه بيتبعت لبوسطة
+  // ولسه في تصدير XLSX وملف بوسطة، بس مابيتعرضش في الجدول.
+  ok('ومفيهوش عمود القطع', !re.includes('items'), re);
   // 🔴 ده اللي بيمنع زحف الأعمدة: الترويسة والجسم والـ colspan كلهم من نفس
   //    الدالة، فعمود يتضاف في ناحية من غير التانية مستحيل.
   api.setRows([]);
@@ -75,6 +78,33 @@ console.log('\n② المبلغ — الاتجاه لازم يبان في الج
   // 🔴 القص عند -2000 حد من بوسطة (errorCode 3008) — و**معلَن** مش صامت.
   //    القص الصامت معناه إن العميل بياخد أقل من حقه ومحدش شايف.
   ok('القص بيتعلّم وبيقول الباقي كام', /✂/.test(clipped) && /700/.test(clipped), clipped);
+}
+
+// ─── ②ب عمود الدورة المفتوحة ────────────────────────────────
+console.log('\n②ب الدورة المفتوحة — الحالة والاسم والعدد كلهم في الخلية');
+{
+  api.setJob('return');
+  const one = api.cycleCell({ cycleName: 'R1-#54244',
+    cycleInfo: { totalCycles: 1, currentCycleName: 'R1-#54244', blocked: false, warnings: [] } });
+  const many = api.cycleCell({ cycleName: 'R3-#51656',
+    cycleInfo: { totalCycles: 3, currentCycleName: 'R3-#51656', blocked: false,
+                 warnings: [{ code: 'MULTI_CYCLE', action: 'دورات متتابعة — قانونية.' }] } });
+  const blocked = api.cycleCell({ cycleName: null,
+    cycleInfo: { totalCycles: 2, blocked: true,
+                 blockReason: { code: 'CYCLE_OVERLAP_OPEN', value: 'R1 · R2', action: 'أكتر من دورة مفتوحة' },
+                 warnings: [] } });
+
+  ok('الدورة السليمة بادجها «دورة واحدة» ومعاه اسم الدورة',
+     /دورة واحدة/.test(one) && /R1-#54244/.test(one), one);
+  // 🔴 ده اللي كان ناقص: الأوردر اللي عدّى بتلات دورات كان شكله زي اللي ليه
+  //    دورة واحدة، والصف كله متحسب من الدورة المفتوحة بس.
+  ok('أكتر من دورة بيبان عددها في الخلية', /3 دورات/.test(many) && /R3-#51656/.test(many), many);
+  ok('والتحذير بيتعرض بالعربي مش بالكود', /دورات متتابعة/.test(many) && !/MULTI_CYCLE</.test(many), many);
+  // 🔴 الكود الخام مالوش معنى عند الموظف — اللي بيتعرض هو السبب بالعربي،
+  //    والقيمة اللي وقّفت الصف تحته. الكود بيفضل في الـ tooltip بس.
+  ok('الصف الموقوف بيقول السبب بالعربي', /أكتر من دورة مفتوحة/.test(blocked), blocked);
+  ok('ومعاه القيمة اللي وقّفته', /R1 · R2/.test(blocked), blocked);
+  ok('وبكلاس بيميّزه بصريًا', /cycle-badge blocked/.test(blocked), blocked);
 }
 
 // ─── ③ التاج والميتافيلد ────────────────────────────────────
