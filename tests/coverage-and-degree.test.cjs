@@ -20,7 +20,7 @@ const api = new Function(src + `
  return { normalizeCatalog, availableDistricts, ensureNormalized, resolveAddress,
           buildAddressObject, addressDegree, nextAddressDegree, goodsProblems,
           coverageProblems, validateOrder, buildDeliveryPayload, humanizeBostaError,
-          terminateDelivery,
+          terminateDelivery, buildRow,
           GOODS_MIN, GOODS_MAX, COD_MAX, COD_REFUND_MIN };`)();
 
 let pass = 0, fail = 0;
@@ -227,6 +227,33 @@ console.log('\n⑥ humanizeBostaError — الأكواد اللي v5.0.0 وثّ�
   // 🔴 403 = حقل برّه الـ whitelist، والنداء **كله** بيتلغي
   ok('403 بيقول إن مفيش أي جزء اتنفّذ',
      /مفيش أي جزء/.test(h({ status: 403, errorCode: null, message: " x can't be updated" })));
+}
+
+// ─── ⑥ب الصف الموقوف في الجدول ───────────────────────────────
+// 🔴 الرسالة الطويلة اتشالت من **العرض** بس (v2.1.1، بطلب أحمد) — الجدول بيقول
+//    نفس المعلومة تلات مرات تانية (بادج الحالة · عمود المنطقة · حالة الرفع).
+//    والخطر إن اللي شايل الرسالة يشيل **المنع** معاها من غير ما ياخد باله،
+//    فالأوردر اللي خارج التغطية يبقى قابل للرفع. الجزء ده بيقفل ده.
+console.log('\n⑥ب الصف الموقوف — الرسالة اتشالت والمنع فضل');
+{
+  const blockedOrder = order({ city: 'طابا', province: 'South Sinai', provinceCode: 'JS' });
+  const r = api.buildRow(blockedOrder, CAT);
+  eq('الصف اتعلّم coverageBlocked', r.mode, 'coverageBlocked');
+  // 🔴 دي النقطة كلها — شيل الرسالة **مايشيلش** المنع
+  ok('والرفع لسه موقوف', r.uploadable === false, r.uploadable);
+  ok('والرسالة الطويلة مش في العرض',
+     !r.problems.some(p => /خارج التغطية|مش بتسلّم فيها/.test(p)), r.problems);
+  // والمعلومة نفسها لسه واصلة بطريقتين تانيتين
+  eq('واسم المنطقة المقفولة لسه واصل للواجهة',
+     (r.blockedDistricts || []).map(d => d.name), ['Taba']);
+
+  // ⚠️ الضابط: أي سبب منع **تاني** لازم يفضل ظاهر في الجدول زي ما هو
+  const cheap = order({ city: 'دهب', province: 'South Sinai', provinceCode: 'JS' },
+                      { subtotal: 50 });
+  const rc = api.buildRow(cheap, CAT);
+  ok('وسبب منع تاني (قيمة البضاعة) لسه ظاهر',
+     rc.problems.some(p => /قيمة البضاعة/.test(p)), rc.problems);
+  ok('وموقوف برضه', rc.uploadable === false);
 }
 
 // ─── ⑦ الإلغاء المكرر ────────────────────────────────────────

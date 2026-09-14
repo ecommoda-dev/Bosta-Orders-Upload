@@ -20,7 +20,7 @@ const api=new Function('document','window','localStorage','Chart','ExcelJS', src
  `\nreturn { renderDistrictList, chooseZone, clearZoneFilter, addrModeInfo,
     setup(rows,districts,cities,orderId,cityId){ allRows=rows; dpDistricts=districts; dpCities=cities;
       dpOrderId=orderId; dpCityId=cityId; dpLoading=false; },
-    dpPickOptions, dpPickCurrent, dpPickZone, dpPickToggle, dpPickFilter,
+    dpPickOptions, dpPickCurrent, dpPickZone, dpPickToggle, dpPickFilter, renderDistrictList,
     zf(){ return dpZoneFilter; }, ov(){ return districtOverride; },
     setZf(z){ dpZoneFilter = z; }, open(){ return dpPickOpen; } };`
 )(doc,win,{getItem:()=>null,setItem(){},removeItem(){}});
@@ -176,6 +176,69 @@ chk('وعليها overflow:visible صريح', /overflow:\s*visible/.test(css), c
 const full = fs.readFileSync('/home/user/Bosta-Orders-Upload/index.html','utf8');
 chk('وتقويس الأركان اتنقل للخانات الطرفية',
     /\.dp-tbl > :first-child > :first-child\{border-start-start-radius/.test(full));
+
+// ══════════════════════════════════════════════════════════════
+// ⑧ الزون: مكان واحد للمعلومة (واجهة v2.6.0)
+// 🔴 كان فيه **تلات أماكن** بيقولوا نفس الحاجة: خانة الزون في صف بوسطة ·
+//    بانر «الشحنة هتترفع على زون …» · وصف «اضغط عشان تشوف مناطقه بس».
+//    التكرار ده بيخلّي الموظف يدوّر على الفرق بينهم. اتساب **الخانة بس**،
+//    والقايمة تحت بتتقصر عليها تلقائيًا.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑧ الزون مكان واحد ──');
+{
+  const zr = { ...row, mode:'zone', zoneName:'Obour', zoneDistrictCount:6, cityId:'q',
+               cityDoubt:false, crossCity:[],
+               localZones:[{kind:'zone',cityId:'q',cityName:'El Kalioubia',zone:'Obour',
+                            zoneAr:'العبور',zoneId:'z1',districtCount:6,
+                            matchedText:'العبور',fieldLabel:'مدينة شوبيفاي'}] };
+  api.setup([zr],cairo,cities,'B','q');
+  api.setZf(null);
+  api.renderDistrictList();
+  chk('بانر «الشحنة هتترفع على زون» اتشال', !/الشحنة هتترفع على زون/.test(listHTML));
+  chk('وصف «اضغط عشان تشوف مناطقه بس» اتشال',
+      !/اضغط عشان تشوف مناطقه بس/.test(listHTML));
+}
+{
+  // ⚠️ اقتراح **المدينة التانية** حاجة مختلفة — بيغيّر المدينة، ومش معروض
+  //    في أي مكان تاني. لازم يفضل.
+  api.setup([row],cairo,cities,'B','q');   // row.crossCity فيه اقتراح القاهرة
+  api.setZf(null);
+  api.renderDistrictList();
+  chk('واقتراح المدينة التانية لسه موجود', /مدن تانية/.test(listHTML));
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⑨ اللوحة مابتوسّعش النافذة (واجهة v2.6.0)
+// 🔴 الخانة الأخيرة (المنطقة) أقصى الشمال في RTL، ولوحتها كانت بتمتد لبرّه
+//    حافة النافذة — فـ`.eco-modal-body` كانت بتطلّع **شريط تمرير أفقي**
+//    والمحتوى يزحف. باج بصري بحت تاني، فالحارس على الـ CSS.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑨ اللوحة جوّه النافذة ──');
+{
+  const page = fs.readFileSync('/home/user/Bosta-Orders-Upload/index.html','utf8');
+  chk('آخر خانة لوحتها متثبّتة من ناحية النهاية',
+      /\.dp-f:last-child \.dp-pick-panel\{inset-inline-start:auto;inset-inline-end:0;\}/.test(page));
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⑩ عدد المناطق المقفولة مش معروض (v2.6.0 — بطلب أحمد)
+// الرقم مالوش أثر على أي قرار: اللي بيفرق إن **المنطقة دي بالذات** مقفولة،
+// وده باين عليها في القايمة نفسها.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑩ مفيش عدّاد مقفولة ──');
+{
+  api.setup([row],cairo,[{cityId:'q',cityName:'El Kalioubia',cityAr:'القليوبيه',blockedCount:12}],
+            'B','q');
+  const cityOpts = api.dpPickOptions('city');
+  chk('قايمة المدن من غير عدّاد مقفولة',
+      cityOpts.every(o => !/مقفولة/.test(o.sub || '')), JSON.stringify(cityOpts.map(o=>o.sub)));
+  // ⚠️ والمنطقة المقفولة نفسها **لسه معلّمة** — ده اللي بيفرق فعلًا
+  api.setup([row],[...cairo,{id:'x1',name:'Taba',nameAr:'طابا',zone:'Taba',zoneAr:'طابا',blocked:true}],
+            cities,'B','q');
+  api.setZf(null);
+  chk('والمنطقة المقفولة نفسها لسه معلّمة',
+      /مقفولة/.test(api.dpPickOptions('district').find(o=>o.id==='x1')?.sub || ''));
+}
 
 console.log(`\n${p}/${n} نجحت`);
 process.exit(p===n?0:1);

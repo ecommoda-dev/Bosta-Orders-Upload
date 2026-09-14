@@ -77,7 +77,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.1.0';
+const WORKER_VERSION = '2.1.1';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2212,7 +2212,7 @@ function coverageProblems(plan) {
   if (!plan.ok || plan.mode !== 'coverageBlocked') return [];
   const names = (plan.blockedDistricts || []).map(d => d.name || d.nameAr).filter(Boolean);
   return [`العنوان طابق منطقة بوسطة **مش بتسلّم فيها** (${names.join(' · ') || '—'}) — `
-        + `العنوان برّه تغطية بوسطة. الرفع على المحافظة مش بديل: الشحنة هتتشحن وترجع. `
+        + `العنوان خارج التغطية. الرفع على المحافظة مش بديل: الشحنة هتتشحن وترجع. `
         + `حوّل الأوردر لخدمة العملاء (عنوان بديل · كوريَر تاني · إلغاء).`];
 }
 
@@ -2348,7 +2348,16 @@ const S1_JOB = getJob(JOB_S1);
 function buildRow(order, catalog) {
   const sa = order.shippingAddress || {};
   const plan = resolveAddress(order, catalog);
-  const problems = validateOrder(order, plan);
+  // 🔴 قايمتين عن قصد: `all` بتحكم **هل الصف يترفع**، و`problems` هي اللي
+  //    بتتعرض. الفرق بينهم بند واحد — رسالة «خارج التغطية».
+  //    السبب: الجدول بيقول نفس المعلومة **تلات مرات تانية** (بادج «حالة
+  //    العنوان» · اسم المنطقة المقفولة في عمود المنطقة · حالة الرفع «موقوف»)،
+  //    والجملة الطويلة جنبهم كانت بتاكل خلية العميل من غير ما تضيف حاجة.
+  //    ⚠️ الشرح الكامل مش ضايع — عايش في الـ tooltip بتاع بادج الحالة، وفي
+  //    رسالة الخطأ وقت الرفع (`§BOSTA::coverageProblems`) لو حد حاول يرفع.
+  const all = validateOrder(order, plan);
+  const covered = coverageProblems(plan);
+  const problems = all.filter(p => !covered.includes(p));
 
   const trackingBefore = previousTrackingS1(order);
   const tags = Array.isArray(order.tags) ? order.tags : [];
@@ -2406,7 +2415,8 @@ function buildRow(order, catalog) {
     blockedDistricts: plan.ok ? (plan.blockedDistricts || []) : [],
     catalogWarning: plan.ok ? plan.catalogWarning : null,
     problems,
-    uploadable:  problems.length === 0,
+    // 🔴 بيتحسب من القايمة **الكاملة** — شيل الرسالة من العرض مايشيلش المنع
+    uploadable:  all.length === 0,
   };
 }
 
@@ -3096,12 +3106,18 @@ function buildReRow(order, catalog, job, cycleAnalysis) {
     catch (e) { plan = { ok: false, error: `فشل حساب خطة العنوان: ${e.message}` }; }
   }
 
-  const problems = info.blocked
+  // 🔴 نفس قاعدة `§UPLOAD::buildRow`: `all` بتحكم المنع، و`problems` هي اللي
+  //    بتتعرض — والفرق بينهم رسالة «خارج التغطية» اللي الجدول بيقولها تلات
+  //    مرات تانية أصلًا (بادج الحالة · عمود المنطقة · حالة الرفع).
+  const all = info.blocked
     ? [`${info.blockReason.code}: ${info.blockReason.action}`]
     : validateReOrder(enriched, plan, parts, job.jobType);
 
   const ref = buildUniqueRef(enriched, job.jobType);
-  if (!ref.ok && !problems.length) problems.push(`${ref.code}: ${ref.action}`);
+  if (!ref.ok && !all.length) all.push(`${ref.code}: ${ref.action}`);
+
+  const covered = coverageProblems(plan);
+  const problems = all.filter(p => !covered.includes(p));
 
   const tags = Array.isArray(order.tags) ? order.tags : [];
   const prevTracking = cleanText(order?.mfTrackS2?.value) || null;
@@ -3168,7 +3184,8 @@ function buildReRow(order, catalog, job, cycleAnalysis) {
     blockedDistricts:  plan.ok ? (plan.blockedDistricts || []) : [],
     catalogWarning: plan.ok ? plan.catalogWarning : null,
     problems,
-    uploadable:  problems.length === 0,
+    // 🔴 من القايمة **الكاملة** — شيل الرسالة من العرض مايشيلش المنع
+    uploadable:  all.length === 0,
   };
 }
 
@@ -3524,9 +3541,10 @@ export default {
             cities: cat.cities.map(c => ({
               cityId: c.cityId, cityName: c.cityName, cityAr: c.cityAr || '',
               districtCount: availableDistricts(c).list.length,
-              // العدد المقفول جنب المتاح — «٧ من ٩» بيقول للموظف إن فيه تغطية
-              // ناقصة في المدينة دي أصلًا، بدل ما يشوف ٧ ويفتكرها الكل.
-              blockedCount:  availableDistricts(c).blocked.length,
+              // ⚠️ عدد المناطق المقفولة **مش بيترجع** عن قصد (v2.1.1، بطلب أحمد):
+              //    الرقم مالوش أثر على أي قرار — اللي بيفرق هو إن **المنطقة دي
+              //    بالذات** مقفولة، وده باين عليها في قايمة مناطق المدينة نفسها.
+              //    (المقفولة نفسها لسه بترجع كاملة في `blockedDistricts` تحت.)
             })).sort((a, b) => a.cityName.localeCompare(b.cityName)),
           }, 200, request);
         }
