@@ -22,6 +22,8 @@ const api=new Function('document','window','localStorage','Chart','ExcelJS', src
       dpOrderId=orderId; dpCityId=cityId; dpLoading=false; },
     dpPickOptions, dpPickCurrent, dpPickZone, dpPickToggle, dpPickFilter, renderDistrictList,
     chooseDistrict, setSearch(q){ document.getElementById('dpSearch').value = q; },
+    pinDistrictToZone, pinDistrictToProvince, dpEffectiveZone, dpChosenDistrictId,
+    rowAddrMode, addrModeInfo,
     zf(){ return dpZoneFilter; }, ov(){ return districtOverride; },
     setZf(z){ dpZoneFilter = z; }, open(){ return dpPickOpen; } };`
 )(doc,win,{getItem:()=>null,setItem(){},removeItem(){}});
@@ -209,16 +211,25 @@ console.log('\n── ⑧ الزون مكان واحد ──');
 }
 
 // ══════════════════════════════════════════════════════════════
-// ⑨ اللوحة مابتوسّعش النافذة (واجهة v2.6.0)
-// 🔴 الخانة الأخيرة (المنطقة) أقصى الشمال في RTL، ولوحتها كانت بتمتد لبرّه
-//    حافة النافذة — فـ`.eco-modal-body` كانت بتطلّع **شريط تمرير أفقي**
-//    والمحتوى يزحف. باج بصري بحت تاني، فالحارس على الـ CSS.
+// ⑨ اللوحة بعرض الصف — مابتوسّعش النافذة ومابتضغطش الأسماء (v2.6.2)
+// 🔴 اللوحة كانت محبوسة في عرض الخانة (تُلت النافذة)، فـ:
+//      ① أسماء المناطق («B1 Factories (10th of Ramadan) — B1 مصانع…») كانت
+//        بتتلف على **تلات سطور** والقراءة تبقى تخمين
+//      ② وخانة المنطقة (أقصى الشمال في RTL) لوحتها كانت بتمتد لبرّه حافة
+//        النافذة فتطلّع **شريط تمرير أفقي**
+//    الاتنين اتحلّوا بحاجة واحدة: الحاوية الموضعية بقت **الصف** (`.dp-src`)
+//    واللوحة `inset-inline:0` — يعني عرضها = عرض الصف بالظبط، مهما كانت
+//    الخانة فين. باج بصري بحت، فالحارس على الـ CSS.
 // ══════════════════════════════════════════════════════════════
-console.log('\n── ⑨ اللوحة جوّه النافذة ──');
+console.log('\n── ⑨ اللوحة بعرض الصف ──');
 {
   const page = fs.readFileSync('/home/user/Bosta-Orders-Upload/index.html','utf8');
-  chk('آخر خانة لوحتها متثبّتة من ناحية النهاية',
-      /\.dp-f:last-child \.dp-pick-panel\{inset-inline-start:auto;inset-inline-end:0;\}/.test(page));
+  chk('الصف هو الحاوية الموضعية', /\.dp-src\{position:relative;\}/.test(page));
+  chk('والخانة `static` مش `relative`', /\.dp-pick\{position:static;/.test(page));
+  chk('واللوحة بعرض الصف كله', /\.dp-pick-panel\{[^}]*inset-inline:0;/.test(page));
+  // 🔴 لو الخانة رجعت `relative` تاني، اللوحة بترجع لعرض الخانة **من غير أي
+  //    خطأ** — والأسماء ترجع تتلف والشريط الأفقي يرجع.
+  chk('ومفيش عرض ثابت بيقيّدها', !/\.dp-pick-panel\{[^}]*width:max\(/.test(page));
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -307,6 +318,57 @@ console.log('\n── ⑫ البحث بيخرج برّه القصر ──');
   api.renderDistrictList();
   const back = (listHTML.match(/class="dp-item/g)||[]).length;
   chk('وبيرجع بعد ما البحث يفضى', back === 6, `ظهر ${back}`);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⑬ «ارفع على الزون بس» — الدرجة الوسطى بقت قرار الموظف (v2.6.2)
+// 🔴 درجة الزون كانت **تلقائية بس** (مفيش مطابقة منطقة + زون واحد + مفيش شك
+//    مدينة). يعني الموظف اللي شايف المطابقة مش مظبوطة **بس عارف الزون**
+//    ماكانش قدامه غير «المحافظة بس» — وهي بتاخد هب افتراضي والزون بياخد هب
+//    محدد، فكان بينزل درجتين بدل واحدة.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑬ ارفع على الزون بس ──');
+{
+  const zc = cairo.map(d => ({ ...d, zoneId: `z-${d.zone}` }));   // الكتالوج بيدّي zoneId
+  api.setup([row],zc,cities,'B','q');
+  api.setZf(null);
+  delete api.ov()['B'];
+
+  chk('من غير زون متحدد، مفيش زون سارية', api.dpEffectiveZone(row) === null);
+  api.pinDistrictToZone();
+  chk('والضغط من غير زون مابيثبّتش حاجة', !api.ov()['B']);
+
+  // الموظف قصّر على زون وبعدين ثبّت عليه
+  api.setZf('Obour');
+  chk('الزون السارية بقت العبور', api.dpEffectiveZone(row)?.id === 'Obour');
+  api.pinDistrictToZone();
+  const ov = api.ov()['B'];
+  chk('اتثبّت على الزون', ov?.forceZone === true, JSON.stringify(ov));
+  // 🔴 بالـ id مش بالاسم — الاسم بيتكرر بين المدن
+  chk('وبالـ zoneId مش بالاسم', ov?.zoneId === 'z-Obour', ov?.zoneId);
+  chk('ومفيش منطقة اتبعتت معاه', !ov?.districtId);
+  chk('وحالة العنوان بقت «بالزون»', api.rowAddrMode(row) === 'zone', api.rowAddrMode(row));
+  chk('والبادج بيقول إنه مثبّت', /مثبّت/.test(api.addrModeInfo(row).label), api.addrModeInfo(row).label);
+  // 🔴 الخانة لازم تعكس التثبيت — 🟢 لأنه اللي هيتبعت فعلًا
+  const zbox = api.dpPickCurrent('zone');
+  chk('وخانة الزون 🟢 ومعاها اسمه', zbox.cls === 'set' && /Obour/.test(zbox.text), JSON.stringify(zbox));
+  // 🔴 والمنطقة لازم تبقى «مفيش» — درجة واحدة بتتبعت، والخانتين مايتناقضوش
+  chk('وخانة المنطقة بقت «مفيش»', /مفيش/.test(api.dpPickCurrent('district').text),
+      api.dpPickCurrent('district').text);
+  chk('والمنطقة السارية اتلغت فعلًا', api.dpChosenDistrictId(row) === null);
+
+  // ⚠️ التثبيت على المحافظة بيلغي المنطقة برضه — نفس القاعدة
+  api.pinDistrictToProvince();
+  chk('وتثبيت المحافظة بيلغي المنطقة كمان', api.dpChosenDistrictId(row) === null);
+}
+{
+  // 🔴 زون بلا zoneId في الكتالوج **مايترفعش عليه** — الزرار بيرفض بدل ما
+  //    يبعت مفتاح مخترع.
+  api.setup([row],cairo,cities,'B','q');   // cairo من غير zoneId
+  api.setZf('Obour');
+  delete api.ov()['B'];
+  api.pinDistrictToZone();
+  chk('وزون بلا zoneId مابيتثبّتش', !api.ov()['B'], JSON.stringify(api.ov()['B']));
 }
 
 console.log(`\n${p}/${n} نجحت`);

@@ -20,7 +20,7 @@ const api = new Function(src + `
  return { normalizeCatalog, availableDistricts, ensureNormalized, resolveAddress,
           buildAddressObject, addressDegree, nextAddressDegree, goodsProblems,
           coverageProblems, validateOrder, buildDeliveryPayload, humanizeBostaError,
-          terminateDelivery, buildRow,
+          terminateDelivery, buildRow, resolveZoneOverride,
           GOODS_MIN, GOODS_MAX, COD_MAX, COD_REFUND_MIN };`)();
 
 let pass = 0, fail = 0;
@@ -254,6 +254,33 @@ console.log('\n⑥ب الصف الموقوف — الرسالة اتشالت و�
   ok('وسبب منع تاني (قيمة البضاعة) لسه ظاهر',
      rc.problems.some(p => /قيمة البضاعة/.test(p)), rc.problems);
   ok('وموقوف برضه', rc.uploadable === false);
+}
+
+// ─── ⑥ج حارس الزون المختار يدويًا ────────────────────────────
+// 🔴 «ارفع على الزون بس» (v2.1.2) بيدّي الموظف درجة وسطى يختارها بنفسه — بس
+//    الزون اللي بييجي من الواجهة **مايتصدّقش**: لازم يكون في **مدينة الرفع**
+//    ومن مناطق متاحة للتسليم. اسم الزون بيتكرر بين المدن، والموظف ممكن يكون
+//    غيّر المدينة بعد ما اختار الزون — فرفع من غير تحقق = شحنة على زون مدينة
+//    تانية خالص.
+console.log('\n⑥ج حارس الزون المختار يدويًا');
+{
+  const giza = CAT.cities.find(c => c.cityId === '0064Qb0OgcA');
+  eq('زون موجود في المدينة بيعدّي',
+     api.resolveZoneOverride(CAT, '0064Qb0OgcA', 'QoHN-zG2tF'),
+     { zoneId: 'QoHN-zG2tF', zoneName: '6 October' });
+  // 🔴 نفس الـ id بس في مدينة تانية = **وقف**
+  ok('ونفس الزون في مدينة تانية بيترفض',
+     api.resolveZoneOverride(CAT, 'nG_c44vHQht', 'QoHN-zG2tF') === null);
+  ok('وزون مخترع بيترفض', api.resolveZoneOverride(CAT, '0064Qb0OgcA', 'z-fake') === null);
+  ok('ومدينة مش في الكتالوج بترفض', api.resolveZoneOverride(CAT, 'no-such-city', 'QoHN-zG2tF') === null);
+  // ⚠️ والزون اللي كل مناطقه مقفولة للتسليم مالوش معنى — `Taba` منطقته الوحيدة
+  //    مقفولة، فالزون كله مقفول (`bosta-api-helper` 8.11).
+  ok('وزون كل مناطقه مقفولة بيترفض',
+     api.resolveZoneOverride(CAT, 'nG_c44vHQht', 'z-taba') === null);
+  ok('وزون متاح في نفس المدينة بيعدّي',
+     api.resolveZoneOverride(CAT, 'nG_c44vHQht', 'z-dahab')?.zoneName === 'Dahab');
+  ok('والمرجوع فيه الـ id مش الاسم بس',
+     !!api.resolveZoneOverride(CAT, 'nG_c44vHQht', 'z-dahab')?.zoneId);
 }
 
 // ─── ⑦ الإلغاء المكرر ────────────────────────────────────────
