@@ -119,5 +119,63 @@ chk('ومعلّمة إنها مقفولة', taba?.blocked === true && /مقفو�
 //    القايمة تحته هتفضل فاضية.
 chk('وزونها مش في قايمة الزون', !api.dpPickOptions('zone').some(z => z.id === 'Taba'));
 
+// ══════════════════════════════════════════════════════════════
+// ⑥ لغة ألوان القوايم (واجهة v2.5.1)
+// 🔴 تلات ألوان بتلات معاني، والخلط بينهم بيغلط في **إيه اللي هيتبعت**:
+//      🟢 set    = قيمة هتتبعت لبوسطة فعلًا
+//      🟠 changed = تدخّل يدوي غيّر اللي كان هيتبعت
+//      🔵 filter  = ترشيح عرض بس — مابيتبعتش ومابيغيّرش حاجة
+//    الزون كان بياخد 🟠 لما يتقصر عليه، والموظف يفتكر إنه عدّل الشحنة.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑥ ألوان القوايم ──');
+api.setup([row],cairo,cities,'B','q');   // المدينة زي ما هي (مفيش تعديل)
+api.setZf(null);
+delete api.ov()['B'];
+
+chk('المدينة من غير تعديل = بلا لون', api.dpPickCurrent('city').cls === '',
+    api.dpPickCurrent('city').cls);
+chk('الزون من غير قصر = رمادي «الكل»',
+    api.dpPickCurrent('zone').cls === 'muted' && api.dpPickCurrent('zone').text === 'الكل');
+
+api.setZf('Obour');
+// 🔴 دي النقطة: القصر **ترشيح** مش تعديل — أزرق مش برتقالي
+const zf = api.dpPickCurrent('zone');
+chk('القصر على زون = 🔵 ترشيح مش 🟠 تعديل', zf.cls === 'filter', zf.cls);
+chk('والشرح بيقول صراحةً إنه مابيتبعتش', /مابيتبعتش/.test(zf.hint || ''), zf.hint);
+
+// الشحنة نفسها هتترفع بالزون → القيمة بقت حقيقية، فاللون 🟢
+const zoneRow = { ...row, mode:'zone', zoneName:'Obour', cityId:'q' };
+api.setup([zoneRow],cairo,cities,'B','q');
+api.setZf(null);
+const zs = api.dpPickCurrent('zone');
+chk('الشحنة هترفع بالزون = 🟢 قيمة بتتبعت', zs.cls === 'set', zs.cls);
+chk('وشرحه بيقول zoneId', /zoneId/.test(zs.hint || ''), zs.hint);
+
+// المدينة المعدّلة يدويًا = 🟠
+api.setup([row],cairo,cities,'B','c');
+chk('المدينة المعدّلة يدويًا = 🟠 تدخّل', api.dpPickCurrent('city').cls === 'changed',
+    api.dpPickCurrent('city').cls);
+
+// ⚠️ كل خانة لازم يبقى ليها شرح — اللون لوحده مابيكفيش
+for (const k of ['city','zone','district']) {
+  chk(`خانة ${k} ليها شرح على الـ hover`, !!(api.dpPickCurrent(k).hint || '').trim());
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⑦ القص — `overflow:hidden` على الجدول كان بياكل نُص اللوحة
+// 🔴 الحارس ده على الـ CSS مباشرةً لأن الباج **بصري بحت**: مفيش خطأ، ومفيش
+//    سلوك بيتغيّر — الموظف بيفتح القايمة ويشوف صفين ونُص وخلاص. أي «تنضيف»
+//    بيرجّع `overflow:hidden` على `.dp-tbl` بيخفي القوايم تاني في صمت.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑦ اللوحة مش مقصوصة ──');
+const css = fs.readFileSync('/home/user/Bosta-Orders-Upload/index.html','utf8')
+  .match(/\.dp-tbl\{[^}]*\}/)[0];
+chk('.dp-tbl مش عليها overflow:hidden', !/overflow:\s*hidden/.test(css), css);
+chk('وعليها overflow:visible صريح', /overflow:\s*visible/.test(css), css);
+// وتقويس الأركان اتنقل للخانات الطرفية — من غيره الجدول بيبان بأركان حادّة
+const full = fs.readFileSync('/home/user/Bosta-Orders-Upload/index.html','utf8');
+chk('وتقويس الأركان اتنقل للخانات الطرفية',
+    /\.dp-tbl > :first-child > :first-child\{border-start-start-radius/.test(full));
+
 console.log(`\n${p}/${n} نجحت`);
 process.exit(p===n?0:1);
