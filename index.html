@@ -567,8 +567,17 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
    🔴 وعدد الأعمدة **تلاتة في الصفين** (v2.5.0) — الصف الأزرق والأحمر لازم
    يفضلوا بنفس العدد، وإلا خانة بوسطة مابتقعش فوق خانة شوبيفاي اللي بتقابلها
    والمقارنة (اللي هي كل الشغل في النافذة دي) بتبقى غلط بصريًا. */
+/* 🔴 `overflow:visible` **إلزامي** — مش تفضيل. اللوحة المنسدلة بنت خانة جوّه
+   الجدول، و`overflow:hidden` (اللي كان هنا لتقويس الأركان) كان **بياكل نُصّها**:
+   الموظف يفتح قايمة المنطقة ويشوف صفين ونُص. وتقويس الأركان اتنقل للخانات
+   الطرفية نفسها بخصائص منطقية (`start`/`end`) عشان يفضل صح في RTL.
+   ⚠️ ممنوع رجوع `overflow:hidden` هنا — أي «تنضيف» بيرجّعه بيخفي القوايم تاني. */
 .dp-tbl{border:1px solid var(--border-strong);border-radius:var(--radius-sm);
-  overflow:hidden;margin-bottom:8px;}
+  overflow:visible;margin-bottom:8px;}
+.dp-tbl > :first-child > :first-child{border-start-start-radius:calc(var(--radius-sm) - 1px);}
+.dp-tbl > :first-child > :last-child{border-start-end-radius:calc(var(--radius-sm) - 1px);}
+.dp-tbl > :last-child  > :first-child{border-end-start-radius:calc(var(--radius-sm) - 1px);}
+.dp-tbl > :last-child  > :last-child{border-end-end-radius:calc(var(--radius-sm) - 1px);}
 .dp-tbl > * + *{border-top:1px solid var(--border-strong);}
 .dp-src{display:grid;grid-template-columns:128px repeat(3,minmax(0,1fr));align-items:stretch;}
 .dp-src-tag{display:flex;align-items:center;gap:5px;padding:6px 10px;
@@ -583,6 +592,9 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .dp-f-v{font-size:12.5px;font-weight:800;color:var(--text-primary);word-break:break-word;}
 .dp-f-v.muted{color:var(--text-muted);font-weight:600;}
 .dp-f-v.set{color:var(--green-dark);}
+/* خانة فاضية بتمسك مكان العمود بس — من غيرها الصفين بيختلفوا في عدد الأعمدة
+   وخانة بوسطة مابتقعش فوق خانة شوبيفاي اللي بتقابلها. */
+.dp-f-blank{}
 /* 🔴 العنوان الكامل **فوق** الصفين وبالأخضر — هو المصدر الوحيد اللي المطابقة
    بتقرا منه، والموظف بيقراه الأول وبعدين يقارن الأزرق بالأحمر. */
 .dp-addr{display:grid;grid-template-columns:128px repeat(3,minmax(0,1fr));
@@ -699,23 +711,33 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .dp-pick-btn:hover{border-color:var(--accent);}
 .dp-pick-btn .dp-pick-cur{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dp-pick-btn .dp-pick-cur.muted{color:var(--text-muted);font-weight:600;}
+/* 🔴 تلات ألوان بتلات معاني مختلفة — والخلط بينهم بيغلط في **إيه اللي هيتبعت**:
+     🟢 set    = قيمة **هتتبعت لبوسطة** فعلًا (منطقة متحددة · زون هترفع عليه)
+     🟠 changed = **تدخّل يدوي** غيّر اللي كان هيتبعت (المدينة اتبدّلت)
+     🔵 filter  = **ترشيح عرض بس** — مابيتبعتش ومابيغيّرش حاجة (قصر القايمة على زون)
+   الزون كان بياخد 🟠 لما يتقصر عليه، وده غلط: القصر مابيغيّرش أي قيمة بتتبعت. */
 .dp-pick-btn.changed{border-color:var(--amber);background:var(--amber-light);color:var(--amber);}
 .dp-pick-btn.set{border-color:var(--green-border);background:var(--green-light);color:var(--green-dark);}
+.dp-pick-btn.filter{border-color:var(--accent-border);background:var(--accent-light);color:var(--accent-dark);}
 .dp-pick-btn[disabled]{cursor:not-allowed;opacity:.55;background:var(--surface-2);}
 .dp-pick-panel{display:none;position:absolute;z-index:40;inset-inline-start:0;top:calc(100% + 4px);
-  width:max(260px,100%);background:var(--surface);border:1px solid var(--border-strong);
+  width:max(340px,100%);max-width:min(92vw,460px);background:var(--surface);
+  border:1px solid var(--border-strong);
   border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,.16);overflow:hidden;}
 .dp-pick.open .dp-pick-panel{display:block;}
 .dp-pick-search{width:100%;height:30px;border:none;border-bottom:1px solid var(--border);
   padding:0 10px;font-family:inherit;font-size:12px;background:var(--surface-2);outline:none;}
 .dp-pick-search:focus{background:var(--surface);}
 .dp-pick-list{max-height:240px;overflow-y:auto;}
+/* الاسم بيلف والعدّاد مابيتزقّش — الاسمين (إنجليزي — عربي) بيعدّوا السطر
+   بسهولة، ومن غير `min-width:0` الفليكس بيرفض يقصّرهم فالعمودين بيركبوا. */
 .dp-pick-opt{padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;
-  display:flex;align-items:center;gap:6px;border-top:1px solid var(--border);}
+  display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);}
+.dp-pick-opt > span:first-child{flex:1;min-width:0;line-height:1.5;}
 .dp-pick-opt:first-child{border-top:none;}
 .dp-pick-opt:hover{background:var(--accent-light);}
 .dp-pick-opt.cur{background:var(--green-light);color:var(--green-dark);}
-.dp-pick-opt-sub{margin-inline-start:auto;font-size:10.5px;font-weight:700;color:var(--text-muted);
+.dp-pick-opt-sub{flex-shrink:0;font-size:10.5px;font-weight:700;color:var(--text-muted);
   white-space:nowrap;}
 /* 🔴 المقفولة للتسليم بتبان هنا كمان — نفس قاعدة القايمة الكبيرة (8.11):
    تتعرض معلّمة ومش قابلة للضغط، مش تتشال بصمت. */
@@ -853,7 +875,10 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
         </div>
         <ul class="cl-items">
           <li class="cl-item"><span class="cl-tag new">جديد</span><span>🔽 <b>صف بوسطة بقى تلات قوايم منسدلة ببحث: المدينة · الزون · المنطقة.</b> قبل كده كانت المدينة بس قايمة، والمنطقة نص للقراءة — يعني الاختيار كله من القايمة الكبيرة تحت. دلوقتي التلاتة قابلة للتغيير من نفس المكان اللي الموظف بيقرا فيه القيمة. ⚠️ و<b>الزون بيقصّر القايمة، مابيختارش منطقة</b> — الزون جواه مناطق كتير (زون العبور = ٦) واختيار واحدة منهم تلقائيًا تخمين.</span></li>
-          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>الأعمدة التلاتة بقت تقابل بعضها عمود بعمود:</b> محافظة شوبيفاي ↔ مدينة بوسطة · مدينة شوبيفاي ↔ الزون (دي الخانة اللي العميل بيكتب فيها «العبور») · عنوان شوبيفاي ↔ المنطقة. يعني السؤال «الأحمر ده جاي منين؟» بقى ليه إجابة فوقه على طول.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>الأعمدة بقت تقابل بعضها عمود بعمود:</b> محافظة شوبيفاي ↔ مدينة بوسطة · مدينة شوبيفاي ↔ الزون (دي الخانة اللي العميل بيكتب فيها «العبور»). يعني السؤال «الأحمر ده جاي منين؟» بقى ليه إجابة فوقه على طول.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>القايمة المنسدلة كانت مقصوصة من تحت.</b> الجدول كان عليه <code>overflow:hidden</code> (لتقويس الأركان) فكان بياكل نُص اللوحة — الموظف يفتح قايمة المنطقة ويشوف صفين ونُص. تقويس الأركان اتنقل للخانات الطرفية نفسها. ⚠️ باج <b>بصري بحت</b>: مفيش خطأ ومفيش سلوك بيتغيّر، عشان كده فيه اختبار بيحرس السطر ده تحديدًا.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>خانة العنوان في سطر شوبيفاي اتشالت</b> — كانت مكررة حرفيًا مع الصف الأخضر فوقها. الخانة نفسها فضلت فاضية عشان الأعمدة تفضل متطابقة بين الصفين.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>لون الزون كان بيقول «عدّلت» وهو مش بيعدّل حاجة.</b> لما تقصّر القايمة على زون كان بيبقى <b>برتقالي</b> — والبرتقالي في الأداة كلها معناه «تدخّل يدوي غيّر اللي هيتبعت». بقى <b>أزرق = ترشيح عرض بس</b>، والأخضر متحجوز للقيمة اللي <b>هتتبعت فعلًا</b> (منطقة متحددة، أو زون الشحنة هترفع عليه). وكل خانة بقى عليها شرح على الـ hover.</span></li>
           <li class="cl-item"><span class="cl-tag new">جديد</span><span>🚫 <b>المناطق اللي بوسطة مش بتسلّم فيها بقت باينة.</b> قبل كده كانت بتتشال من القايمة <b>في صمت</b> — الموظف يشوف ٧ مناطق بدل ٩ ومش عارف إن عنوان العميل أصلًا <b>برّه تغطية بوسطة</b>، فيضغط «ارفع على المحافظة بس» فاكرها مسار احتياطي سليم، والشحنة تتشحن بفلوس وترجع بعد أيام. دلوقتي بتتعرض في نفس القايمة <b>معلّمة ومش قابلة للضغط</b>، والعنوان اللي بيطابق واحدة منها <b>بيوقف الصف</b> بحالة جديدة <b>🚫 برّه تغطية بوسطة</b> — الأوردر يتحوّل لخدمة العملاء (عنوان بديل · كوريَر تاني · إلغاء).</span></li>
           <li class="cl-item"><span class="cl-tag new">جديد</span><span>🗺️ <b>درجة الزون — مستوى جديد بين المنطقة والمحافظة.</b> الأوردر اللي مالوش مطابقة منطقة بس عنوانه طابق <b>زون واحد</b> بقى يترفع بالزون بدل ما ينزل على طول للمحافظة. الفرق مقيس على بوليصتين: «المحافظة بس» بتاخد <b>هب افتراضي</b> وكود فرز <code>G-02</code>، والزون بياخد <b>هب محدد</b> وكود <code>G-08</code> — يعني تحويلة أقل. السلّم بقى <b>منطقة ← زون ← محافظة</b>، والنزول بيحصل لما اللي فوقه يترفض بس.</span></li>
           <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>قيمة البضاعة تحت ١٠٠ جنيه كانت بترجّع رفض مبهم من بوسطة.</b> بوسطة عندها حد <b>مش مكتوب في التوثيق</b> (١٠٠–٥٠٠٠٠) ورسالة الرفض بتتكلم عن «قيمة الطرد» من غير ما تقول إن فيه حد أصلًا. دلوقتي الصف <b>بيتوقف قبل النداء</b> برسالة واضحة. ⚠️ الحالة دي أقرب بكتير في <b>الاسترجاع/الاستبدال</b>: القيمة هناك متحسبة من سعر القطع اللي بتسافر مش من إجمالي الأوردر.</span></li>
@@ -1847,7 +1872,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.5.0';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.5.1';   // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -3538,15 +3563,20 @@ function dpAddrRow(key, val) {
 //    لأنهم مالهمش دخل بقرار المنطقة.
 // 🔴 **الأعمدة التلاتة بتقابل بعضها عمود بعمود** (v2.5.0) — مش مجرد زيادة خانة:
 //
-//      شوبيفاي   المحافظة   │   المدينة      │   العنوان
+//      شوبيفاي   المحافظة   │   المدينة      │   (فاضية)
 //      بوسطة     المدينة    │   الزون        │   المنطقة
 //
-//    كل عمود هو **مصدر القيمة اللي تحته**: المحافظة بتتحول لمدينة بوسطة من
-//    الجدول المقفول · وخانة `city` بتاعة شوبيفاي هي اللي العميل بيكتب فيها اسم
-//    الزون («العبور») · واسم المنطقة بيتلقط من نص العنوان. والترجيح نفسه بيرتّب
-//    الخانات كده بالظبط (`city` تغلب `address1`). يعني الترتيب ده مش تجميل —
-//    هو اللي بيخلي السؤال «الأحمر ده جاي منين؟» ليه إجابة فوقه على طول.
-// ⚠️ ولازم الصفين يفضلوا **نفس عدد الأعمدة**، وإلا الخانات مابتقعش فوق بعضها.
+//    أول عمودين **كل واحد فيهم مصدر القيمة اللي تحته**: المحافظة بتتحول لمدينة
+//    بوسطة من الجدول المقفول · وخانة `city` بتاعة شوبيفاي هي اللي العميل بيكتب
+//    فيها اسم الزون («العبور»). يعني السؤال «الأحمر ده جاي منين؟» ليه إجابة
+//    فوقه على طول.
+// 🔴 **والخانة التالتة في صف شوبيفاي فاضية عن قصد.** كان فيها نص العنوان، وده
+//    **مكرر حرفيًا** مع الصف الأخضر فوق اللي بيعرض العنوان بالكامل — والتكرار
+//    في نافذة ضيقة تكلفة مش فايدة. اتشال، **والخانة فضلت** لأن عدد الأعمدة
+//    لازم يفضل واحد في الصفين، وإلا خانة بوسطة مابتقعش فوق خانة شوبيفاي اللي
+//    بتقابلها والمقارنة (اللي هي كل الشغل في النافذة دي) بتبقى غلط بصريًا.
+//    ⚠️ وفاضية **بلا `—`**: الشرطة بتقرا «القيمة دي مش موجودة»، وهنا مفيش
+//    قيمة أصلًا مفروض تكون موجودة — المنطقة بتتقرا من العنوان الكامل فوق.
 function dpContextHTML(r) {
   return '<div class="dp-tbl">' +
          // 🔴 العنوان الكامل أول سطر — هو المصدر الوحيد اللي المطابقة بتقرا منه،
@@ -3556,7 +3586,7 @@ function dpContextHTML(r) {
          dpSrcRow('shopify', '🛍️ شوبيفاي',
            dpField('المحافظة', r.province) +
            dpField('المدينة', r.addressCity) +
-           dpField('العنوان', [r.address1, r.address2].filter(Boolean).join(' - '))) +
+           '<div class="dp-f dp-f-blank"></div>') +
          dpSrcRow('bosta', '🚚 بوسطة',
            // 🔴 التلاتة **قوايم منسدلة ببحث** مش نص: القيمة المعروضة هي اللي
            //    هتتبعت فعلًا، فتغييرها لازم يحصل في نفس الخانة اللي الموظف
@@ -3732,25 +3762,49 @@ function dpPickCurrent(key) {
   const opts = dpPickOptions(key);
   const cur  = opts.find(o => o.cur);
   if (key === 'city') {
+    const changed = dpCityId !== r.cityId;
     return { text: cur?.label || r.cityName || '—',
-             cls: dpCityId !== r.cityId ? 'changed' : '' };
+             cls: changed ? 'changed' : '',
+             hint: changed
+               ? `المدينة اتغيّرت يدويًا من ${r.cityName} — الشحنة هتترفع على ${cur?.label || dpCityId}`
+               : 'مدينة بوسطة المحسوبة من المحافظة (جدول مقفول) — الشحنة هتترفع عليها' };
   }
   if (key === 'zone') {
-    // ⚠️ الزون **مُرشِّح مش اختيار**: هو بيقصّر القايمة ومابيحددش منطقة، لأن
-    //    الزون جواه مناطق كتير واختيار واحدة منها تخمين (`bosta-api-helper` 8.10).
-    //    الاستثناء إن الشحنة نفسها هتترفع بالزون (`mode: 'zone'`) — ساعتها هو
-    //    قيمة حقيقية بتتبعت، مش ترشيح.
-    if (dpZoneFilter) return { text: cur?.label || dpZoneFilter, cls: 'changed' };
-    if (r.mode === 'zone' && r.zoneName && dpCityId === r.cityId) {
-      return { text: r.zoneName, cls: 'set' };
+    // 🔴 الزون ليه **معنيين مختلفين**، ولازم اللون يفرّق بينهم:
+    //
+    //   🟢 `set`    — الشحنة **هتترفع بالزون ده فعلًا** (`mode: 'zone'`): مفيش
+    //                مطابقة منطقة، فـ`zoneId` هو اللي بيتبعت لبوسطة.
+    //   🔵 `filter` — الموظف قصّر القايمة على زون عشان يدوّر جواه. **مابيتبعتش
+    //                ولا بيغيّر أي قيمة** — الزون جواه مناطق كتير واختيار واحدة
+    //                منها تخمين (`bosta-api-helper` 8.10).
+    //
+    // ⚠️ لحد v2.5.0 كانت الحالة التانية بتاخد 🟠 `changed` — **وده غلط**: البرتقالي
+    //    في الأداة كلها معناه «تدخّل يدوي غيّر اللي هيتبعت»، والقصر مابيغيّرش
+    //    حاجة بتتبعت خالص. فالموظف كان بيشوف برتقالي ويفتكر إنه عدّل الشحنة.
+    const isSentDegree = r.mode === 'zone' && r.zoneName && dpCityId === r.cityId;
+    if (dpZoneFilter) {
+      return { text: cur?.label || dpZoneFilter,
+               cls: isSentDegree ? 'set' : 'filter',
+               hint: isSentDegree
+                 ? `الشحنة هتترفع على زون ${dpZoneFilter} — والقايمة تحت مقصورة عليه`
+                 : `ترشيح عرض بس — القايمة تحت مقصورة على زون ${dpZoneFilter}. `
+                   + 'مابيتبعتش لبوسطة ومابيغيّرش المنطقة — اختر منطقة من القايمة.' };
     }
-    return { text: 'الكل', cls: 'muted' };
+    if (isSentDegree) {
+      return { text: r.zoneName, cls: 'set',
+               hint: `مفيش مطابقة منطقة، فالشحنة هتترفع على زون ${r.zoneName} (zoneId) — `
+                   + 'هب وكود فرز محددين بدل الهب الافتراضي للمحافظة.' };
+    }
+    return { text: 'الكل', cls: 'muted',
+             hint: 'اختر زون عشان تقصّر قايمة المناطق تحت — الزون ترشيح، مابيحددش منطقة' };
   }
   const dm = addrModeInfo(r);
-  if (cur) return { text: cur.label, cls: 'set' };
+  if (cur) return { text: cur.label, cls: 'set',
+                    hint: 'المنطقة اللي الشحنة هتترفع عليها (districtId) — أدق درجة عنوان' };
   // مفيش منطقة متحددة — البادج نفسه مش منطقة، فكتابته هنا بتقرا كأن الشحنة
   // عليها منطقة وهي مالهاش.
-  return { text: dm.set && dpCityId === r.cityId ? dm.label : '— مفيش —', cls: 'muted' };
+  return { text: dm.set && dpCityId === r.cityId ? dm.label : '— مفيش —', cls: 'muted',
+           hint: 'مفيش منطقة متحددة — الشحنة هتترفع على درجة أقل دقة (زون أو محافظة)' };
 }
 
 function dpPickToggle(key) {
@@ -3836,6 +3890,9 @@ function renderDpControls() {
     if (!wrap || !btn) continue;
     const cur = dpPickCurrent(key);
     btn.className = `dp-pick-btn${cur.cls && cur.cls !== 'muted' ? ` ${cur.cls}` : ''}`;
+    // 🔴 اللون لوحده مابيكفيش — «ليه ده برتقالي وده أخضر؟» سؤال حقيقي اتسأل.
+    //    الشرح بيعيش على الخانة نفسها، مش في توثيق برّه الشاشة.
+    btn.title = cur.hint || '';
     btn.innerHTML = `<span class="dp-pick-cur${cur.cls === 'muted' ? ' muted' : ''}">${esc(cur.text)}</span><span>▾</span>`;
     wrap.classList.toggle('open', dpPickOpen === key);
     const search = document.getElementById(`dpPickSearch-${key}`);
