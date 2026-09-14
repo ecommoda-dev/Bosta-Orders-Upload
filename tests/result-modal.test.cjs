@@ -99,10 +99,23 @@ ok('«العنوان (سطر ١)» اتشال', !ctx.includes('العنوان (�
 // سطر العنوان لازم يسبق الصفين — هو المصدر اللي المطابقة بتقرا منه
 ok('العنوان الكامل فوق صف شوبيفاي', ctx.indexOf('dp-addr') < ctx.indexOf('dp-src shopify'));
 ok('وفيه سطر ٢ جوّه النص الكامل', ctx.includes('بجوار المعبر'));
-// 🔴 قايمة المدن جوّه صف بوسطة — الصف المنفصل كان بيخلي الموظف يقرا مدينة
-//    في السطر الأحمر ويغيّر مدينة في سطر تاني
+// 🔴 القوايم المنسدلة **جوّه صف بوسطة** — الصف المنفصل كان بيخلي الموظف يقرا
+//    قيمة في السطر الأحمر ويغيّرها في سطر تاني
 const bosta = ctx.slice(ctx.indexOf('dp-src bosta'));
-ok('قايمة المدن جوّه صف بوسطة', bosta.includes('id="dpCity"'));
+ok('قايمة المدينة جوّه صف بوسطة',  bosta.includes('id="dpPick-city"'));
+ok('وقايمة الزون جنبها',           bosta.includes('id="dpPick-zone"'));
+ok('وقايمة المنطقة كمان',          bosta.includes('id="dpPick-district"'));
+// 🔴 التلاتة لازم يبقى فيهم خانة بحث — ٢٠٧ منطقة في القليوبية والجيزة ٣٣١،
+//    يعني التمرير مش وسيلة اختيار.
+ok('وكل واحدة فيها خانة بحث', (bosta.match(/dp-pick-search/g) || []).length === 3,
+   (bosta.match(/dp-pick-search/g) || []).length);
+// 🔴 الأعمدة لازم تفضل **نفس العدد** في الصفين، وإلا خانة بوسطة مابتقعش فوق
+//    خانة شوبيفاي اللي بتقابلها والمقارنة بتبقى غلط بصريًا.
+const shop = ctx.slice(ctx.indexOf('dp-src shopify'), ctx.indexOf('dp-src bosta'));
+ok('صف شوبيفاي تلات خانات',
+   (shop.match(/class="dp-f"/g) || []).length === 3, (shop.match(/class="dp-f"/g) || []).length);
+ok('وصف بوسطة تلاتة كمان',
+   (bosta.match(/class="dp-f"/g) || []).length === 3, (bosta.match(/class="dp-f"/g) || []).length);
 ok('صف المدينة المنفصل اتشال', !html.includes('class="dp-city-row"'));
 ok('سطر «الحالي:» اتشال من جسم النافذة', !html.includes('id="dpState"'));
 // عنوان النافذة = رقم الأوردر + حالة العنوان بنفس قيمة العمود بالحرف
