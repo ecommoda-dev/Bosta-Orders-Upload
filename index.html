@@ -741,6 +741,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>عمود «القطع» اتشال من الجدول.</b> كان بياخد عرض كبير في كل صف استرجاع/استبدال بوصف القطع الراجعة والخارجة. الوصف ده <b>لسه بيتبعت لبوسطة زي ما هو</b> (هو اللي المندوب بيقراه)، ولسه موجود في <b>تصدير XLSX</b> وفي <b>ملف بوسطة (Excel)</b> — العرض في الجدول بس هو اللي اتشال.</span></li>
           <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>عمود «الدورة المفتوحة» بقى سطرين — زي أداة التصدير القديمة.</b> فوق <b>بادج الحالة</b>: <code>دورة واحدة</code> (أخضر) · تحذير بالبرتقالي · <b>⛔ موقوف</b> بالأحمر. وتحته <b>اسم الدورة</b> ومعاه <b>«من كام دورة»</b> لو الأوردر عليه أكتر من دورة. قبل كده الخلية كانت بتقول اسم الدورة بس، فالأوردر اللي عدّى بتلات دورات كان شكله زي اللي ليه دورة واحدة.</span></li>
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>سبب التوقيف بقى بالعربي.</b> الخلية كانت بتعرض الكود الخام (<code>CYCLE_OVERLAP_OPEN</code>) للموظف. دلوقتي بتعرض <b>«أكتر من دورة مفتوحة»</b>، والقيمة اللي وقّفت الصف بتبان تحتها — والكود نفسه فاضل في الـ tooltip عشان التتبع مع الدعم.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>ونفس الترجمة في نافذة الرفض وفي جدول النتايج.</b> النافذة كانت لسه بتعرض الكود الخام في بادج كل أوردر متوقّف، والصف في جدول النتايج كان سببه مكتوب <code>CYCLE_OVERLAP_OPEN: …</code>. دلوقتي التلاتة بيقروا من <b>نفس المصدر</b> — الموظف بيقرا نفس الجملة في الجدول وفي النافذة وفي تصدير النتايج. الكود الخام فاضل في الـ tooltip وفي سجل D1.</span></li>
           <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>تلات إشارات لونية كانت مش ظاهرة خالص.</b> «<b>↩ استرداد</b>» في عمود المبلغ، وبادج الدورة الموقوفة، وسطر «<b>✅ مفيش ولا شحنة اتعملت</b>» في نافذة الرفض — كلهم كانوا بيقروا ألوان مش معرّفة في الصفحة (<code>--danger</code> / <code>--success</code>، اتنقلوا مع كود الدمج)، فكانوا بيطلعوا بلون عادي. اللون هو الإشارة نفسها هنا: المبلغ السالب معناه <b>بوسطة بتدفع للعميل عند الباب</b>.</span></li>
         </ul>
       </div>
@@ -1681,7 +1682,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.1.0';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.1.1';   // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -3815,7 +3816,7 @@ async function postUploadRE(chunk, j) {
           return {
             orderId: r.orderId, orderNumber: r.orderNumber, status: 'error',
             actions: [], warnings: [], trackingNumber: null,
-            error: b ? `${b.code}: ${b.action}`
+            error: b ? `${cycleCodeLabel(b.code)}: ${b.action}`
                      : (d.missing || []).includes(r.orderNumber)
                        ? 'شوبيفاي ما رجّعتش الأوردر ده وقت الرفع — الدفعة كلها اتوقفت قبل أي شحنة'
                        : 'الدفعة اتوقفت كلها بسبب أوردرات تانية في نفس الدفعة — **مفيش ولا شحنة اتعملت**',
@@ -3828,6 +3829,11 @@ async function postUploadRE(chunk, j) {
 }
 
 // ─── §TOOL-JS::cycleBlock ───
+// 🔴 أسباب التوقيف هنا بتتعرض **بالعربي** من `CYCLE_CODE_LABEL` — نفس المصدر
+//    بتاع عمود «الدورة المفتوحة». مصدرين للترجمة معناهم إن الموظف يقرا
+//    «أكتر من دورة مفتوحة» في الجدول و`CYCLE_OVERLAP_OPEN` في النافذة لنفس
+//    الصف. الكود الخام بيفضل في الـ tooltip وفي سجل D1 — التتبع مع الدعم
+//    مابيضيعش.
 function openCycleBlockModal(d, j) {
   const rows = d.blocked || [];
   const missing = d.missing || [];
@@ -3840,7 +3846,7 @@ function openCycleBlockModal(d, j) {
   if (rows.length) {
     parts.push('<div class="dup-list">' + rows.map(b =>
       `<div style="padding:7px 0;border-bottom:1px solid var(--border);">
-         <b>${esc(b.name || '—')}</b> — <span class="badge badge-danger">${esc(b.code)}</span>
+         <b>${esc(b.name || '—')}</b> — <span class="badge badge-danger" title="${esc(b.code || '')}">${esc(cycleCodeLabel(b.code))}</span>
          <div style="font-size:11.5px;color:var(--text-muted);margin-top:3px;">${esc(b.value || '')}</div>
          <div style="font-size:12px;margin-top:3px;line-height:1.8;">${esc(b.action || '')}</div>
        </div>`).join('') + '</div>');

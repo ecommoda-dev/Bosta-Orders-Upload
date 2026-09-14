@@ -26,6 +26,7 @@ const ls  = { getItem:()=>null, setItem(){}, removeItem(){} };
 
 const tail = `
 return { tableColumns, renderTable, codCell, cycleCell, upCell, JOBS, sortConfig,
+         cycleCodeLabel, CYCLE_CODE_LABEL, openCycleBlockModal,
          LOG_TYPE_ITEMS, MIN_WORKER_VERSION, setJob(k){ currentJobKey = k; },
          getJob(){ return currentJobKey; }, setRows(r){ allRows = r; } };`;
 const api = new Function('document','window','localStorage','Chart','ExcelJS', src + tail)(doc, win, ls, undefined, undefined);
@@ -105,6 +106,36 @@ console.log('\n②ب الدورة المفتوحة — الحالة والاسم
   ok('الصف الموقوف بيقول السبب بالعربي', /أكتر من دورة مفتوحة/.test(blocked), blocked);
   ok('ومعاه القيمة اللي وقّفته', /R1 · R2/.test(blocked), blocked);
   ok('وبكلاس بيميّزه بصريًا', /cycle-badge blocked/.test(blocked), blocked);
+}
+
+// ─── ②ج نافذة الرفض — نفس الترجمة بتاعة العمود ──────────────
+console.log('\n②ج نافذة الرفض بتقرا من نفس مصدر الترجمة');
+{
+  // 🔴 مصدرين للترجمة معناهم إن الموظف يقرا «أكتر من دورة مفتوحة» في الجدول
+  //    و`CYCLE_OVERLAP_OPEN` في النافذة — لنفس الصف بالظبط.
+  api.openCycleBlockModal({
+    error: 'الرفع اتوقف', blocked: [
+      { id: 'gid://1', name: '#54244', code: 'CYCLE_OVERLAP_OPEN', value: 'R1 · R2', action: 'اقفل الزيادة' },
+      { id: 'gid://2', name: '#51656', code: 'COURIER_NOT_BOSTA',  value: 'Aramex',  action: 'ظبّط الكوريَر' },
+    ],
+  }, { label: 'استرجاع' });
+  const html = el.innerHTML;
+
+  ok('سبب التوقيف في النافذة بالعربي', /أكتر من دورة مفتوحة/.test(html), html.slice(0, 200));
+  ok('وكل الأسباب مترجمة مش واحد بس', /الكوريَر مش بوسطة/.test(html), html.slice(0, 400));
+  // الكود الخام بيفضل في الـ tooltip بس — التتبع مع الدعم لازم يفضل ممكن
+  ok('والكود الخام مش معروض كنص', !/>CYCLE_OVERLAP_OPEN</.test(html), html.slice(0, 400));
+  ok('بس لسه موجود في الـ tooltip', /title="CYCLE_OVERLAP_OPEN"/.test(html), html.slice(0, 400));
+  // ⚠️ السطر ده مهم أكتر من القايمة نفسها
+  ok('وسطر «مفيش ولا شحنة اتعملت» موجود وأخضر',
+     /مفيش ولا شحنة اتعملت/.test(html) && /var\(--green\)/.test(html), html.slice(0, 300));
+
+  // أي كود مش في القايمة بيرجع زي ما هو — أحسن من «—» بيخفي السبب
+  ok('كود مش متعرّف بيرجع زي ما هو', api.cycleCodeLabel('SOMETHING_NEW') === 'SOMETHING_NEW');
+  ok('وكل أكواد الحارس في القايمة',
+     ['CYCLES_TRUNCATED','NO_OPEN_CYCLE','CYCLE_OVERLAP_OPEN','EXCHANGE_WITHOUT_ITEMS',
+      'ORDER_NOT_READABLE','COURIER_NOT_BOSTA','CYCLE_OVERLAP','MULTI_CYCLE','TYPE_MISMATCH',
+      'EXCHANGE_ITEMS_RECOVERED'].every(c => api.CYCLE_CODE_LABEL[c]));
 }
 
 // ─── ③ التاج والميتافيلد ────────────────────────────────────
