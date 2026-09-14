@@ -77,7 +77,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.0.1';
+const WORKER_VERSION = '2.1.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -104,6 +104,14 @@ const ALLOW_OPEN_PKG    = true;                                 // قرار تش
 //    **ومفيش شحنة اتعملت**.
 const COD_MAX           = 30000;
 const COD_REFUND_MIN    = -2000;
+// 🔴 `goodsInfo.amount` محبوسة بين `100` و`50000` — **والحد ده مش موثّق في الـ
+//    spec خالص** (`bosta-api-helper` 8.4 · مقيس حيًا 14-09-2026: `amount: 1`
+//    بيرجّع 400 · `errorCode 41591`). ورسالة بوسطة بتتكلم عن «قيمة الطرد» مش
+//    عن حد أدنى، فمن غير حارس عندنا الموظف بيقرا رفض مبهم على أوردر سليم.
+//    ⚠️ الحد بيتطبّق **وقت الإنشاء بس** — `PUT` بيقبل `1` (8d ④). الأداة دي
+//    مابتعملش `PUT`، بس لو اتضاف مسار تعديل يومًا الحارس **يتكرر** هناك، مش يتورّث.
+const GOODS_MIN         = 100;
+const GOODS_MAX         = 50000;
 
 // ─── §CONSTANTS::shopify ───
 // القيم الحرفية — فرق حرف واحد = صفر صف من غير أي خطأ (ecommoda-order-lifecycle)
@@ -1547,7 +1555,7 @@ function normalizeCatalog(raw) {
     const cityName = c?.name || c?.cityName || '';
     const cityAr   = c?.nameAr || c?.otherName || c?.cityOtherName || '';
     const rawDistricts = Array.isArray(c?.districts) ? c.districts
-                       : Array.isArray(c?.zones) ? c.zones.flatMap(z => (z?.districts || []).map(d => ({ ...d, zoneName: z?.name, zoneOtherName: z?.otherName || z?.nameAr })))
+                       : Array.isArray(c?.zones) ? c.zones.flatMap(z => (z?.districts || []).map(d => ({ ...d, zoneId: z?._id || z?.zoneId, zoneName: z?.name, zoneOtherName: z?.otherName || z?.nameAr })))
                        : [];
     const districts = [];
     for (const d of rawDistricts) {
@@ -1557,12 +1565,24 @@ function normalizeCatalog(raw) {
         id,
         name:   d?.districtName || d?.name || '',
         nameAr: d?.districtOtherName || d?.otherName || d?.nameAr || '',
+        // 🔴 `zoneId` هو **مفتاح درجة الزون** في الرفع (`bosta-api-helper` 8.10.4).
+        //    قبل v2.1.0 كان الاسم بس بيتخزّن، فدرجة الزون كانت مستحيلة أصلًا —
+        //    والأوردر اللي مالوش مطابقة منطقة كان بينزل للمحافظة على طول وياخد
+        //    **هب افتراضي** بدل هب الزون (مقيس بمقارنة بوليصتين — 8.10.2).
+        zoneId: d?.zoneId || d?.zone?._id || null,
         zone:   d?.zoneName || d?.zone?.name || '',
         zoneAr: d?.zoneOtherName || d?.zone?.otherName || '',
         dropOff: d?.dropOffAvailability,
+        // 🟡 موثّق في الكتالوج 14-09-2026 · **أثره ما اتجربش حيًا** (السؤال ٩ في
+        //    قايمة التجارب المفتوحة). الأداة بتبعت `SMALL` دايمًا فهو مالوش أثر
+        //    دلوقتي — بيتخزّن عشان أي أداة بتبعت `Light/Heavy Bulky` تلاقيه.
+        bulkyBlocked: d?.notAllowedBulkyOrders === true,
       });
     }
-    if (cityId) out.push({ cityId, cityName, cityAr, districts });
+    // 🟡 `dropOffAvailability` موجود على مستوى **المدينة** كمان مش المنطقة بس
+    //    (`bosta-api-helper` 8.6) — فحص أرخص بيقفل حالات كاملة قبل اللفّ على
+    //    مناطق المدينة (الجيزة لوحدها ٣٣١ منطقة).
+    if (cityId) out.push({ cityId, cityName, cityAr, cityDropOff: c?.dropOffAvailability, districts });
   }
   return { fetchedAt: new Date().toISOString(), cities: out };
 }
@@ -1594,15 +1614,24 @@ async function getCatalog(env, { force = false } = {}) {
 }
 
 // ─── §BOSTA::availableDistricts ───
-// الفلترة على dropOffAvailability === true إلزامية.
+// 🔴 القاعدة **طبقتين مش واحدة** (`bosta-api-helper` 8.11، v4.0.0):
+//      المطابقة والإرسال → المنطقة المقفولة **متتبعتش أبدًا**  → `list`
+//      واجهة الموظف      → **تتعرض ومعلّمة إنها مقفولة**       → `blocked`
+//    `dropOffAvailability === false` معناها بوسطة **مش بتسلّم هناك أصلًا** — دي
+//    خارج التغطية، مش «مش متاحة دلوقتي». الإخفاء الصامت (اللي كان هنا لحد
+//    v2.0.1) بيخلّي الموظف يشوف ٧ مناطق بدل ٩ ويضغط «ارفع على المحافظة بس» وهو
+//    فاكرها مسار احتياطي سليم — والشحنة بتتشحن بفلوس وترجع بعد أيام بـ
+//    *outside Bosta's delivery coverage area*. المسار الصح إن الأوردر
+//    **مايترفعش** ويتحوّل لخدمة العملاء (عنوان بديل · كوريَر تاني · إلغاء).
 // ⚠️ لو الحقل غايب من الكتالوج كله، الفلترة هتفضّي القايمة — والحالة دي بتتبلّغ
 //    في diag وفي رد get_orders بدل ما تتحول لـ"مفيش مطابقة" صامتة.
 function availableDistricts(city) {
-  if (!city) return { list: [], fieldMissing: false };
+  if (!city) return { list: [], blocked: [], fieldMissing: false };
   const withField = city.districts.filter(d => d.dropOff !== undefined);
   const fieldMissing = city.districts.length > 0 && withField.length === 0;
-  const list = fieldMissing ? [] : city.districts.filter(d => d.dropOff === true);
-  return { list, fieldMissing };
+  const list    = fieldMissing ? [] : city.districts.filter(d => d.dropOff === true);
+  const blocked = fieldMissing ? [] : city.districts.filter(d => d.dropOff === false);
+  return { list, blocked, fieldMissing };
 }
 
 // ─── §BOSTA::ensureNormalized ───
@@ -1644,12 +1673,16 @@ function buildZoneIndex(city) {
     const key = normText(en) + '|' + normText(ar);
     let z = byKey.get(key);
     if (!z) {
-      z = { zone: en, zoneAr: ar, nameN: normText(en), nameArN: normText(ar), count: 0 };
+      // 🔴 `zoneId` هو اللي بيترفع فعلًا (8.10.4) — الاسم للعرض بس. زون من غير
+      //    `id` **مايترفعش** عليه (بيفضل اقتراح واجهة)، عشان مانخمّنش مفتاح.
+      z = { zone: en, zoneAr: ar, zoneId: d.zoneId || null,
+            nameN: normText(en), nameArN: normText(ar), count: 0 };
       // زون اسمه اسم المدينة نفسها = معلومة شبه صفرية، زي المنطقة العامّة
       z.generic = (!!z.nameN   && (z.nameN   === city.cityNameN || z.nameN   === city.cityArN))
                || (!!z.nameArN && (z.nameArN === city.cityNameN || z.nameArN === city.cityArN));
       byKey.set(key, z);
     }
+    if (!z.zoneId && d.zoneId) z.zoneId = d.zoneId;
     z.count++;
   }
   return [...byKey.values()];
@@ -1667,7 +1700,7 @@ function matchZonesIn(city, fields) {
       for (const n of [z.nameN, z.nameArN]) {
         if (!n || n.length < 3 || !ftext.includes(n)) continue;
         const hit = {
-          zone: z.zone, zoneAr: z.zoneAr, count: z.count,
+          zone: z.zone, zoneAr: z.zoneAr, zoneId: z.zoneId || null, count: z.count,
           tier: f.tier, field: f.key, fieldLabel: f.label,
           matched: n, matchedText: n === z.nameArN ? z.zoneAr : z.zone,
           exact: ftext === n, generic: !!z.generic,
@@ -1724,11 +1757,15 @@ function dominates(a, b) {
 
 // ─── §BOSTA::matchDistrictsIn ───
 // مطابقة مناطق مدينة واحدة على خانات العنوان. بترجّع كل الإصابات مرتّبة.
-function matchDistrictsIn(city, fields, zoneOnly) {
+// ⚠️ `sourceList` بيسمح بمطابقة **المقفولة** بنفس الترجيح بالظبط (8.11) — من
+//    غير ده كنا هنحتاج نسخة تانية من المنطق، ونسختين بيفترقوا = قرار مدينة
+//    مختلف في شاشتين (نفس سبب قاعدة «محرك واحد» في 8.6a).
+function matchDistrictsIn(city, fields, zoneOnly, sourceList) {
   const { list, fieldMissing } = availableDistricts(city);
-  if (!list.length || !fields.length) return { hits: [], fieldMissing };
+  const source = sourceList || list;
+  if (!source.length || !fields.length) return { hits: [], fieldMissing };
 
-  let pool = list;
+  let pool = source;
   if (zoneOnly) {
     const zEn = normText(zoneOnly.en), zAr = normText(zoneOnly.ar);
     pool = list.filter(d => {
@@ -1761,8 +1798,8 @@ function matchDistrictsIn(city, fields, zoneOnly) {
 
 // ─── §BOSTA::matchDistrict ───
 // بترجّع المرشحين المتنافسين: واحد = حسم · أكتر من واحد = غموض معلَن.
-function matchDistrict(city, fields, zoneOnly) {
-  const { hits, fieldMissing } = matchDistrictsIn(city, fields, zoneOnly);
+function matchDistrict(city, fields, zoneOnly, sourceList) {
+  const { hits, fieldMissing } = matchDistrictsIn(city, fields, zoneOnly, sourceList);
   if (!hits.length) return { matches: [], fieldMissing };
   const top = hits[0];
   const matches = hits.filter(h => h === top || !dominates(top, h));
@@ -1817,7 +1854,7 @@ function findCrossCity(catalog, fields, skipCityId) {
       out.push({
         kind: 'zone',
         cityId: c.cityId, cityName: c.cityName,
-        zone: z.zone, zoneAr: z.zoneAr, districtCount: z.count,
+        zone: z.zone, zoneAr: z.zoneAr, zoneId: z.zoneId || null, districtCount: z.count,
         matchedText: z.matchedText, fieldLabel: z.fieldLabel,
         // الزون بيترتّب جنب المناطق بنفس المفتاح — مافيش أفضلية لنوع على التاني،
         // الأخصّية هي اللي بتحكم
@@ -1846,7 +1883,7 @@ function findLocalZones(city, fields) {
     .slice(0, CROSS_MAX_PER_CITY)
     .map(z => ({
       kind: 'zone', cityId: city.cityId, cityName: city.cityName,
-      zone: z.zone, zoneAr: z.zoneAr, districtCount: z.count,
+      zone: z.zone, zoneAr: z.zoneAr, zoneId: z.zoneId || null, districtCount: z.count,
       matchedText: z.matchedText, fieldLabel: z.fieldLabel,
     }));
 }
@@ -1856,7 +1893,12 @@ function findLocalZones(city, fields) {
 //   province → cityId حتميًا من الجدول المقفول (ممنوع مطابقة نصية بديلة)
 //   مطابقة منطقة واحدة  → الشكل (أ): { city, districtId, firstLine }        · موثّق
 //   محافظة خاصة بلا مطابقة → الشكل (ب): { city, cityId, districtName, … }   · موثّق
+//   زون واحد بلا مطابقة منطقة → الشكل (د): { zoneId, firstLine }            · غير موثّق
 //   أكتر من مطابقة أو مفيش → الشكل (ج): { city, firstLine }                 · غير موثّق
+//   طابق منطقة **مقفولة للتسليم** → وقف الصف، مفيش رفع أصلًا (8.11)
+// 🔴 السلّم **منطقة ← زون ← محافظة** (8.5) — والعقد بيتغيّر مع الدرجة:
+//    المنطقة على العقد الموثّق (②) · الزون والمحافظة على غير الموثّق (①).
+//    `zoneId` على ② بيرجّع 400، و`districtName` على ① بيرجّع 400 `3002`.
 function resolveAddress(order, catalog) {
   ensureNormalized(catalog);
   const sa = order.shippingAddress || {};
@@ -1909,6 +1951,7 @@ function resolveAddress(order, catalog) {
     })),
     crossCity: [],
     localZones: [],
+    blockedDistricts: [],
   };
 
   if (matches.length === 1) {
@@ -1919,20 +1962,129 @@ function resolveAddress(order, catalog) {
     return { ...base, mode: 'zoneName', districtName: row.zoneOnly.en };
   }
   if (matches.length === 0) {
+    // 🔴 قبل أي نزول درجة: هل العنوان طابق منطقة **مقفولة للتسليم**؟
+    //    (`bosta-api-helper` 8.5 خطوة ٠ · 8.11). لو أيوه، ده **مش** نقص مطابقة —
+    //    ده عنوان **برّه تغطية بوسطة**، والنزول للمحافظة بيشتري شحنة هترجع.
+    //    الصف بيتوقف باسم المنطقة صريح عشان الموظف يحوّله لخدمة العملاء.
+    const { blocked } = availableDistricts(city);
+    if (blocked.length) {
+      const { matches: blockedHits } = matchDistrict(city, fields, row.zoneOnly, blocked);
+      if (blockedHits.length) {
+        return {
+          ...base,
+          mode: 'coverageBlocked',
+          ambiguous: false,
+          blockedDistricts: blockedHits.map(m => ({
+            id: m.id, name: m.name, nameAr: m.nameAr, zone: m.zone,
+            matchedText: m.matchedText, fieldLabel: m.fieldLabel,
+          })),
+        };
+      }
+    }
+
     // مفيش مطابقة منطقة جوّه المدينة. بندوّر على:
     //   ① زون جوّه **نفس** المدينة — المدينة صح، والزون بيقصّر القايمة للموظف
     //   ② منطقة أو زون في **مدينة تانية** — دي حالة «المدينة مشكوك فيها»
     const localZones = findLocalZones(city, fields);
     const crossCity  = findCrossCity(catalog, fields, row.cityId);
+    // 🟠 الشك في المدينة بيتعلن **بس** لما فيه اقتراح في مدينة تانية.
+    //    زون جوّه نفس المدينة مش شك — دي مساعدة في اختيار المنطقة.
+    const cityDoubt = crossCity.length > 0;
+
+    // 🔴 درجة الزون — السلّم **منطقة ← زون ← محافظة** (`bosta-api-helper` 8.5
+    //    درجة ٤ · 8.10). مثبتة بالقياس مش نظرية: شحنتان نفس المحافظة ونفس
+    //    اليوم ونفس الراسل، الفرق الوحيد الزون → `G-02 · OCTOBER HUB` مقابل
+    //    `G-08 · NEW OCTOBER HUB`. «المحافظة بس» **مش** بلا فرز — بتاخد **هب
+    //    افتراضي**، فالفرق هو «هب محدد ضد هب افتراضي»، وتحويلة زيادة على
+    //    العنوان اللي زونه بعيد عن الافتراضي.
+    // ⚠️ شرطين إلزاميين قبل ما نرفع بالزون:
+    //    ① **زون واحد بالظبط** — أكتر من زون = غموض، والاختيار بينهم تخمين.
+    //    ② **مفيش شك في المدينة** — الزون بيحسم المدينة (8.10.1)، فرفعه فوق
+    //       شك مدينة قايم بيثبّت المدينة المشكوك فيها بدل ما الموظف يراجعها.
+    //    الحالتين بيفضلوا `province` والاقتراحات بتتعرض في النافذة زي ما هي.
+    const zoneTier = (!cityDoubt && localZones.length === 1 && localZones[0].zoneId)
+      ? localZones[0] : null;
+    if (zoneTier) {
+      return {
+        ...base, mode: 'zone', ambiguous: false,
+        zoneId: zoneTier.zoneId, zoneName: zoneTier.zone, zoneNameAr: zoneTier.zoneAr,
+        zoneDistrictCount: zoneTier.districtCount,
+        localZones, crossCity, cityDoubt,
+      };
+    }
+
     return {
       ...base, mode: 'province', ambiguous: false,
-      localZones, crossCity,
-      // 🟠 الشك في المدينة بيتعلن **بس** لما فيه اقتراح في مدينة تانية.
-      //    زون جوّه نفس المدينة مش شك — دي مساعدة في اختيار المنطقة.
-      cityDoubt: crossCity.length > 0,
+      localZones, crossCity, cityDoubt,
     };
   }
   return { ...base, mode: 'province', ambiguous: true };
+}
+
+// ─── §BOSTA::buildAddressObject ───
+// 🔴 شكل العنوان **بيتغيّر بالدرجة، والعقد بيتغيّر معاه** (`bosta-api-helper`
+//    8.5 · 8.10.4). الدالة دي هي المصدر الوحيد للشكل ده في الأداة كلها — الشحن
+//    العادي والاسترجاع والاستبدال بيقروا منها، عشان مايبقاش فيه تلات نسخ
+//    بتفترق (نفس سبب قاعدة «محرك واحد» في 8.6a: المدينة بتحدد **الفرع
+//    والتسعيرة**، فنسختين بتفترقوا = شحنتين لنفس العنوان على مدينتين).
+//
+//   الدرجة      | العقد            | الحقول
+//   ────────────┼──────────────────┼─────────────────────────────────────────
+//   district    | ② موثّق          | city + districtId
+//   zoneName    | ② موثّق          | city + cityId + districtName (اسم زون — 8.10.3)
+//   zone        | ① غير موثّق      | zoneId **لوحده**
+//   province    | ① غير موثّق      | city بالاسم بس
+//
+// 🔴 ممنوع الخلط: `zoneId` على ② بيرجّع 400
+//    (`must contain at least one of [districtId, districtName]`)، و`districtName`
+//    على ① بيرجّع 400 `Zone Not Found` · 3002 حتى لو الاسم زون صحيح ١٠٠٪.
+// ⚠️ على درجة الزون **مابنبعتش `city`** — بوسطة بتستنتج المدينة من الزون
+//    (مقيس: `zoneId` لوحده بنص عنوان محايد رجّع المدينة صح — 8.10.1)، وبعتها
+//    جنبه مالوش أثر (T2 وT3 نتيجتهم متطابقة). الأبسط إنه مايتبعتش.
+function buildAddressObject(plan, mode, firstLine) {
+  // 🔴 الحقل الصح `city` — مش `cityName`. الڤاليديتور مش شايف `cityName` أصلًا
+  //    وبيتجاهله بصمت، فأي نسخ حرفي من داشبورد بوسطة بيقع في الفخ ده (8.2).
+  if (mode === 'zone')     return { zoneId: plan.zoneId, firstLine };
+  if (mode === 'district') return { city: plan.cityName, districtId: plan.districtId, firstLine };
+  if (mode === 'zoneName') return { city: plan.cityName, cityId: plan.cityId,
+                                    districtName: plan.districtName, firstLine };
+  return { city: plan.cityName, firstLine };
+}
+
+// ─── §BOSTA::addressDegree ───
+// درجة العنوان اللي اتبعت فعلًا — بتتسجّل في D1 جنب `contract_used`.
+// 🔴 `contract_used` **لوحده بقى ناقص** (8.10.4): الزون والمحافظة الاتنين
+//    بيروحوا على العقد غير الموثّق، فالعمود مش بيفرّق بينهم. من غير الدرجة
+//    مفيش طريقة نقيس بعدين نسبة كل درجة — وده قياس مطلوب في أول أسبوع تشغيل.
+// ⚠️ الوصف اللي الموظف بيقراه في «الإجراءات» لازم يقول **الدرجة** مش العقد:
+//    الزون والمحافظة الاتنين على نفس العقد، فوصفهم بالعقد بيخلي الاتنين
+//    «بالمحافظة» — والموظف مش هيعرف إن الشحنة دي اتفرزت على هب الزون.
+const DEGREE_LABEL = { district: 'بالمنطقة', zone: 'بالزون', province: 'بالمحافظة' };
+
+function addressDegree(mode) {
+  if (mode === 'district' || mode === 'zoneName') return 'district';
+  if (mode === 'zone') return 'zone';
+  return 'province';
+}
+
+// ─── §BOSTA::nextAddressDegree ───
+// 🔴 النزول درجة بيحصل **لما اللي فوقه يفشل بس** (8.5 خطوة ٦) — ومصدره
+//    `errorCode` بوسطة، مش تخمين. النزول بيرجّع الدرجة الجاية أو `null`:
+//      district/zoneName + `3003` (District Not Found) → زون لو فيه، وإلا محافظة
+//      zone + `3002`/`3000` (Zone Not Found / عنوان ناقص) → محافظة
+//    ⚠️ `errorCode` **نص مش رقم** — المقارنة بالرقم معناها إن الرجوع ده عمره
+//       ما هيشتغل، وشحنة كان ممكن تعدّي بتتحسب فشل.
+// 🔴 `zoneId` بيتبعت **من برّه** عن قصد، مابيتقراش من الخطة هنا: لما الموظف
+//    يعدّل المدينة يدويًا، الزونات المحسوبة بتبقى بتاعة المدينة **الأصلية** —
+//    والنزول عليها بيبعت الشحنة على المدينة اللي الموظف رفضها، في صمت. القرار
+//    ده بتاع اللي شايف التعديل، مش بتاع الدالة دي.
+function nextAddressDegree(mode, errorCode, zoneId) {
+  const code = errorCode == null ? null : String(errorCode);
+  if ((mode === 'district' || mode === 'zoneName') && code === '3003') {
+    return zoneId ? 'zone' : 'province';
+  }
+  if (mode === 'zone' && (code === '3002' || code === '3000')) return 'province';
+  return null;
 }
 
 // ─── §BOSTA::buildDeliveryPayload ───
@@ -1949,11 +2101,16 @@ function buildDeliveryPayload(order, plan, mode) {
   const second  = wirePhone(order.phone);
   const sendSecond = second && normPhone(second) !== normPhone(phone);
 
-  // 🔴 `Math.abs` صح **هنا بالذات**: ده أوردر شحن عادي، والسالب معناه العميل
-  //    دفع زيادة فمفيش حاجة تتحصّل. **وممنوع نسخ السطر ده لأي أداة استرجاع أو
-  //    استبدال** — هناك السالب معناه بوسطة بتدفع للعميل عند الباب، والـ abs
-  //    بتحوّل «رجّعله ٢٠٠٠» لـ«حصّل منه ٢٠٠٠». (`bosta-api-helper` Step 8b.)
-  const cod = Math.abs(Number(order.totalOutstandingSet?.presentmentMoney?.amount || 0));
+  // 🔴 السالب هنا معناه **العميل دفع زيادة**، يعني مفيش حاجة تتحصّل → `0`.
+  //    لحد v2.0.1 كان السطر ده `Math.abs`، وده كان **بيناقض تعليقه نفسه**:
+  //    `-200` كانت بتتحوّل لـ«حصّل منه 200» — تحصيل من عميل دافع زيادة أصلًا.
+  //    ⚠️ و`0` اختيار متحفّظ مقصود: بوسطة **بتقبل `cod` سالب على `type 10`**
+  //    (مقيس 14-09-2026: `-500` عدّى 200، و`3008` بيمسك تحت `-2000`) — يعني
+  //    ممكن نخليها ترجّع للعميل على الباب. ده **قرار تشغيلي مش تقني**، والتسوية
+  //    المكتبية هي السلوك الحالي لحد ما يتاخد. (`bosta-api-helper` 8d ④.)
+  //    **وممنوع نسخ السطر ده لأي مسار استرجاع أو استبدال** — هناك السالب
+  //    بيتبعت بإشارته (`§RE-UPLOAD::resolveCod`).
+  const cod = Math.max(0, Number(order.totalOutstandingSet?.presentmentMoney?.amount || 0));
   const goods = Math.abs(Number(order.currentSubtotalPriceSet?.presentmentMoney?.amount || 0));
 
   const lines = (order.lineItems?.nodes || []).filter(li => (li.currentQuantity || 0) > 0);
@@ -1969,9 +2126,7 @@ function buildDeliveryPayload(order, plan, mode) {
 
   // 🔴 الحقل الصح `city` — مش `cityName`. الڤاليديتور مش شايف cityName أصلاً
   //    وبيتجاهله بصمت، فأي نسخ حرفي من داشبورد بوسطة بيقع في الفخ ده.
-  const dropOffAddress = { city: plan.cityName, firstLine };
-  if (mode === 'district')  { dropOffAddress.districtId = plan.districtId; }
-  if (mode === 'zoneName')  { dropOffAddress.cityId = plan.cityId; dropOffAddress.districtName = plan.districtName; }
+  const dropOffAddress = buildAddressObject(plan, mode, firstLine);
 
   const receiver = { firstName, phone };              // الإلزامي الموثّق
   if (lastName)   receiver.lastName  = lastName;
@@ -1981,10 +2136,13 @@ function buildDeliveryPayload(order, plan, mode) {
   const payload = {
     type: BOSTA_TYPE_BY_JOB[JOB_S1],
     cod,
-    // قيمة البضاعة — مش الفلوس المحصّلة.
-    // ⚠️ وليها **تكلفة مباشرة**: بوسطة بتحسب `pricing.insuranceFee` = **١٪**
-    //    منها تلقائيًا على الشحنة (مقيس: 2600 → 26). `bosta-api-helper` 8.9
-    //    كانت بتقول «مالوش أثر مالي تلقائي» — اتصحّحت في v2.0.0.
+    // قيمة البضاعة — مش الفلوس المحصّلة. محروسة بين GOODS_MIN وGOODS_MAX فوق.
+    // ⚠️ وليها **تكلفة مباشرة**: بوسطة بتحسب `pricing.insuranceFee` تلقائيًا =
+    //    **`clamp(1% , 10 , 50)`** — مش ١٪ مجردة (`bosta-api-helper` 8.9،
+    //    اتصحّحت في v5.0.0: القياس القديم 2600 → 26 صادف إنه جوه المدى فالحدين
+    //    ما بانوش. المقيس: 100 → 10 · 4500 → 45 · 49000 → 50).
+    // 🔴 و`shipmentFees` **شامل التأمين أصلًا** مش زايد عليه — أي حساب تكلفة
+    //    بيجمع `shipmentFees + insuranceFee` بيعدّ التأمين مرتين.
     goodsInfo: { amount: goods },
     receiver,
     dropOffAddress,
@@ -2019,9 +2177,41 @@ function validateOrder(order, plan) {
   if (!fullName) problems.push('اسم المستلم فاضي — firstName إلزامي عند بوسطة');
   const firstLineLen = [sa.address1, sa.address2, sa.city, sa.province].filter(Boolean).join(' ').length;
   if (firstLineLen <= 5) problems.push('العنوان أقصر من الحد الأدنى (أكتر من ٥ حروف)');
-  const cod = Math.abs(Number(order.totalOutstandingSet?.presentmentMoney?.amount || 0));
+  const cod = Math.max(0, Number(order.totalOutstandingSet?.presentmentMoney?.amount || 0));
   if (cod > COD_MAX) problems.push(`قيمة التحصيل ${cod.toLocaleString('en-US')} أعلى من الحد الموثّق ${COD_MAX.toLocaleString('en-US')}`);
+  problems.push(...goodsProblems(Math.abs(Number(order.currentSubtotalPriceSet?.presentmentMoney?.amount || 0))));
+  problems.push(...coverageProblems(plan));
   return problems;
+}
+
+// ─── §BOSTA::goodsProblems ───
+// 🔴 حارس `goodsInfo.amount` — لازم **قبل** النداء، مش اكتشاف الحد من رد بوسطة.
+//    خارج المدى بيرجّع `400 · errorCode 41591` برسالة بتتكلم عن «قيمة الطرد»
+//    مش عن حد أدنى، فالموظف بيقرا رفض مبهم على أوردر سليم تمامًا.
+//    (`bosta-api-helper` 8.4 · 8.9 — الحد **مش موثّق في الـ spec خالص**.)
+function goodsProblems(goods) {
+  const v = Number(goods) || 0;
+  if (v < GOODS_MIN) {
+    return [`قيمة البضاعة ${v.toLocaleString('en-US')} أقل من الحد الأدنى عند بوسطة `
+          + `(${GOODS_MIN}) — الشحنة هتترفض بـ errorCode 41591. راجع الأوردر أو ارفعه يدويًا.`];
+  }
+  if (v > GOODS_MAX) {
+    return [`قيمة البضاعة ${v.toLocaleString('en-US')} أعلى من الحد الأقصى عند بوسطة `
+          + `(${GOODS_MAX.toLocaleString('en-US')}) — الشحنة هتترفض بـ errorCode 41591.`];
+  }
+  return [];
+}
+
+// ─── §BOSTA::coverageProblems ───
+// 🔴 العنوان طابق منطقة **مقفولة للتسليم** = برّه تغطية بوسطة (8.11). الوقف هنا
+//    مش تشدّد: النزول لمسار المحافظة بيشتري شحنة بفلوس ترجع بعد أيام بـ
+//    *outside Bosta's delivery coverage area*. المسار الصح تحويل لخدمة العملاء.
+function coverageProblems(plan) {
+  if (!plan.ok || plan.mode !== 'coverageBlocked') return [];
+  const names = (plan.blockedDistricts || []).map(d => d.name || d.nameAr).filter(Boolean);
+  return [`العنوان طابق منطقة بوسطة **مش بتسلّم فيها** (${names.join(' · ') || '—'}) — `
+        + `العنوان برّه تغطية بوسطة. الرفع على المحافظة مش بديل: الشحنة هتتشحن وترجع. `
+        + `حوّل الأوردر لخدمة العملاء (عنوان بديل · كوريَر تاني · إلغاء).`];
 }
 
 // ─── §BOSTA::createDelivery ───
@@ -2077,11 +2267,22 @@ async function terminateDelivery(env, trackingNumber) {
   }
   let body = null;
   try { body = text ? JSON.parse(text) : null; } catch { /* نص خام تحت */ }
-  if (resp.ok) return { ok: true, status: resp.status };
+  if (resp.ok) return { ok: true, status: resp.status, alreadyGone: false };
+  const errorCode = body?.errorCode != null ? String(body.errorCode) : null;
+  // 🔴 الإلغاء المكرر **مميَّز عن الفشل** (`bosta-api-helper` 8.7 · مقيس
+  //    14-09-2026 على ٦ شحنات): `terminate` تاني مرة بيرجّع **404** بينما
+  //    `GET`/`PUT` على نفس الشحنة بيرجّعوا **400** — كلهم بـ`errorCode 1066`.
+  //    فالـ 404 هنا = «اتلغت خلاص»، وعرضه كـ«فشل الإلغاء» بيبعت الموظف
+  //    لداشبورد بوسطة يدوّر على شحنة **مش موجودة أصلًا**.
+  //    ⚠️ التحقق من الإلغاء = **الاختفاء نفسه**، مش قراءة حالة نهائية — مفيش
+  //    `state` زي `48 Terminated` تقدر تقراه، الشحنة بتتشال من النتايج.
+  if (resp.status === 404 && errorCode === '1066') {
+    return { ok: true, status: resp.status, alreadyGone: true };
+  }
   return {
     ok: false,
     status: resp.status,
-    errorCode: body?.errorCode != null ? String(body.errorCode) : null,
+    errorCode,
     message: body?.message || body?.error || text.slice(0, 200) || `HTTP ${resp.status}`,
   };
 }
@@ -2101,12 +2302,29 @@ function humanizeBostaError(res, job = null) {
       : 'بوسطة رافضة: رقم الأوردر ده مرفوع عندها قبل كده (uniqueBusinessReference مكرر)';
   }
   if (code === '3003')  return 'بوسطة رافضة: المنطقة غير موجودة عندها (District Not Found)';
-  if (code === '3002')  return 'بوسطة رافضة: المدينة غير موجودة عندها';
+  if (code === '3002')  return 'بوسطة رافضة: الزون غير موجود عندها (Zone Not Found)';
+  if (code === '3000')  return 'بوسطة رافضة: بيانات العنوان ناقصة — لازم درجة عنوان (منطقة أو زون أو مدينة) مع نص العنوان';
+  if (code === '3009')  return 'بوسطة رافضة: العنوان من غير مفتاح درجة — لازم city أو zoneId أو districtId';
+  if (code === '3007')  return `بوسطة رافضة: أقصى مبلغ تحصيل ${COD_MAX.toLocaleString('en-US')} جنيه`;
   if (code === '3008')  return `بوسطة رافضة: أقصى مبلغ استرداد عند الباب ${COD_REFUND_MIN} جنيه`;
+  // 🔴 الحد `100`–`50000` **مش موثّق في الـ spec**، ورسالة بوسطة بتتكلم عن «قيمة
+  //    الطرد» من غير ما تقول إن فيه حد أصلًا — فالترجمة دي هي اللي بتخلي الموظف
+  //    يفهم إن ده حد مش عطل. (`bosta-api-helper` 8.4 · مقيس 14-09-2026.)
+  if (code === '41591') return `بوسطة رافضة: قيمة البضاعة لازم تكون بين ${GOODS_MIN} و${GOODS_MAX.toLocaleString('en-US')} جنيه`;
+  // 🔴 الشحنة مش موجودة — يا إما اتلغت خلاص يا إما رقم التتبع غلط. الفرق مهم:
+  //    بعد `terminate` ناجح الشحنة **بتختفي** ومفيش حالة نهائية تتقرا (8.7).
+  if (code === '1066')  return 'بوسطة مش لاقية الشحنة — يا إما اتلغت خلاص يا إما رقم التتبع غلط';
   if (code === '1028')  return 'بوسطة رافضة: مفتاح الـ API غير صالح — راجع BOSTA_API_KEY';
   // 🔴 مش كل فشل من بوسطة معاه `errorCode`. شكل العنوان الغلط بيرجّع
   //    **500 بلا كود خالص** (مقيس 10-09-2026 على عقد الاسترجاع). أي
   //    `humanizeBostaError` بيفترض وجود كود بيطلّع رسالة فاضية على الحالة دي.
+  // 🔴 الـ 403 من بوسطة معناه **حقل برّه الـ whitelist**، والنداء كله بيتلغي
+  //    مش جزء منه (`bosta-api-helper` 8d ①). الأداة دي مابتعملش `PUT` دلوقتي،
+  //    والفرع موجود عشان أي حقل جديد يتضاف لجسم الإنشاء ميرجعش رسالة خام.
+  if (res.status === 403) {
+    return `بوسطة رفضت النداء كله (403): ${res.message} — فيه حقل مش مسموح بتعديله. `
+         + 'مفيش أي جزء من الطلب اتنفّذ.';
+  }
   if (res.status >= 500) {
     return `بوسطة ردّت بخطأ داخلي (HTTP ${res.status}): ${res.message} — `
          + (isRE ? 'غالبًا شكل العنوان غلط للنوع ده. ' : '')
@@ -2151,7 +2369,9 @@ function buildRow(order, catalog) {
     address2:    sa.address2 || '',
     s1:          order.mfStatus?.value || '',
     courier:     order.mfCourier?.value || '',
-    cod:         Math.abs(Number(order.totalOutstandingSet?.presentmentMoney?.amount || 0)),
+    // نفس حساب `§BOSTA::buildDeliveryPayload` بالحرف — الرقم المعروض لازم يبقى
+    // الرقم اللي هيتبعت، وإلا الموظف بيوافق على حاجة وبتترفع حاجة تانية.
+    cod:         Math.max(0, Number(order.totalOutstandingSet?.presentmentMoney?.amount || 0)),
     goodsValue:  Math.abs(Number(order.currentSubtotalPriceSet?.presentmentMoney?.amount || 0)),
     itemsCount:  lines.reduce((s, li) => s + (li.currentQuantity || 0), 0),
     note:        order.note || '',
@@ -2175,6 +2395,13 @@ function buildRow(order, catalog) {
     crossCity:   plan.ok ? (plan.crossCity || []) : [],
     // زون جوّه نفس المدينة — المدينة صح، والزون بيقصّر قايمة الاختيار
     localZones:  plan.ok ? (plan.localZones || []) : [],
+    // 🔴 درجة الزون — الصف ده هيترفع بـ`zoneId` مش بالمحافظة (8.5 درجة ٤)
+    zoneId:      plan.ok ? (plan.zoneId || null) : null,
+    zoneName:    plan.ok ? (plan.zoneName || null) : null,
+    zoneDistrictCount: plan.ok ? (plan.zoneDistrictCount || 0) : 0,
+    // 🔴 العنوان طابق منطقة **مقفولة للتسليم** — برّه تغطية بوسطة (8.11).
+    //    بتترجع بالاسم عشان الموظف يشوف السبب، مش «مفيش مطابقة» صامتة.
+    blockedDistricts: plan.ok ? (plan.blockedDistricts || []) : [],
     catalogWarning: plan.ok ? plan.catalogWarning : null,
     problems,
     uploadable:  problems.length === 0,
@@ -2195,7 +2422,9 @@ async function uploadOne(env, token, order, catalog, override) {
     trackingNumber: null,
     bostaId: null,
     contractUsed: null,
+    addressDegree: null,     // district · zone · province — 🔴 `contract_used` لوحده مش بيفرّق (8.10.4)
     districtSent: null,
+    zoneSent: null,
     citySent: null,
     cityAuto: null,          // المدينة اللي المطابقة التلقائية وصلت لها
     cityOverridden: false,   // الموظف غيّر المدينة يدويًا؟
@@ -2261,22 +2490,45 @@ async function uploadOne(env, token, order, catalog, override) {
     mode = 'province';
   }
 
-  const documented = mode === 'district' || mode === 'zoneName';
+  // 🔴 الزون اللي ينفع ننزل عليه لو المنطقة اترفضت. **بيتصفّر لو الموظف عدّل
+  //    المدينة** — الزونات المحسوبة ساعتها بتاعة المدينة الأصلية، والنزول
+  //    عليها بيرجّع الشحنة للمدينة اللي الموظف رفضها من غير ما حد يشوف.
+  const fallbackZoneId = row.cityOverridden
+    ? null
+    : (planUsed.zoneId || planUsed.localZones?.[0]?.zoneId || null);
+
+  const applyDegree = (m) => {
+    const doc = m === 'district' || m === 'zoneName';
+    row.contractUsed   = doc ? 'documented' : 'undocumented';
+    row.addressDegree  = addressDegree(m);
+    row.districtSent   = (m === 'district' || m === 'zoneName') ? planUsed.districtName : null;
+    row.zoneSent       = m === 'zone' ? (planUsed.zoneName || null) : null;
+    return doc;
+  };
+
+  let documented = applyDegree(mode);
   let payload = buildDeliveryPayload(order, planUsed, mode);
   let res = await createDelivery(env, payload, documented);
-  row.contractUsed = documented ? 'documented' : 'undocumented';
   row.citySent     = planUsed.cityName;
   row.cityAuto     = plan.cityName;
-  row.districtSent = mode === 'district' ? planUsed.districtName : (mode === 'zoneName' ? planUsed.districtName : null);
 
-  // 🔴 errorCode نص مش رقم — المقارنة بالرقم معناها إن الرجوع التلقائي عمره ما هيشتغل
-  if (!res.ok && String(res.errorCode) === '3003' && documented) {
-    row.warnings.push(`بوسطة رفضت المنطقة "${row.districtSent}" — اترفعت على مستوى المحافظة بدلها`);
-    mode = 'province';
-    payload = buildDeliveryPayload(order, planUsed, 'province');
-    res = await createDelivery(env, payload, false);
-    row.contractUsed = 'undocumented';
-    row.districtSent = null;
+  // 🔴 سلّم النزول **منطقة ← زون ← محافظة** (`bosta-api-helper` 8.5) — خطوة
+  //    واحدة لكل رفض، ومصدرها `errorCode` بوسطة مش تخمين. الحلقة محدودة
+  //    بطبيعتها (كل درجة بتنزل للي تحتها وبس) فمفيش دوران.
+  while (!res.ok) {
+    const next = nextAddressDegree(mode, res.errorCode, fallbackZoneId);
+    if (!next) break;
+    row.warnings.push(next === 'zone'
+      ? `بوسطة رفضت المنطقة "${row.districtSent}" — اترفعت على زون "${planUsed.localZones?.[0]?.zone || '—'}" بدلها`
+      : `بوسطة رفضت ${row.districtSent ? `المنطقة "${row.districtSent}"` : `الزون "${row.zoneSent}"`} — اترفعت على مستوى المحافظة بدلها`);
+    mode = next;
+    if (next === 'zone') {
+      planUsed.zoneId   = fallbackZoneId;
+      planUsed.zoneName = planUsed.zoneName || planUsed.localZones?.[0]?.zone || '';
+    }
+    documented = applyDegree(mode);
+    payload = buildDeliveryPayload(order, planUsed, mode);
+    res = await createDelivery(env, payload, documented);
   }
 
   if (!res.ok) {
@@ -2285,7 +2537,7 @@ async function uploadOne(env, token, order, catalog, override) {
     return row;
   }
 
-  actions.push(`رفع الشحنة على بوسطة (${row.contractUsed === 'documented' ? 'بالمنطقة' : 'بالمحافظة'})`);
+  actions.push(`رفع الشحنة على بوسطة (${DEGREE_LABEL[row.addressDegree] || 'بالمحافظة'})`);
   row.trackingNumber = res.trackingNumber;
   row.bostaId        = res.bostaId;
 
@@ -2329,9 +2581,15 @@ async function logRow(env, row, employee, job = S1_JOB) {
         jobType:         job.jobType,
         result:          row.status,
         contract_used:   row.contractUsed,
+        // 🔴 `contract_used` **لوحده بقى ناقص** (`bosta-api-helper` 8.10.4):
+        //    الزون والمحافظة الاتنين على العقد غير الموثّق، فالعمود مش بيفرّق
+        //    بينهم. من غير الدرجة مفيش طريقة نقيس نسبة كل درجة بعدين — وده
+        //    قياس مطلوب في أول أسبوع تشغيل.
+        address_degree:  row.addressDegree,
         tracking_number: row.trackingNumber,
         bosta_id:        row.bostaId,
         district_sent:   row.districtSent,
+        zone_sent:       row.zoneSent || null,
         city_sent:       row.citySent,
         // تدخّل المدينة يتسجّل عشان نقيس تكراره — الحالات اللي بتتكرر هي
         // المرشحة تتحوّل لصف في جدول المحافظات بدل تدخّل يدوي كل مرة
@@ -2470,7 +2728,10 @@ function buildPayloadParts(order, jobType) {
 
   // قيمة البضاعة = اللي **بيسافر**. على الاستبدال ده الطرد الخارج؛ على
   // الاسترجاع القطع الراجعة.
-  // ⚠️ وعليها تكلفة مباشرة: بوسطة بتحسب تأمين **١٪** منها تلقائيًا (2600 → 26).
+  // ⚠️ وعليها تكلفة مباشرة: تأمين تلقائي **`clamp(1% , 10 , 50)`** — و
+  //    `shipmentFees` شامله أصلًا، متجمعوش عليه تاني (`bosta-api-helper` 8.9).
+  // 🔴 محروسة بين GOODS_MIN وGOODS_MAX في `validateReOrder` — والقيمة هنا
+  //    متحسبة من سعر القطع مش من subtotal الأوردر، فالنزول تحت ١٠٠ وارد جدًا.
   const goodsValue = outgoing.length ? valueItems(outgoing) : valueItems(returns);
 
   return {
@@ -2515,9 +2776,7 @@ function buildRePayload(order, plan, mode, jobType, parts) {
 
   // 🔴 الحقل `city` — **مش `cityName`**. الڤاليديتور مش شايف `cityName` أصلًا
   //    وبيتجاهله بصمت، فأي نسخ حرفي من داشبورد بوسطة بيقع في الفخ ده.
-  const address = { city: plan.cityName, firstLine };
-  if (mode === 'district') { address.districtId = plan.districtId; }
-  if (mode === 'zoneName') { address.cityId = plan.cityId; address.districtName = plan.districtName; }
+  const address = buildAddressObject(plan, mode, firstLine);
 
   const receiver = { firstName, phone };            // الإلزامي الموثّق
   if (lastName)   receiver.lastName    = lastName;
@@ -2527,7 +2786,7 @@ function buildRePayload(order, plan, mode, jobType, parts) {
   const payload = {
     type: BOSTA_TYPE_BY_JOB[jobType],
     cod: parts.cod,                                  // 🔴 بإشارتها — §RE-UPLOAD::resolveCod
-    goodsInfo: { amount: parts.goodsValue },         // ⚠️ عليها تأمين ١٪ تلقائي عند بوسطة
+    goodsInfo: { amount: parts.goodsValue },         // ⚠️ تأمين تلقائي clamp(1%,10,50) — 8.9
     receiver,
     // الطرد الراجع — موجود في **النوعين**.
     returnSpecs: {
@@ -2584,6 +2843,11 @@ function validateReOrder(order, plan, parts, jobType) {
   if (parts.cod > COD_MAX) {
     problems.push(`قيمة التحصيل ${parts.cod.toLocaleString('en-US')} أعلى من الحد الموثّق ${COD_MAX.toLocaleString('en-US')}`);
   }
+  // 🔴 نفس حارس `§BOSTA::goodsProblems` — والحالة هنا **أقرب بكتير**: قيمة
+  //    البضاعة في R/E متحسبة من سعر القطع اللي بتسافر (مش subtotal الأوردر)،
+  //    فقطعة راجعة بـ٨٠ جنيه بتدّي `amount: 80` وبوسطة بترفض بـ41591.
+  problems.push(...goodsProblems(parts.goodsValue));
+  problems.push(...coverageProblems(plan));
 
   // شحنة من غير طرد على أي من الناحيتين مش شحنة. ناحية الاستبدال متمنوعة فوق
   // (`EXCHANGE_WITHOUT_ITEMS`)؛ ده بيمسك ناحية الاسترجاع، اللي مفيش حاجة تانية بتفحصها.
@@ -2612,9 +2876,11 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     bostaId: null,
     uref: null,
     contractUsed: null,
+    addressDegree: null,
     citySent: null,
     cityAuto: null,
     districtSent: null,
+    zoneSent: null,
     cityOverridden: false,
     codSent: null,
     codClipped: false,
@@ -2678,7 +2944,23 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   }
 
   const parts2 = { ...parts, uref: ref.uref };
-  let documented = mode === 'district' || mode === 'zoneName';
+
+  // 🔴 نفس قاعدة §UPLOAD: الزون الاحتياطي **بيتصفّر لو المدينة اتعدّلت يدويًا**،
+  //    لأنه محسوب على المدينة الأصلية اللي الموظف رفضها.
+  const fallbackZoneId = row.cityOverridden
+    ? null
+    : (planUsed.zoneId || planUsed.localZones?.[0]?.zoneId || null);
+
+  const applyDegree = (m) => {
+    const doc = m === 'district' || m === 'zoneName';
+    row.contractUsed  = doc ? 'documented' : 'undocumented';
+    row.addressDegree = addressDegree(m);
+    row.districtSent  = (m === 'district' || m === 'zoneName') ? planUsed.districtName : null;
+    row.zoneSent      = m === 'zone' ? (planUsed.zoneName || null) : null;
+    return doc;
+  };
+
+  let documented = applyDegree(mode);
   let payload = buildRePayload(order, planUsed, mode, job.jobType, parts2);
 
   let res;
@@ -2689,33 +2971,39 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     return row;
   }
 
-  row.contractUsed = documented ? 'documented' : 'undocumented';
   row.citySent     = planUsed.cityName;
   row.cityAuto     = plan.cityName;
-  row.districtSent = (mode === 'district' || mode === 'zoneName') ? planUsed.districtName : null;
   row.codSent      = parts.cod;
   row.codClipped   = parts.clipped;
   row.codRemainder = parts.remainder;
 
-  // 🔴 `errorCode` **نص** — مقارنته بالرقم 3003 معناها إن الرجوع ده عمره ما يشتغل.
-  if (!res.ok && String(res.errorCode) === '3003' && documented) {
-    row.warnings.push(`بوسطة رفضت المنطقة "${row.districtSent}" — اترفعت على مستوى المحافظة بدلها`);
-    mode = 'province';
-    documented = false;
-    payload = buildRePayload(order, planUsed, 'province', job.jobType, parts2);
+  // 🔴 سلّم النزول **منطقة ← زون ← محافظة** — نفس منطق §UPLOAD بالظبط، ومن
+  //    **نفس** الدالة (`nextAddressDegree`). الشكل هو اللي بيختلف بين الوضعين
+  //    (الاتجاه بيتقلب في R/E)، مش ترتيب الدرجات.
+  while (!res.ok) {
+    const next = nextAddressDegree(mode, res.errorCode, fallbackZoneId);
+    if (!next) break;
+    row.warnings.push(next === 'zone'
+      ? `بوسطة رفضت المنطقة "${row.districtSent}" — اترفعت على زون "${planUsed.localZones?.[0]?.zone || '—'}" بدلها`
+      : `بوسطة رفضت ${row.districtSent ? `المنطقة "${row.districtSent}"` : `الزون "${row.zoneSent}"`} — اترفعت على مستوى المحافظة بدلها`);
+    mode = next;
+    if (next === 'zone') {
+      planUsed.zoneId   = fallbackZoneId;
+      planUsed.zoneName = planUsed.zoneName || planUsed.localZones?.[0]?.zone || '';
+    }
+    documented = applyDegree(mode);
+    payload = buildRePayload(order, planUsed, mode, job.jobType, parts2);
     try {
-      res = await createDelivery(env, payload, false);
+      res = await createDelivery(env, payload, documented);
     } catch (e) {
       row.error = e.message;
       return row;
     }
-    row.contractUsed = 'undocumented';
-    row.districtSent = null;
   }
 
   if (!res.ok) { row.error = humanizeBostaError(res, job); return row; }
 
-  actions.push(`رفع شحنة ${job.label} على بوسطة (${row.contractUsed === 'documented' ? 'بالمنطقة' : 'بالمحافظة'})`);
+  actions.push(`رفع شحنة ${job.label} على بوسطة (${DEGREE_LABEL[row.addressDegree] || 'بالمحافظة'})`);
   row.trackingNumber = res.trackingNumber;
   row.bostaId        = res.bostaId;
 
@@ -2872,6 +3160,10 @@ function buildReRow(order, catalog, job, cycleAnalysis) {
     cityDoubt:    plan.ok ? !!plan.cityDoubt : false,
     crossCity:    plan.ok ? (plan.crossCity || []) : [],
     localZones:   plan.ok ? (plan.localZones || []) : [],
+    zoneId:       plan.ok ? (plan.zoneId || null) : null,
+    zoneName:     plan.ok ? (plan.zoneName || null) : null,
+    zoneDistrictCount: plan.ok ? (plan.zoneDistrictCount || 0) : 0,
+    blockedDistricts:  plan.ok ? (plan.blockedDistricts || []) : [],
     catalogWarning: plan.ok ? plan.catalogWarning : null,
     problems,
     uploadable:  problems.length === 0,
@@ -3114,6 +3406,7 @@ export default {
           const cat = await getCatalog(env, { force: url.searchParams.get('refresh') === '1' });
           const totalD = cat.cities.reduce((s, c) => s + c.districts.length, 0);
           const availD = cat.cities.reduce((s, c) => s + availableDistricts(c).list.length, 0);
+          const blockedD = cat.cities.reduce((s, c) => s + availableDistricts(c).blocked.length, 0);
           const missing = cat.cities.filter(c => availableDistricts(c).fieldMissing).length;
           checks.push({
             ok: availD > 0,
@@ -3121,19 +3414,31 @@ export default {
             detail: `${cat.cities.length} مدينة · ${totalD} منطقة · ${availD} متاحة للتسليم` +
                     (missing ? ` · ⚠️ ${missing} مدينة من غير dropOffAvailability` : ''),
           });
+          // 🔴 العدد ده هو إجابة السؤال ٤ في «تجارب حية مفتوحة» بتاعة
+          //    `bosta-api-helper` Step 9 — والمقيس لحد دلوقتي جنوب سيناء بس
+          //    (٢ من ٩). القراءة نضيفة ومفيهاش أي أثر، فمكانها الفحص الذاتي.
+          //    المناطق دي **بتتعرض للموظف معلّمة** ومابتتبعتش لبوسطة (8.11).
+          checks.push({
+            ok: true,
+            label: 'مناطق مقفولة للتسليم',
+            detail: `${blockedD} منطقة dropOffAvailability=false من ${totalD} — `
+                  + 'بتتعرض في نافذة الاختيار معلّمة، ومابتتبعتش لبوسطة. '
+                  + 'العنوان اللي بيطابق واحدة منها **بيوقف الصف** بدل ما ينزل للمحافظة.',
+          });
         } catch (e) { checks.push({ ok: false, label: 'كتالوج بوسطة', detail: e.message }); }
 
         // تغطية الزون — الفرق بين «مفيش زون في الكتالوج» و«المنطقة دي بلا زون»
         // لازم يبان. من غير الفحص ده، عمود زون فاضي في النافذة بيبقى غامض.
         try {
           const cat = await getCatalog(env);
-          let withZone = 0, totalD = 0;
+          let withZone = 0, withZoneId = 0, totalD = 0;
           const zones = new Set();
           for (const c of cat.cities) {
             for (const d of availableDistricts(c).list) {
               totalD++;
               const z = d.zone || d.zoneAr;
               if (z) { withZone++; zones.add(`${c.cityName}/${z}`); }
+              if (d.zoneId) withZoneId++;
             }
           }
           const sample = [...zones].slice(0, 4).join(' · ');
@@ -3145,6 +3450,17 @@ export default {
                 (sample ? ` · عيّنة: ${sample}` : '')
               : `صفر — الكتالوج مابيرجّعش zoneName. الزون هيبان فاضي في نافذة الاختيار، ` +
                 `وده معناه إن الحقل مش موجود مش إن المناطق بلا زون.`,
+          });
+          // 🔴 الاسم **مش** كفاية لدرجة الزون — اللي بيترفع هو `zoneId` (8.10.4).
+          //    لو الكتالوج راجع بأسماء زون من غير ids، درجة الزون بتتعطّل بالكامل
+          //    والأوردرات بتنزل للمحافظة **في صمت**. الفحص ده هو الإشارة الوحيدة.
+          checks.push({
+            ok: withZoneId > 0 || withZone === 0,
+            label: 'zoneId في الكتالوج (درجة الزون)',
+            detail: withZoneId
+              ? `${withZoneId} من ${totalD} منطقة معاها zoneId — درجة الزون شغّالة`
+              : `صفر zoneId رغم إن ${withZone} منطقة ليها اسم زون — **درجة الزون متعطّلة**، `
+                + `وكل أوردر مالوش مطابقة منطقة هينزل للمحافظة وياخد هب افتراضي.`,
           });
         } catch { /* الكتالوج فشل فوق وبيتعرض هناك */ }
 
@@ -3206,19 +3522,30 @@ export default {
             cities: cat.cities.map(c => ({
               cityId: c.cityId, cityName: c.cityName, cityAr: c.cityAr || '',
               districtCount: availableDistricts(c).list.length,
+              // العدد المقفول جنب المتاح — «٧ من ٩» بيقول للموظف إن فيه تغطية
+              // ناقصة في المدينة دي أصلًا، بدل ما يشوف ٧ ويفتكرها الكل.
+              blockedCount:  availableDistricts(c).blocked.length,
             })).sort((a, b) => a.cityName.localeCompare(b.cityName)),
           }, 200, request);
         }
         const city = cat.cities.find(c => c.cityId === cityId);
-        const { list, fieldMissing } = availableDistricts(city);
+        const { list, blocked, fieldMissing } = availableDistricts(city);
+        const shape = d => ({ id: d.id, name: d.name, nameAr: d.nameAr,
+                              zone: d.zone, zoneAr: d.zoneAr, zoneId: d.zoneId || null,
+                              bulkyBlocked: !!d.bulkyBlocked });
         return json({
           ok: true, cityId, cityName: city?.cityName || '', cityAr: city?.cityAr || '',
           fieldMissing,
-          // الزون بيترجع بالاسمين — الواجهة بتعرضه في نافذة الاختيار. الزون هو
-          // المستوى فوق المنطقة عند بوسطة (مدينة ← زون ← منطقة)، ولحد دلوقتي
-          // **مش داخل في المطابقة** — بيتعرض للتشخيص بس.
-          districts: list.map(d => ({ id: d.id, name: d.name, nameAr: d.nameAr,
-                                      zone: d.zone, zoneAr: d.zoneAr })),
+          // 🔴 المدينة نفسها ممكن تكون مقفولة للتسليم — الحقل موجود على مستوى
+          //    المدينة كمان مش المنطقة بس (`bosta-api-helper` 8.6).
+          cityDropOff: city?.cityDropOff,
+          // الزون بيترجع بالاسمين **ومعاه `zoneId`** — الاسم للعرض، والـ id هو
+          // اللي بيترفع فعلًا في درجة الزون (8.10.4).
+          districts: list.map(shape),
+          // 🔴 المقفولة بتترجع **معلّمة، مش متشالة** (8.11). الإخفاء الصامت
+          //    بيخلّي الموظف يشوف قايمة ناقصة ويفتكر إن العنوان محتاج «محافظة
+          //    بس»، وهو أصلًا **برّه تغطية بوسطة** والشحنة هترجع بعد أيام.
+          blockedDistricts: blocked.map(shape),
         }, 200, request);
       }
 
@@ -3493,12 +3820,15 @@ export default {
               uniqueBusinessReference: r.uref,
               businessReference: order.name,
               contract_used: r.contractUsed,
+              // 🔴 الزون والمحافظة على نفس العقد — الدرجة هي اللي بتفرّق (8.10.4)
+              address_degree: r.addressDegree,
               city_sent: r.citySent,
               city_auto: r.cityAuto,
               // القياس اللي بيقول أنهي مدن تستاهل صف في جدول المحافظات بدل
               // تدخّل يدوي كل مرة.
               city_overridden: !!r.cityOverridden,
               district_sent: r.districtSent,
+              zone_sent: r.zoneSent || null,
               codSent: r.codSent,
               codClipped: r.codClipped,
               codRemainder: r.codRemainder,
@@ -3555,11 +3885,16 @@ export default {
           await writeLog(env.DB, {
             tool: job.tool, type: CANCEL_TYPE, employee, orderId, orderName,
             notes: res.ok
-              ? `إلغاء شحنة بوسطة ${trackingNumber}${reason ? ` — ${reason}` : ''}`
+              ? (res.alreadyGone
+                  ? `الشحنة ${trackingNumber} كانت ملغية عند بوسطة خلاص${reason ? ` — ${reason}` : ''}`
+                  : `إلغاء شحنة بوسطة ${trackingNumber}${reason ? ` — ${reason}` : ''}`)
               : `فشل إلغاء شحنة بوسطة ${trackingNumber} — ${res.message}`,
             extra: {
               jobType: job.jobType, trackingNumber,
-              result: res.ok ? 'success' : 'error', status: res.status,
+              // `already` = العملية المطلوبة محصّلها تمّ، بس مش دلوقتي
+              // (`ecommoda-constants` §12) — مش نجاح جديد ومش فشل.
+              result: res.ok ? (res.alreadyGone ? 'already' : 'success') : 'error',
+              status: res.status,
               errorCode: res.errorCode || null, message: res.message || null, reason,
             },
           });
@@ -3570,11 +3905,18 @@ export default {
         }
         return json({
           ok: true, trackingNumber,
+          // 🔴 الإلغاء المكرر **نجاح**، مش فشل (8.7). من غير التفرقة دي الموظف
+          //    بيقرا «فشل الإلغاء» على شحنة اتلغت فعلًا، ويروح داشبورد بوسطة
+          //    يدوّر على حاجة مش موجودة.
+          alreadyGone: !!res.alreadyGone,
           // 🔴 حالة S2 **مابترجعش** هنا عن قصد. إرجاع نقلة حالة قرار تاني غير
           //    إلغاء شحنة، وتخمين اللي الموظف قصده بيعيد كتابة حالة حية.
           //    وكمان رقم التتبع في `custom.bosta_tracking_number_s2` بيفضل —
           //    امسحه بالإيد لو الشحنة مش هتترفع تاني.
-          note: 'الشحنة اتلغت عند بوسطة. حالة الأوردر على شوبيفاي ما اتغيّرتش — غيّرها يدويًا لو محتاج.',
+          note: (res.alreadyGone
+            ? 'الشحنة دي كانت ملغية عند بوسطة خلاص — مفيش حاجة اتعملت دلوقتي. '
+            : 'الشحنة اتلغت عند بوسطة. ')
+            + 'حالة الأوردر على شوبيفاي ما اتغيّرتش — غيّرها يدويًا لو محتاج.',
           logged, logError,
         }, 200, request);
       }
