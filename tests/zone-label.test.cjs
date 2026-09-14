@@ -1,8 +1,10 @@
 // ══════════════════════════════════════════════════════════════
 // اختبار عرض الزون في نافذة اختيار المنطقة — node tests/zone-label.test.cjs
 //
-// 🔴 البند اللي بيحميه: المنطقة اللي مالهاش زون لازم تتكتب «بلا زون» صريحة.
-//    الخانة الفاضية بتخلط بين «المنطقة دي بلا زون» و«الكتالوج مابيرجّعش
+// 🔴 البند اللي بيحميه: المنطقة اللي مالهاش مدينة لازم تتكتب «بلا مدينة» صريحة.
+//    (المستوى ده اسمه `zoneId` في الـ API واسمه «المدينة» في العرض — القاموس
+//    في `BOSTA-NAMING-20260914.md`.) الخانة الفاضية بتخلط بين «مالهاش مدينة»
+//    و«الكتالوج مابيرجّعش
 //    الحقل أصلًا» — وده بالظبط الغموض اللي بيوقف التشخيص.
 // ══════════════════════════════════════════════════════════════
 const fs=require('fs');
@@ -19,7 +21,7 @@ const cases=[
  ['إنجليزي بس',      {id:'b',name:'Balteem',nameAr:'بلطيم',zone:'Balteem',zoneAr:''}],
  ['عربي بس',         {id:'c',name:'Qalin',nameAr:'قلين',zone:'',zoneAr:'قلين'}],
  ['متطابقين',        {id:'d',name:'Tanta',nameAr:'طنطا',zone:'Tanta',zoneAr:'Tanta'}],
- ['بلا زون',         {id:'e',name:'Somewhere',nameAr:'مكان',zone:'',zoneAr:''}],
+ ['بلا مدينة',       {id:'e',name:'Somewhere',nameAr:'مكان',zone:'',zoneAr:''}],
  ['الحقل مش موجود',  {id:'f',name:'Old',nameAr:'قديم'}],
 ];
 let p=0;
@@ -28,7 +30,7 @@ for(const [label,d] of cases){
   const html=api.dpRow(d,'',false,'');
   const chip=(html.match(/<span class="dp-zone[^"]*"[^>]*>([^<]*)</)||[])[1];
   const cls=(html.match(/class="(dp-zone[^"]*)"/)||[])[1];
-  const ok = z.none ? (z.text==='بلا زون' && cls.includes('none')) : (!!z.text && !cls.includes('none'));
+  const ok = z.none ? (z.text==='بلا مدينة' && cls.includes('none')) : (!!z.text && !cls.includes('none'));
   if(ok)p++;
   console.log(`${ok?'✅':'❌'} ${label.padEnd(16)} → شبشة: "${chip.trim()}"   [${cls}]`);
 }

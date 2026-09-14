@@ -127,8 +127,8 @@ console.log('\n②ج نافذة الرفض بتقرا من نفس مصدر ال�
   ok('والكود الخام مش معروض كنص', !/>CYCLE_OVERLAP_OPEN</.test(html), html.slice(0, 400));
   ok('بس لسه موجود في الـ tooltip', /title="CYCLE_OVERLAP_OPEN"/.test(html), html.slice(0, 400));
   // ⚠️ السطر ده مهم أكتر من القايمة نفسها
-  ok('وسطر «مفيش ولا شحنة اتعملت» موجود وأخضر',
-     /مفيش ولا شحنة اتعملت/.test(html) && /var\(--green\)/.test(html), html.slice(0, 300));
+  ok('وسطر «لم يتم إنشاء أي شحنة» موجود وأخضر',
+     /لم يتم إنشاء أي شحنة/.test(html) && /var\(--green\)/.test(html), html.slice(0, 300));
 
   // أي كود مش في القايمة بيرجع زي ما هو — أحسن من «—» بيخفي السبب
   ok('كود مش متعرّف بيرجع زي ما هو', api.cycleCodeLabel('SOMETHING_NEW') === 'SOMETHING_NEW');

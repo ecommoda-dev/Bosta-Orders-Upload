@@ -781,10 +781,16 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
    🔴 ده مش تاب عرض — ده بيغيّر **نوع الشحنة اللي هتتعمل بفلوس**. عشان كده
    شريط مستقل وواضح فوق الفلاتر، والوضع النشط بلونه الخاص، ومعاه سطر بيشرح
    الوضع الحالي — مش بادج صغير جنب الفلتر. */
-.job-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:11px 14px;
-  background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;}
-.job-bar-label{font-size:12.5px;font-weight:800;color:var(--text-secondary);white-space:nowrap;}
-.job-btns{display:flex;gap:6px;flex-wrap:wrap;}
+/* 🔴 الأزرار **في نص الشريط** (v2.8.0) — الشريط بقى الأزرار التلاتة وبس.
+   التسمية «نوع الرفع:» وسطر الشرح الطويل اتشالوا: الأزرار نفسها بتقول نوعها
+   (🚚 شحن عادي · ↩️ استرجاع · 🔄 استبدال) والنشط بلونه، فالتسمية كانت بتكرر
+   اللي تحتها. والشرح الطويل كان بياخد نُص الشريط ومحدش بيقراه بعد أول يوم.
+   ⚠️ **`justify-content:center` مش تجميل** — من غيره الأزرار بتتراص من أول
+   الشريط وتسيب تلتينه فاضيين بعد ما الشرح اتشال. */
+.job-bar{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;
+  padding:11px 14px;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:var(--radius);margin-bottom:12px;}
+.job-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
 .job-btn{padding:8px 14px;border:2px solid var(--border-strong);background:var(--surface);
   color:var(--text-secondary);border-radius:var(--radius-sm);font-family:var(--font-body);
   font-size:13px;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;}
@@ -792,9 +798,6 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .job-btn.active{background:var(--accent);color:var(--on-accent);border-color:var(--accent);}
 .job-btn.active.re{background:var(--amber);border-color:var(--amber);color:#fff;}
 .job-btn:disabled{opacity:.5;cursor:not-allowed;}
-.job-hint{flex:1;min-width:240px;font-size:11.5px;font-weight:600;color:var(--text-muted);line-height:1.7;}
-.job-hint code{background:var(--surface);padding:1px 4px;border-radius:3px;font-size:11px;}
-.job-hint b{color:var(--amber);}
 /* صف الاسترداد — الاتجاه لازم يبان في الجدول نفسه، مش في النافذة بس */
 .cod-refund{color:var(--red);font-weight:800;}
 .cod-collect{font-weight:700;}
@@ -886,6 +889,20 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">14-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>أسماء مستويات العنوان اتوحّدت مع بوسطة وشوبيفاي.</b> داشبورد بوسطة نفسها بتسمّي الحقل اللي إحنا كنا بنقوله «مدينة بوسطة» ← <code>Governorate / المحافظة</code>، والمنطقة ← <code>Area / المنطقة</code>. يعني كنا بنترجم <b>اسم حقل الـ API</b> حرفيًا ونخترع مصطلح مش موجود عند حد. التسمية بقت: <b>المحافظة</b> (<code>cityId</code>) · <b>المدينة</b> (<code>zoneId</code>) · <b>المنطقة</b> (<code>districtId</code>) — والنتيجة إن صف شوبيفاي وصف بوسطة في نافذة اختيار المنطقة بقوا <b>يقابلوا بعض عمود بعمود</b>: المحافظة فوق المحافظة، والمدينة فوق المدينة. ⚠️ <b>أسماء الحقول والمعرّفات في الكود ما اتغيّرتش</b> — ده عرض بس.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>شريط نوع الرفع بقى الأزرار التلاتة في النص وبس.</b> تسمية «نوع الرفع:» وسطر الشرح الطويل تحتها اتشالوا — الأزرار بتقول نوعها بنفسها (🚚 شحن عادي · ↩️ استرجاع · 🔄 استبدال) والنشط بلونه.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>تلميحات نافذة اختيار المنطقة اتشالت</b> — ما عدا <b>شروح الخانات التلاتة</b> (المحافظة · المدينة · المنطقة). دول فضلوا لأنهم الحاجة الوحيدة اللي بتفرّق بين 🟢 «القيمة دي هتتبعت لبوسطة» و🔵 «دي ترشيح عرض بس» — الخانة بتعرض نفس النص في الحالتين.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>بانر «خارج تغطية بوسطة» اتشال من النافذة — والمنع زي ما هو.</b> الحالة لسه باينة في مكانين: بادج <b>🚫 خارج التغطية</b> في عنوان النافذة، والمنطقة نفسها في القايمة بشريط أحمر مشطوبة ومش قابلة للضغط. ⚠️ <b>الأوردر لسه مايترفعش</b> — المنع في الـ Worker ومتغطّى باختبارين.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>نصوص أوضح: خانة المنطقة الفاضية بقت <b>«لا توجد منطقة محددة»</b> بدل «— مفيش —» · «لا توجد نتائج» · وسطر نافذة الرفض بقى <b>«✅ لم يتم إنشاء أي شحنة»</b> · وحالة الرفع بقت <b>«⛔ موقوف»</b> من غير «(بيانات ناقصة)».</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.7.0</span>
           <span class="cl-ver-date">14-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -1120,15 +1137,15 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <h4>كيف تعمل — Workflow</h4>
           <ol>
             <li>الموظف يدخل بالـ PIN، والأداة بتستعلم من شوبيفاي لحظيًا (مفيش عدد محفوظ — الرقم بيتحرك خلال اليوم).</li>
-            <li>لكل أوردر: المحافظة بتتحوّل لمدينة بوسطة بجدول حتمي مقفول، وبعدين الأداة بتحاول تطابق المنطقة من نص العنوان الحر (عربي وإنجليزي) على كتالوج بوسطة.</li>
-            <li>عمود <strong>المنطقة</strong> بيقول بالظبط هيتبعت إيه: <code>📍 اسم منطقة</code> = المطابقة نجحت والشحنة هتترفع بالمنطقة · <code>🗺️ اسم زون</code> = محافظة اتلغت إداريًا وبتتبعت كزون · <code>❓ N احتمالات</code> = المطابقة غامضة والاحتمالات مثبّتة فوق قايمة النافذة · <code>🟠 المدينة مشكوك فيها</code> = مفيش مطابقة جوه مدينة الجدول والعنوان طابق منطقة في <strong>مدينة تانية</strong> · <code>🏙️ المحافظة بس</code> = مفيش مطابقة، الشحنة بتترفع على المحافظة وبتدخل مسار العناوين غير الواضحة عند بوسطة (<strong>مش فشل</strong>). الشرح كامل على الـ hover، وعمود <strong>حالة العنوان</strong> جنبه بيكرّر نفس التصنيف بنص فلتر <strong>حالة العنوان</strong> بالحرف — نفس الاسم ونفس القيمة في الفلتر والعمود وعنوان نافذة اختيار المنطقة.</li>
-            <li>🟠 <strong>«المدينة مشكوك فيها» حالة مختلفة عن «المحافظة بس»، ومش أقل خطورة منها.</strong> «المحافظة بس» = المدينة صح والمنطقة ناقصة. «المدينة مشكوك فيها» = <strong>المدينة نفسها على الأرجح غلط</strong> — والمدينة بتحدد الفرع والتسعيرة، مش بس دقة العنوان. بيحصل لسببين: تصنيف بوسطة مش التقسيم الإداري (<strong>العبور</strong> إداريًا القليوبية وعند بوسطة تحت <strong>القاهرة</strong>)، أو العميل غلط في اختيار المحافظة. الصفوف دي <strong>مستثناة من «تحديد الكل»</strong> وليها فلتر خاص — تتراجع وتتحدد بالإيد.</li>
-            <li>🎯 <strong>الزون داخل في المطابقة دلوقتي.</strong> لما نص العنوان مايطابقش أي منطقة، الأداة بتدوّر على <strong>اسم الزون</strong> — وده اللي بيلقط <strong>العبور</strong>: اسم المنطقة عند بوسطة <code>المنطقة 01 (العبور)</code> محدش بيكتبها، لكن الزون اسمه «العبور». الاقتراح بيطلع جاهز، والضغطة <strong>بتظبّط المدينة وتقصّر القايمة على مناطق الزون بس</strong>. ⚠️ الزون <strong>بيحسم المدينة مش المنطقة</strong> — فيه مناطق كتير واختيار واحدة تخمين.</li>
-            <li>🗺️ <strong>الزون</strong> عمود قايم بذاته في قايمة النافذة (القايمة جدول: <strong>المنطقة · الزون · سبب المطابقة</strong>). بوسطة هرمها <strong>مدينة ← زون ← منطقة</strong>، والزون هو المستوى الأوسط. البحث بيشمله (كتابة «العبور» بتجيب كل مناطق زون العبور)، والمنطقة اللي مالهاش زون بتتكتب <strong>«بلا زون»</strong> صراحةً. 🔴 اسم الزون بيتعرض <strong>كامل من غير قص</strong> — الجزء المقصوص هو بالظبط اللي بيفرّق بين زونين، والزون هو اللي بيحسم المدينة.</li>
+            <li>لكل أوردر: محافظة شوبيفاي بتتحوّل لمحافظة بوسطة بجدول حتمي مقفول، وبعدين الأداة بتحاول تطابق المنطقة من نص العنوان الحر (عربي وإنجليزي) على كتالوج بوسطة.</li>
+            <li>عمود <strong>المنطقة</strong> بيقول بالظبط هيتبعت إيه: <code>📍 اسم منطقة</code> = المطابقة نجحت والشحنة هتترفع بالمنطقة · <code>🗺️ اسم مدينة</code> = مفيش مطابقة منطقة بس العنوان طابق مدينة واحدة، فالشحنة بتترفع عليها (هب وكود فرز محددين) · <code>❓ N احتمالات</code> = المطابقة غامضة والاحتمالات مثبّتة فوق قايمة النافذة · <code>🟠 المحافظة مشكوك فيها</code> = مفيش مطابقة جوّه محافظة الجدول والعنوان طابق منطقة في <strong>محافظة تانية</strong> · <code>🏙️ المحافظة بس</code> = مفيش مطابقة، الشحنة بتترفع على المحافظة وبتدخل مسار العناوين غير الواضحة عند بوسطة (<strong>مش فشل</strong>). وعمود <strong>حالة العنوان</strong> جنبه بيكرّر نفس التصنيف بنص فلتر <strong>حالة العنوان</strong> بالحرف — نفس الاسم ونفس القيمة في الفلتر والعمود وعنوان نافذة اختيار المنطقة.</li>
+            <li>🟠 <strong>«المحافظة مشكوك فيها» حالة مختلفة عن «المحافظة بس»، ومش أقل خطورة منها.</strong> «المحافظة بس» = المحافظة صح والمنطقة ناقصة. «المحافظة مشكوك فيها» = <strong>المحافظة نفسها على الأرجح غلط</strong> — وهي اللي بتحدد الفرع والتسعيرة، مش بس دقة العنوان. بيحصل لسببين: تصنيف بوسطة مش التقسيم الإداري (<strong>العبور</strong> إداريًا القليوبية وعند بوسطة تحت <strong>القاهرة</strong>)، أو العميل غلط في اختيار المحافظة. الصفوف دي <strong>مستثناة من «تحديد الكل»</strong> وليها فلتر خاص — تتراجع وتتحدد بالإيد.</li>
+            <li>🎯 <strong>المدينة داخلة في المطابقة.</strong> لما نص العنوان مايطابقش أي منطقة، الأداة بتدوّر على <strong>اسم المدينة</strong> — وده اللي بيلقط <strong>العبور</strong>: اسم المنطقة عند بوسطة <code>المنطقة 01 (العبور)</code> محدش بيكتبها، لكن المدينة اسمها «العبور». الاقتراح بيطلع جاهز، والضغطة <strong>بتظبّط المحافظة وتقصّر القايمة على مناطق المدينة بس</strong>. ⚠️ المدينة <strong>بتحسم المحافظة مش المنطقة</strong> — فيها مناطق كتير واختيار واحدة تخمين.</li>
+            <li>🗺️ <strong>المدينة</strong> عمود قايم بذاته في قايمة النافذة (القايمة جدول: <strong>المنطقة · المدينة · سبب المطابقة</strong>). هرم بوسطة <strong>محافظة ← مدينة ← منطقة</strong> (أسماء الحقول عندهم <code>city</code> ← <code>zone</code> ← <code>district</code>، والتسمية العربية من واجهتهم). البحث بيشمل المدينة (كتابة «العبور» بتجيب كل مناطقها)، والمنطقة اللي مالهاش مدينة بتتكتب <strong>«بلا مدينة»</strong> صراحةً. 🔴 اسم المدينة بيتعرض <strong>كامل من غير قص</strong> — الجزء المقصوص هو بالظبط اللي بيفرّق بين مدينتين، والمدينة هي اللي بتحسم المحافظة.</li>
             <li>سياق نافذة المنطقة <strong>جدول واحد بأعمدة متطابقة</strong>: فوق <strong>العنوان بالكامل</strong> (أخضر) — هو المصدر الوحيد اللي المطابقة بتقرا منه — وتحته صف <strong>🛍️ شوبيفاي</strong> (المحافظة · المدينة) وصف <strong>🚚 بوسطة</strong> (المدينة · المنطقة) من غير أي فاصل بينهم، فالخانة الزرقا بتقع فوق الخانة الحمرا بالظبط. خانات شوبيفاي بتفضل <strong>منفصلة</strong>: الترجيح بيفرّق بين خانة <code>city</code> وخانة <code>address1</code>، فدمجهم في العرض بيخفي الخانة اللي المطابقة اتبنت عليها. و<strong>حالة العنوان</strong> بقت في <strong>عنوان النافذة</strong> نفسه (<code>📍 اختر المنطقة — #12345 — حالة العنوان: …</code>) والشرح الكامل على الـ hover عليها.</li>
-            <li><strong>منتقي المدينة جوّه صف بوسطة نفسه</strong> — نفس الخانة اللي بتعرض المدينة هي اللي بتغيّرها، مش صف تاني تحت. لو غيّرت المدينة، الرفع بيتبعت عليها هي — وعمود «مدينة بوسطة» في الجدول بيوريها بعلامة ✎ والمدينة الأصلية على الـ hover. اقتراحات المدن التانية بتتحط فوق القايمة، والضغط عليها بيغيّر المدينة والمنطقة مع بعض.</li>
+            <li><strong>منتقي المحافظة جوّه صف بوسطة نفسه</strong> — نفس الخانة اللي بتعرض المحافظة هي اللي بتغيّرها، مش صف تاني تحت. لو غيّرتها، الرفع بيتبعت عليها هي — وعمود «محافظة بوسطة» في الجدول بيوريها بعلامة ✎. اقتراحات المحافظات التانية بتتحط فوق القايمة، والضغط عليها بيغيّر المحافظة والمنطقة مع بعض.</li>
             <li>أي صف ينفع يتفتح بزرار <em>اختر المنطقة</em> — والنافذة فيها <strong>↺ رجّع للمطابقة التلقائية</strong> (بتشيل التدخّل اليدوي) و<strong>🏙️ ارفع على المحافظة بس</strong> (بتثبّت الصف على المحافظة حتى لو المطابقة نجحت وقت الرفع). الاختيار كله اختياري، والرفع شغّال من غيره.</li>
-            <li>الموظف يحدد الأوردرات ويضغط <strong>رفع المحدد</strong>، أو يضغط <strong>⬆ رفع الكل</strong> اللي بيحدد <strong>كل المعروض حسب الفلتر الحالي</strong> (والعدد مكتوب جوّه الزرار) ويسأل تأكيد قبل ما يرفع. صفوف 🟠 <strong>المدينة مشكوك فيها مستثناة من الاتنين</strong> — تتحدد بالإيد بعد المراجعة. والأوردر المرفوع قبل كده بيطلب تأكيد صريح.</li>
+            <li>الموظف يحدد الأوردرات ويضغط <strong>رفع المحدد</strong>، أو يضغط <strong>⬆ رفع الكل</strong> اللي بيحدد <strong>كل المعروض حسب الفلتر الحالي</strong> (والعدد مكتوب جوّه الزرار) ويسأل تأكيد قبل ما يرفع. صفوف 🟠 <strong>المحافظة مشكوك فيها مستثناة من الاتنين</strong> — تتحدد بالإيد بعد المراجعة. والأوردر المرفوع قبل كده بيطلب تأكيد صريح.</li>
             <li>الرفع بيحصل على دفعات، وكل صف بيجيب نتيجته الخاصة ومعاه رقم تتبعه.</li>
             <li>بعد كل نجاح: اللي في عمود «بيكتب إيه» في جدول الأوضاع فوق — بيختلف بالوضع.</li>
             <li>بعد ما الرفع يخلص بتيجي <strong>نافذة نتيجة الرفع</strong> — مستنية ضغطة، مش توست بيختفي لوحده. في النجاح الكامل بتقول العدد بس، و<strong>في أي حالة تانية بتفتح التفاصيل لوحدها</strong> (صف بصف: رقم التتبع · العقد · المدينة والمنطقة المبعوتة · ما تم فعليًا · السبب). وزرار <strong>▾ عرض التفاصيل</strong> بيفتحها بالإيد حتى لما يكون كله نجاح.</li>
@@ -1228,7 +1245,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
     </div>
     <div class="eco-modal-ftr">
       <button class="btn-ghost" onclick="resetDistrictToAuto()">↺ رجّع للمطابقة التلقائية</button>
-      <button class="btn-ghost" id="dpPinZone" onclick="pinDistrictToZone()">🗺️ ارفع على الزون بس</button>
+      <button class="btn-ghost" id="dpPinZone" onclick="pinDistrictToZone()">🗺️ ارفع على المدينة بس</button>
       <button class="btn-ghost" onclick="pinDistrictToProvince()">🏙️ ارفع على المحافظة بس</button>
       <button class="btn-modal-save" onclick="closeDistrictPicker()">تم</button>
     </div>
@@ -1476,9 +1493,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
   <!-- مبدّل نوع الرفع — v2.0.0. الترتيب مقصود: الشحن العادي الأول وهو
        الافتراضي، والاتنين اللي بيعملوا شحنات R/E بعده وبلون تاني. -->
   <div class="job-bar" id="jobBar">
-    <span class="job-bar-label">نوع الرفع:</span>
     <div class="job-btns" id="jobBtns"></div>
-    <div class="job-hint" id="jobHint"></div>
   </div>
 
   <div class="unified-section">
@@ -1681,7 +1696,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           📄 ملف بوسطة (Excel)</button>
         <div class="bulk-actions">
           <button class="big-btn all" id="bulkAllBtn" onclick="event.stopPropagation(); askUploadAllVisible();"
-                  title="بيحدد كل الصفوف المعروضة حسب الفلتر الحالي ويرفعها — صفوف 🟠 المدينة مشكوك فيها مستثناة">
+                  title="بيحدد كل الصفوف المعروضة حسب الفلتر الحالي ويرفعها — صفوف 🟠 المحافظة مشكوك فيها مستثناة">
             <span>⬆ رفع الكل</span><span class="cnt" id="bulkAllCnt">0</span></button>
           <button class="big-btn sel" id="bulkBtn" disabled onclick="event.stopPropagation(); startUpload();">
             <span id="bulkSelLbl">⬆ رفع المحدد</span><span class="cnt" id="bulkSelCnt">0</span></button>
@@ -1897,12 +1912,12 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.7.0';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.8.0';   // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
 //    القديم من غير ما حد ياخد باله. الحارس بيتنده في `checkWorkerVersion`.
-const MIN_WORKER_VERSION = '2.1.2';
+const MIN_WORKER_VERSION = '2.1.3';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -1921,7 +1936,6 @@ const JOBS = {
     statusLabel: 'الحالة (S1)', statusField: 's1',
     statusItems: [{ value: 'Confirmed', label: 'Confirmed' }, { value: 'Confirmed + Edit', label: 'Confirmed + Edit' }],
     tag: 'Bosta_Uploaded_S1', trackingKey: 'bosta_tracking_number_s1',
-    hint: 'أوردرات <code>custom.zone = Other_Regions</code> وحالتها Confirmed — بتترفع شحنة عادية (type 10)، وبتكتب الكوريَر ورقم التتبع والتاج.',
     excel: false, cancel: false,
   },
   return: {
@@ -1934,9 +1948,6 @@ const JOBS = {
     // ⚠️ الحالة التالية دي بتخص **مسار الإكسيل لوحده** (`confirm_upload`).
     // الرفع المباشر مابيحركش الحالة خالص — زيه زي الشحن العادي بالظبط.
     nextStatus: 'In-Return',
-    hint: 'أوردرات <code>status_2_r_e = Confirmed + RETURN</code> وكوريَرها Bosta — شحنة CRP (type 25) بتسحب من العميل. '
-        + '🔴 عنوان العميل بيروح <code>pickupAddress</code>، و<b>المبلغ السالب معناه بوسطة بتدفع للعميل عند الباب</b>. '
-        + 'الرفع بيكتب رقم التتبع والتاج بس — <b>الحالة مابتتحركش</b>، زيها زي الشحن العادي.',
     excel: true, cancel: true,
   },
   exchange: {
@@ -1948,9 +1959,6 @@ const JOBS = {
     tag: 'Bosta_Uploaded_S2', trackingKey: 'bosta_tracking_number_s2',
     // ⚠️ زي الاسترجاع — بتخص مسار الإكسيل لوحده.
     nextStatus: 'Ready',
-    hint: 'أوردرات <code>status_2_r_e = Confirmed + EXCHANGE</code> وكوريَرها Bosta — شحنة استبدال (type 30): '
-        + 'بتوصّل القطعة الجديدة وتسحب القديمة في نفس الزيارة. '
-        + 'الرفع بيكتب رقم التتبع والتاج بس — <b>الحالة مابتتحركش</b>، زيها زي الشحن العادي.',
     excel: true, cancel: true,
   },
 };
@@ -2631,19 +2639,22 @@ function updateLoginSettingsBtn() {
 const UP_STATE_ITEMS = [
   { value: 'ready',    label: '🟢 جاهز للرفع' },
   { value: 'uploaded', label: '🔁 مرفوع قبل كده' },
-  { value: 'blocked',  label: '⛔ موقوف (بيانات ناقصة)' },
+  { value: 'blocked',  label: '⛔ موقوف' },
 ];
 const ADDR_MODE_ITEMS = [
   { value: 'district', label: '📍 عنوان مظبوط' },
-  { value: 'zoneName', label: '🗺️ بزون المحافظة الخاصة' },
+  // 🔴 محافظة اتلغت إداريًا وبوسطة بقت بتعاملها كـ`zoneId` جوّه محافظة تانية —
+  //    وده في العرض «مدينة» زي أي `zoneId` (القاموس فوق).
+  { value: 'zoneName', label: '🗺️ محافظة تابعة — بتترفع كمدينة' },
   // 🔴 درجة وسيطة حقيقية بين المنطقة والمحافظة (واجهة v2.4.0) — مش تسمية
-  //    تجميلية. الزون بيغيّر **الهب وكود الفرز** على البوليصة، و«المحافظة بس»
-  //    بتاخد هب افتراضي. لازم الموظف يفرّق بين الاتنين في الفلتر والعمود.
-  { value: 'zone',     label: '🗺️ بالزون' },
+  //    تجميلية. الـ`zoneId` بيغيّر **الهب وكود الفرز** على البوليصة،
+  //    و«المحافظة بس» بتاخد هب افتراضي. لازم الموظف يفرّق بين الاتنين.
+  { value: 'zone',     label: '🗺️ بالمدينة' },
   { value: 'province', label: '🏙️ بالمحافظة بس' },
   { value: 'ambiguous',label: '❓ أكتر من مطابقة — محتاج اختيار' },
-  { value: 'cityDoubt',label: '🟠 المدينة مشكوك فيها — محتاج مراجعة' },
-  { value: 'cityFixed',label: '🏙️ مدينة معدّلة يدويًا' },
+  // ⚠️ الشك هنا على **`cityId`** — يعني «المحافظة» في العرض، مش «المدينة».
+  { value: 'cityDoubt',label: '🟠 المحافظة مشكوك فيها — محتاج مراجعة' },
+  { value: 'cityFixed',label: '🏙️ محافظة معدّلة يدويًا' },
   // 🔴 دي **مش** نقص مطابقة — دي عنوان بوسطة مش بتسلّم فيه أصلًا. لازم تبقى
   //    حالة مستقلة في الفلتر عشان الأوبريشن يقدر يطلّعهم كلهم ويحوّلهم.
   { value: 'coverageBlocked', label: '🚫 خارج التغطية' },
@@ -3133,12 +3144,12 @@ function addrModeInfo(r) {
   if (ov?.districtId)   return { label: `📍 ${ov.districtName}${cityTxt}`, set: true,
     hint: `منطقة متحدّدة يدويًا — الشحنة هتترفع على مدينة ${ov.cityName || r.cityName} بـ districtId عليها` };
   if (ov?.forceZone) return { label: `🗺️ ${ov.zoneName} · مثبّت`, set: true,
-    hint: `متثبّت يدويًا على زون ${ov.zoneName} — الشحنة هتترفع بالـ zoneId ده، `
+    hint: `متثبّت يدويًا على مدينة ${ov.zoneName} — الشحنة هتترفع بالـ zoneId ده، `
         + 'يعني هب وكود فرز محددين بدل الهب الافتراضي للمحافظة. مش هتتبعت منطقة.' };
   if (ov?.forceProvince) return { label: `🏙️ ${ov.cityName || r.cityName} بس · مثبّت`, set: false,
-    hint: 'متثبّت يدويًا على مستوى المدينة — مش هتتبعت منطقة حتى لو المطابقة نجحت وقت الرفع' };
+    hint: 'متثبّت يدويًا على مستوى المحافظة — مش هتتبعت منطقة حتى لو المطابقة نجحت وقت الرفع' };
   if (ov?.cityId) return { label: `🏙️ ${ov.cityName} · مدينة معدّلة`, set: false,
-    hint: `المدينة اتغيّرت يدويًا لـ ${ov.cityName} ولسه من غير منطقة — الشحنة هتترفع على المدينة دي وتدخل مسار العناوين غير الواضحة` };
+    hint: `المحافظة اتغيّرت يدويًا لـ ${ov.cityName} ولسه من غير منطقة — الشحنة هتترفع على المحافظة دي وتدخل مسار العناوين غير الواضحة` };
   // 🔴 أسبق من كل حاجة: العنوان برّه تغطية بوسطة. الرفع موقوف، والزرار بيفتح
   //    النافذة عشان الموظف يشوف المنطقة المقفولة بنفسه ويختار بديل لو فيه.
   if (r.mode === 'coverageBlocked') {
@@ -3153,19 +3164,19 @@ function addrModeInfo(r) {
   // 🗺️ درجة الزون — بين المنطقة والمحافظة. `set: true` لأن الشحنة **بتترفع
   //    بمفتاح حقيقي** (`zoneId`) مش على مستوى المحافظة.
   if (r.mode === 'zone') return { label: `🗺️ ${r.zoneName}`, set: true,
-    hint: `مفيش مطابقة منطقة، بس العنوان طابق زون واحد (${r.zoneName}) — الشحنة هتترفع `
-        + `بالزون ده (zoneId)، يعني هب وكود فرز محددين بدل الهب الافتراضي للمحافظة. `
-        + `الزون جواه ${fmtNum(r.zoneDistrictCount || 0)} منطقة — افتح لو عايز تحدد واحدة بالظبط.` };
+    hint: `مفيش مطابقة منطقة، بس العنوان طابق مدينة واحدة (${r.zoneName}) — الشحنة هتترفع `
+        + `على المدينة دي (zoneId)، يعني هب وكود فرز محددين بدل الهب الافتراضي للمحافظة. `
+        + `المدينة جواها ${fmtNum(r.zoneDistrictCount || 0)} منطقة — افتح لو عايز تحدد واحدة بالظبط.` };
   if (r.mode === 'zoneName') return { label: `🗺️ ${r.districtName}`, set: true,
-    hint: 'محافظة اتلغت إداريًا — بتتبعت كزون جوه مدينة بوسطة التابعة ليها' };
+    hint: 'محافظة اتلغت إداريًا — بتتبعت كمدينة جوّه محافظة بوسطة التابعة ليها' };
   if (r.ambiguous) return { label: `❓ ${r.candidates.length} احتمالات`, set: false,
     hint: `نص العنوان طابق ${r.candidates.length} مناطق — من غير اختيار يدوي الشحنة هتترفع على المحافظة بس` };
   if (r.cityDoubt) {
     // اسم المدينة المقترحة في البادج نفسه — الموظف يعرف من الجدول من غير ما
     // يفتح النافذة، والضغطة بتوديه على الاقتراح جاهز
     const f = r.crossCity?.[0];
-    const what = f ? (f.kind === 'zone' ? `زون ${f.zone}` : f.districtName) : '';
-    return { label: f ? `🟠 ${f.cityName}؟` : '🟠 المدينة مشكوك فيها', set: false,
+    const what = f ? (f.kind === 'zone' ? `مدينة ${f.zone}` : f.districtName) : '';
+    return { label: f ? `🟠 ${f.cityName}؟` : '🟠 المحافظة مشكوك فيها', set: false,
       hint: `مفيش مطابقة جوّه ${r.cityName}، بس العنوان طابق في مدينة تانية` +
             (f ? ` — ${f.cityName} ← ${what} (طابق "${f.matchedText}")` : '') +
             `. افتح واضغط على الاقتراح: بيظبّط المدينة` +
@@ -3177,7 +3188,7 @@ function addrModeInfo(r) {
     hint: 'مفيش مطابقة منطقة في نص العنوان — الشحنة بتترفع على المحافظة وبتدخل مسار العناوين غير الواضحة عند بوسطة (مش فشل)' +
       // ⚠️ الصف اللي كان بيتضغط اتشال (v2.6.0) — الإحالة بقت على **قايمة الزون**
       //    في صف بوسطة، وهي المكان الواحد للمعلومة دي.
-      (lz ? ` · 🗺️ بس العنوان طابق زون ${lz.zone} في نفس المدينة — افتح واختاره من قايمة «الزون» عشان تشوف ${fmtNum(lz.districtCount || 0)} منطقة بس.` : '') };
+      (lz ? ` · 🗺️ بس العنوان طابق مدينة ${lz.zone} في نفس المحافظة — افتح واختارها من قايمة «المدينة» عشان تشوف ${fmtNum(lz.districtCount || 0)} منطقة بس.` : '') };
 }
 // المدينة المعروضة = اللي هتتبعت فعلًا. لو الموظف عدّلها، الأصلية بتفضل
 // مكتوبة في الـ tooltip — عشان مراجعة الصف تفضل ممكنة.
@@ -3224,7 +3235,7 @@ function tableColumns() {
       cell: r => `<span class="cell-clamp">${esc(fullAddressText(r) || '—')}</span>`,
       attrs: r => `title="${esc(fullAddressText(r) || '—')}"` },
     { key: 'province',    label: 'المحافظة (شوبيفاي)', sort: 'province', cell: r => esc(r.province || '—') },
-    { key: 'cityName',    label: 'مدينة بوسطة', sort: 'cityName', cell: cityCell },
+    { key: 'cityName',    label: 'محافظة بوسطة', sort: 'cityName', cell: cityCell },
     { key: 'district',    label: 'المنطقة', cell: districtCell },
     { key: 'addrMode',    label: 'حالة العنوان', sort: 'addrMode', cell: addrModeCell },
   ];
@@ -3347,7 +3358,7 @@ function renderTable(rows) {
     const cells = cols.map(c => {
       if (c.key === 'cb') {
         return `<td><input type="checkbox" class="row-cb" data-id="${esc(r.orderId)}" ${selected.has(r.orderId) ? 'checked' : ''}
-                 ${rowNeedsCityDecision(r) ? 'data-doubt="1" title="مستثنى من تحديد الكل — المدينة محتاجة مراجعة. تقدر تحدده بإيدك."' : ''}
+                 ${rowNeedsCityDecision(r) ? 'data-doubt="1" title="مستثنى من تحديد الكل — المحافظة محتاجة مراجعة. تقدر تحدده بإيدك."' : ''}
                  ${blocked ? 'disabled' : ''} onclick="onRowCheck('${jsq(r.orderId)}', this.checked)"></td>`;
       }
       const cls   = c.cls ? ` class="${c.cls}"` : '';
@@ -3373,7 +3384,7 @@ function toggleSelectAllRows(checked) {
   boxes.forEach(cb => { cb.checked = checked; checked ? selected.add(cb.dataset.id) : selected.delete(cb.dataset.id); });
   const skipped = document.querySelectorAll('#tblBody .row-cb[data-doubt="1"]').length;
   if (checked && skipped)
-    showToast(`${fmtNum(skipped)} صف مستثنى — المدينة محتاجة مراجعة. افتح عمود المنطقة وراجعها.`, 'warning', 6000);
+    showToast(`${fmtNum(skipped)} صف مستثنى — المحافظة محتاجة مراجعة. افتح عمود المنطقة وراجعها.`, 'warning', 6000);
   updateSelectionUI();
 }
 function updateSelectionUI() {
@@ -3401,7 +3412,7 @@ function clearSelection() { selected.clear(); applyFilters(); }
 function askUploadAllVisible() {
   if (uploadRunning) return;
   const rows = visibleRows.filter(isAutoSelectable);
-  if (!rows.length) { showToast('مفيش صفوف معروضة صالحة للرفع', 'warning'); return; }
+  if (!rows.length) { showToast('لا توجد صفوف صالحة للرفع', 'warning'); return; }
   const doubt = visibleRows.filter(rowNeedsCityDecision).length;
   const dups  = rows.filter(r => r.alreadyUploaded).length;
   document.getElementById('bulkAllMsg').className = 'dp-state' + (doubt || dups ? ' doubt' : '');
@@ -3410,7 +3421,7 @@ function askUploadAllVisible() {
     // 🔴 نوع الشحنة مكتوب في نص التأكيد نفسه. الأداة بقت تلات أوضاع، والموظف
     //    لازم يشوف إنه بيعمل «استرجاع» مش «شحن» في اللحظة دي بالذات.
     `دي <b>شحنات ${esc(job().label)} حقيقية على بوسطة (type ${job().bostaType})</b>.` +
-    (doubt ? `<br>🟠 <b>${fmtNum(doubt)}</b> صف «المدينة مشكوك فيها» <b>مستثنى</b> — راجعه وحدده بإيدك.` : '') +
+    (doubt ? `<br>🟠 <b>${fmtNum(doubt)}</b> صف «المحافظة مشكوك فيها» <b>مستثنى</b> — راجعه وحدده بإيدك.` : '') +
     (dups  ? `<br>🔁 <b>${fmtNum(dups)}</b> أوردر مرفوع قبل كده — هيتسألك عليه تأكيد تاني.` : '');
   document.getElementById('bulkAllOverlay').classList.add('open');
 }
@@ -3435,7 +3446,6 @@ function renderJobBar() {
                     id="jobBtn-${esc(j.key)}" ${uploadRunning ? 'disabled' : ''}
                     onclick="switchJob('${jsq(j.key)}')">${j.icon} ${esc(j.label)}</button>`;
   }).join('');
-  document.getElementById('jobHint').innerHTML = job().hint;
   // زرار تصدير ملف بوسطة بيبان في أوضاع R/E بس — الشحن العادي مالوش مسار إكسيل
   const ex = document.getElementById('bostaExcelBtn');
   if (ex) ex.style.display = job().excel ? '' : 'none';
@@ -3624,9 +3634,11 @@ function dpContextHTML(r) {
            // 🔴 التلاتة **قوايم منسدلة ببحث** مش نص: القيمة المعروضة هي اللي
            //    هتتبعت فعلًا، فتغييرها لازم يحصل في نفس الخانة اللي الموظف
            //    بيقراها — مش في صف تاني تحت ولا في القايمة الكبيرة بس.
-           dpControlField('المدينة',   dpPickHTML('city')) +
-           dpControlField('الزون',     dpPickHTML('zone')) +
-           dpControlField('المنطقة',   dpPickHTML('district'))) +
+           // 🔴 التسمية من `DP_PICKS` **مش مكتوبة هنا** — مصدر واحد للخانة
+           //    واسمها، وإلا تسمية تتغيّر في مكان وتفضل قديمة في التاني.
+           dpControlField(DP_PICKS.city.label,     dpPickHTML('city')) +
+           dpControlField(DP_PICKS.zone.label,     dpPickHTML('zone')) +
+           dpControlField(DP_PICKS.district.label, dpPickHTML('district'))) +
          '</div>';
 }
 
@@ -3637,9 +3649,20 @@ function dpContextHTML(r) {
 // ⚠️ كل اللوحات عايشة جوّه `#dpContext`، و`renderDistrictState` بتعيد كتابته
 //    بالكامل — فالحالة (`dpPickOpen` · `dpPickSearch`) عايشة **برّه** الـ DOM
 //    وبتترسم من الأول كل مرة. حالة محفوظة في الـ DOM كانت هتتمسح بصمت.
+// 🔴 **تسميات العرض مش أسماء الحقول** (v2.8.0) — والمفتاح هنا هو اسم الحقل
+//    في الـ API، والـ `label` هو اللي الموظف بيقراه. الاتنين **مختلفين عن قصد**:
+//
+//      المفتاح (API)   العرض        ليه
+//      city/cityId  →  المحافظة     بوسطة نفسها بتسمّيه Governorate/المحافظة
+//      zone/zoneId  →  المدينة      المقابل في شوبيفاي اسمه «المدينة»
+//      district     →  المنطقة      بوسطة بتسمّيه Area/المنطقة ✅ متطابق أصلًا
+//
+//    ⚠️ **ممنوع** إعادة تسمية `dpCityId` / `r.cityName` / `dpZoneFilter` على
+//    أساس ده — دي أسماء حقول بوسطة وبتتبعت على السلك زي ما هي. التوثيق الكامل
+//    في `BOSTA-NAMING-20260914.md`.
 const DP_PICKS = {
-  city:     { label: 'المدينة',  placeholder: 'ابحث عن مدينة…' },
-  zone:     { label: 'الزون',    placeholder: 'ابحث عن زون…' },
+  city:     { label: 'المحافظة', placeholder: 'ابحث عن محافظة…' },
+  zone:     { label: 'المدينة',  placeholder: 'ابحث عن مدينة…' },
   district: { label: 'المنطقة',  placeholder: 'ابحث عن منطقة…' },
 };
 let dpPickOpen = null;               // أنهي قايمة مفتوحة دلوقتي (واحدة بالكتير)
@@ -3670,7 +3693,7 @@ function renderDpTitle(r) {
              : info.set ? ' ok'
              : (mode === 'cityDoubt' || mode === 'cityFixed' ? ' doubt' : '');
   el.innerHTML = `📍 اختر المنطقة — ${esc(r.orderNumber)} — حالة العنوان:` +
-    `<span class="dp-hdr-state${cls}" title="${esc(info.hint)}">${esc(ADDR_MODE_LABEL[mode] || mode)}</span>`;
+    `<span class="dp-hdr-state${cls}">${esc(ADDR_MODE_LABEL[mode] || mode)}</span>`;
 }
 
 async function openDistrictPicker(orderId) {
@@ -3856,7 +3879,7 @@ function dpPickCurrent(key) {
     const ovZ = districtOverride[dpOrderId];
     if (ovZ?.forceZone) {
       return { text: ovZ.zoneName, cls: 'set',
-               hint: `متثبّت يدويًا — الشحنة هتترفع على زون ${ovZ.zoneName} (zoneId) `
+               hint: `متثبّت يدويًا — الشحنة هتترفع على مدينة ${ovZ.zoneName} (zoneId) `
                    + 'ومش هتتبعت منطقة. «↺ رجّع للمطابقة التلقائية» بتشيل التثبيت.' };
     }
     const chosenId = dpChosenDistrictId(r);
@@ -3866,11 +3889,11 @@ function dpPickCurrent(key) {
       return z.none
         // ⚠️ «بلا زون» حالة حقيقية في الكتالوج — تتقال صريحة بدل «الكل» اللي
         //    بيقرا كأن فيه اختيار لسه مطلوب.
-        ? { text: 'بلا زون', cls: 'muted',
-            hint: `المنطقة المختارة (${chosenD.name}) مالهاش زون في كتالوج بوسطة — ده مش نقص عندنا.` }
+        ? { text: 'بلا مدينة', cls: 'muted',
+            hint: `المنطقة المختارة (${chosenD.name}) مالهاش مدينة في كتالوج بوسطة — ده مش نقص عندنا.` }
         : { text: z.text, cls: 'set',
-            hint: `زون المنطقة المختارة (${chosenD.name}) — بوسطة بتحطّه لوحدها من المنطقة. `
-                + 'غيّر المنطقة لو عايز زون تاني، أو اضغط هنا تقصّر القايمة على زون وتختار منه.' };
+            hint: `مدينة المنطقة المختارة (${chosenD.name}) — بوسطة بتحطّها لوحدها من المنطقة. `
+                + 'غيّر المنطقة لو عايزة مدينة تانية، أو اضغط هنا تقصّر القايمة على مدينة وتختار منها.' };
     }
 
     const isSentDegree = r.mode === 'zone' && r.zoneName && dpCityId === r.cityId;
@@ -3878,17 +3901,17 @@ function dpPickCurrent(key) {
       return { text: cur?.label || dpZoneFilter,
                cls: isSentDegree ? 'set' : 'filter',
                hint: isSentDegree
-                 ? `الشحنة هتترفع على زون ${dpZoneFilter} — والقايمة تحت مقصورة عليه`
-                 : `ترشيح عرض بس — القايمة تحت مقصورة على زون ${dpZoneFilter}. `
+                 ? `الشحنة هتترفع على مدينة ${dpZoneFilter} — والقايمة تحت مقصورة عليها`
+                 : `ترشيح عرض بس — القايمة تحت مقصورة على مدينة ${dpZoneFilter}. `
                    + 'مابيتبعتش لبوسطة ومابيغيّرش المنطقة — اختر منطقة من القايمة.' };
     }
     if (isSentDegree) {
       return { text: r.zoneName, cls: 'set',
-               hint: `مفيش مطابقة منطقة، فالشحنة هتترفع على زون ${r.zoneName} (zoneId) — `
+               hint: `مفيش مطابقة منطقة، فالشحنة هتترفع على مدينة ${r.zoneName} (zoneId) — `
                    + 'هب وكود فرز محددين بدل الهب الافتراضي للمحافظة.' };
     }
     return { text: 'الكل', cls: 'muted',
-             hint: 'اختر زون عشان تقصّر قايمة المناطق تحت — الزون ترشيح، مابيحددش منطقة' };
+             hint: 'اختر مدينة عشان تقصّر قايمة المناطق تحت — المدينة ترشيح، مابتحددش منطقة' };
   }
   if (cur) return { text: cur.label, cls: 'set',
                     hint: 'المنطقة اللي الشحنة هتترفع عليها (districtId) — أدق درجة عنوان' };
@@ -3898,9 +3921,9 @@ function dpPickCurrent(key) {
   //    والخانتين يقروا نفس القيمة لدرجتين مختلفتين.
   const isDistrictDegree = ['district', 'zoneName'].includes(rowAddrMode(r));
   const dm = addrModeInfo(r);
-  return { text: isDistrictDegree && dm.set && dpCityId === r.cityId ? dm.label : '— مفيش —',
+  return { text: isDistrictDegree && dm.set && dpCityId === r.cityId ? dm.label : 'لا توجد منطقة محددة',
            cls: 'muted',
-           hint: 'مفيش منطقة متحددة — الشحنة هتترفع على درجة أقل دقة (زون أو محافظة)' };
+           hint: 'لا توجد منطقة محددة — الشحنة هتترفع على درجة أقل دقة (المدينة أو المحافظة)' };
 }
 
 function dpPickToggle(key) {
@@ -3941,7 +3964,7 @@ function dpPickZone(id) {
     : (dpZoneFilter && dpZoneFilter.toLowerCase() === String(id).toLowerCase()) ? null : id;
   dpZoneFilter = next;
   renderDistrictList();
-  showToast(next ? `القايمة مقصورة على زون ${next} — اختر المنطقة` : 'القصر اتشال — كل مناطق المدينة',
+  showToast(next ? `القايمة مقصورة على مدينة ${next} — اختر المنطقة` : 'القصر اتشال — كل مناطق المحافظة',
             'success', 4000);
 }
 
@@ -3955,20 +3978,19 @@ function renderDpPickList(key) {
   // «الكل» في قايمة الزون بس — هو اللي بيشيل القصر ويرجّع كل مناطق المدينة
   const head = (key === 'zone' && !q)
     ? `<div class="dp-pick-opt${dpZoneFilter ? '' : ' cur'}"
-            onclick="dpPickChoose('zone','')">🗺️ كل الزونات
+            onclick="dpPickChoose('zone','')">🗺️ كل المدن
          <span class="dp-pick-opt-sub">${fmtNum(dpDistricts.filter(d => !d.blocked).length)} منطقة</span>
        </div>`
     : '';
 
   if (!opts.length && !head) {
-    el.innerHTML = `<div class="dp-pick-empty">مفيش نتايج${q ? ` لـ"${esc(q)}"` : ''}</div>`;
+    el.innerHTML = `<div class="dp-pick-empty">لا توجد نتائج${q ? ` لـ"${esc(q)}"` : ''}</div>`;
     return;
   }
   // القايمة مقصوصة على ٤٠٠ زي القايمة الكبيرة — والبحث هو وسيلة الوصول
   el.innerHTML = head + opts.slice(0, 400).map(o =>
     `<div class="dp-pick-opt${o.cur ? ' cur' : ''}${o.blocked ? ' blocked' : ''}"
-          ${o.blocked ? 'title="بوسطة مش بتسلّم في المنطقة دي — العنوان خارج التغطية"'
-                      : `onclick="dpPickChoose('${key}','${jsq(o.id)}')"`}>
+          ${o.blocked ? '' : `onclick="dpPickChoose('${key}','${jsq(o.id)}')"`}>
        <span>${esc(o.label)}</span>${o.sub ? `<span class="dp-pick-opt-sub">${esc(o.sub)}</span>` : ''}
      </div>`).join('');
 }
@@ -3985,10 +4007,9 @@ function renderDpControls() {
   const pinZ = document.getElementById('dpPinZone');
   if (pinZ) {
     const z = dpEffectiveZone(r);
+    // ⚠️ الزرار المقفول بيقول السبب **بحالته** (رمادي ومش قابل للضغط) —
+    //    الشرح على الـ hover اتشال مع باقي تلميحات النافذة (v2.8.0).
     pinZ.disabled = !z?.zoneId;
-    pinZ.title = z?.zoneId
-      ? `الشحنة هتترفع على زون ${z.id} بدل المنطقة — هب وكود فرز محددين بدل الهب الافتراضي للمحافظة`
-      : 'مفيش زون متحدد — اختر زون أو منطقة من القوايم فوق الأول';
   }
   for (const key of Object.keys(DP_PICKS)) {
     const wrap = document.getElementById(`dpPick-${key}`);
@@ -4017,7 +4038,7 @@ async function chooseCity(cityId) {
     delete districtOverride[dpOrderId];            // رجوع للمدينة التلقائية
   } else {
     districtOverride[dpOrderId] = { cityId, cityName: c?.cityName || '' };
-    showToast(`المدينة بقت ${c?.cityName || cityId} — اختر المنطقة أو ارفع على المدينة بس`, 'warning', 5000);
+    showToast(`المحافظة بقت ${c?.cityName || cityId} — اختر المنطقة أو ارفع على المحافظة بس`, 'warning', 5000);
   }
   applyFilters();
   await loadDpCity(cityId);
@@ -4044,7 +4065,7 @@ function renderDistrictState() {
 // نص الزون المعروض — الاسمين لو الاتنين موجودين، و«بلا زون» صريحة لو مفيش
 function zoneLabel(d) {
   const en = (d.zone || '').trim(), ar = (d.zoneAr || '').trim();
-  if (!en && !ar) return { text: 'بلا زون', none: true };
+  if (!en && !ar) return { text: 'بلا مدينة', none: true };
   if (en && ar && en !== ar) return { text: `${en} — ${ar}`, none: false };
   return { text: en || ar, none: false };
 }
@@ -4057,21 +4078,17 @@ function dpRow(d, cls, chosen, why, badge) {
   const z = zoneLabel(d);
   const blocked = !!d.blocked;
   const click = blocked ? '' : ` onclick="chooseDistrict('${jsq(d.id)}','${jsq(d.name)}')"`;
-  const tip = blocked
-    ? 'بوسطة مش بتسلّم في المنطقة دي — العنوان ده خارج التغطية، والأوردر يتحوّل لخدمة العملاء'
-    : `الزون: ${z.text}`;
-  return `<div class="dp-item ${cls}${chosen ? ' chosen' : ''}${blocked ? ' dp-blocked' : ''}"
-      title="${esc(tip)}"${click}>
+  return `<div class="dp-item ${cls}${chosen ? ' chosen' : ''}${blocked ? ' dp-blocked' : ''}"${click}>
       <span class="dp-main"><span class="dp-name">${esc(d.name)}${d.nameAr ? ` — ${esc(d.nameAr)}` : ''}${
         blocked ? '<span class="dp-blocked-badge">🚫 مقفولة للتسليم</span>' : ''}${
         badge ? `<span class="dp-match-badge">${esc(badge)}</span>` : ''}</span>${
         why ? `<span class="dp-why">${esc(why)}</span>` : ''}</span>
-      <span class="dp-cell"><span class="dp-zone${z.none ? ' none' : ''}" title="${esc(`الزون: ${z.text}`)}">🗺️ ${esc(z.text)}</span></span>
+      <span class="dp-cell"><span class="dp-zone${z.none ? ' none' : ''}">🗺️ ${esc(z.text)}</span></span>
     </div>`;
 }
 // ترويسة أعمدة القايمة — ملزوقة فوق، عشان الأعمدة تفضل معروفة وسط ٤٠٠ صف
 function dpTableHead() {
-  return `<div class="dp-thead"><span>المنطقة</span><span>الزون</span></div>`;
+  return `<div class="dp-thead"><span>المنطقة</span><span>المدينة</span></div>`;
 }
 
 // عدّاد تغطية الزون للمدينة المعروضة. الرقم ده هو اللي بيفرّق بين
@@ -4084,10 +4101,10 @@ function renderZoneNote() {
   const total = dpDistricts.length;
   el.style.display = total ? '' : 'none';
   el.innerHTML = total
-    ? `<summary>🗺️ <b>الزون</b> = المستوى فوق المنطقة عند بوسطة · ` +
-      `<b>${fmtNum(withZone)}</b> من <b>${fmtNum(total)}</b> منطقة هنا ليها زون</summary>` +
-      `<div class="dp-note-body">الترتيب عند بوسطة: مدينة ← زون ← منطقة. الزون بيتعرض للتشخيص، ` +
-      `<b>البحث بيشمله</b>، و<b>المطابقة بتشوفه</b> — بيظبّط المدينة ويقصّر القايمة، والمنطقة اختيارك.</div>`
+    ? `<summary>🗺️ <b>المدينة</b> = المستوى فوق المنطقة عند بوسطة · ` +
+      `<b>${fmtNum(withZone)}</b> من <b>${fmtNum(total)}</b> منطقة هنا ليها مدينة</summary>` +
+      `<div class="dp-note-body">الترتيب عند بوسطة: محافظة ← مدينة ← منطقة. ` +
+      `<b>البحث بيشمل المدينة</b>، و<b>المطابقة بتشوفها</b> — بتظبّط المحافظة وتقصّر القايمة، والمنطقة اختيارك.</div>`
     : '';
 }
 // صف اقتراح زون. 🔴 مابيختارش منطقة — الزون فيه مناطق كتير، واختيار واحدة
@@ -4098,7 +4115,7 @@ function zoneSuggestRow(z, cls) {
   return `<div class="dp-item ${cls}" onclick="chooseZone('${jsq(z.cityId)}','${jsq(z.cityName)}','${jsq(z.zone)}')">
       <span class="dp-main"><span class="dp-name">🗺️ ${esc(z.cityName)}</span>
       <span class="dp-why">اضغط تظبّط المدينة وتقصّر القايمة · طابق "${esc(z.matchedText)}" في ${esc(z.fieldLabel || 'العنوان')}</span></span>
-      <span class="dp-cell"><span class="dp-zone" title="${esc(`الزون: ${zTxt}`)}">🗺️ ${esc(zTxt)}</span>
+      <span class="dp-cell"><span class="dp-zone">🗺️ ${esc(zTxt)}</span>
       <span class="dp-count">${fmtNum(n)} منطقة</span></span>
     </div>`;
 }
@@ -4121,7 +4138,7 @@ async function chooseZone(cityId, cityName, zone) {
   document.getElementById('dpSearch').value = '';
   toggleSearchActiveState(document.getElementById('dpSearch'));
   renderDistrictList();
-  showToast(`المدينة ${cityName} · القايمة مقصورة على زون ${zone} — اختر المنطقة`, 'success', 5000);
+  showToast(`المحافظة ${cityName} · القايمة مقصورة على مدينة ${zone} — اختر المنطقة`, 'success', 5000);
 }
 function clearZoneFilter() { dpZoneFilter = null; renderDistrictList(); }
 
@@ -4142,10 +4159,10 @@ function renderDistrictList() {
     head += q
       // ⚠️ الحالة دي لازم تتقال صراحةً: القصر لسه متسجّل، بس البحث شغّال على
       //    المدينة كلها. سكوت هنا بيخلّي الموظف يفتكر إنه بيدوّر جوّه الزون.
-      ? `<div class="dp-group-hdr pick">🔍 البحث بيلف على <b>كل مناطق المدينة</b> —
-          قصر زون <b>${esc(dpZoneFilter)}</b> بيرجع أول ما تفضّي خانة البحث
+      ? `<div class="dp-group-hdr pick">🔍 البحث بيلف على <b>كل مناطق المحافظة</b> —
+          قصر مدينة <b>${esc(dpZoneFilter)}</b> بيرجع أول ما تفضّي خانة البحث
           <button class="dp-clear-zone" onclick="event.stopPropagation();clearZoneFilter()">✕ شيل القصر</button></div>`
-      : `<div class="dp-group-hdr pick">🗺️ مقصورة على زون <b>${esc(dpZoneFilter)}</b>
+      : `<div class="dp-group-hdr pick">🗺️ مقصورة على مدينة <b>${esc(dpZoneFilter)}</b>
           <button class="dp-clear-zone" onclick="event.stopPropagation();clearZoneFilter()">✕ شيل القصر</button></div>`;
   }
   // 🔴 المنطقة اللي المطابقة وصلت لها (أو اللي الموظف اختارها) بتتثبّت **أول
@@ -4164,14 +4181,12 @@ function renderDistrictList() {
         manual ? '✅ اختيارك' : '✅ المطابقة الحالية');
     }
   }
-  // 🔴 بانر ثابت فوق القايمة لما العنوان نفسه طابق منطقة مقفولة — ده السبب
-  //    اللي وقّف الصف، ولازم يبان قبل أي اقتراح تاني في النافذة.
-  if (!q && sameCity && r?.mode === 'coverageBlocked') {
-    const names = (r.blockedDistricts || []).map(d => d.name).filter(Boolean).join(' · ');
-    head += `<div class="dp-group-hdr cross">🚫 العنوان طابق منطقة بوسطة <b>مش بتسلّم فيها</b>
-      (${esc(names || '—')}) — الأوردر ده خارج تغطية بوسطة والرفع موقوف.
-      الرفع على المحافظة مش بديل: الشحنة هتتشحن وترجع. حوّله لخدمة العملاء.</div>`;
-  }
+  // 🔴 **بانر التغطية اتشال من هنا (v2.8.0) — والمنع فضل.** الحالة لسه
+  //    باينة في مكانين: بادج «🚫 خارج التغطية» في عنوان النافذة، والمنطقة
+  //    نفسها في القايمة تحت بشريط أحمر ومشطوبة ومش قابلة للضغط.
+  //    ⚠️ **الخطر إن اللي يشيل الرسالة يشيل المنع معاها** — المنع عايش في
+  //    الـ Worker (`§BOSTA::coverageProblems`) ومتغطّى في
+  //    `tests/coverage-and-degree.test.cjs` ⑥ب. متلمسوش.
   if (!q && sameCity && !dpZoneFilter) {
     // ① الاحتمالات — مثبّتة فوق وقابلة للضغط، مش نص في سطر السياق
     const cands = (r.candidates || []).filter(c => dpDistricts.some(d => d.id === c.id));
@@ -4193,7 +4208,7 @@ function renderDistrictList() {
         <div class="dp-item cross" onclick="chooseCrossCity('${jsq(c.cityId)}','${jsq(c.cityName)}','${jsq(c.districtId)}','${jsq(c.districtName)}')">
           <span class="dp-main"><span class="dp-name">${esc(c.cityName)} ← ${esc(c.districtName)}${c.districtNameAr ? ` — ${esc(c.districtNameAr)}` : ''}</span>
           <span class="dp-why">مدينة تانية — اضغط تظبّط المدينة والمنطقة · طابق "${esc(c.matchedText)}" في ${esc(c.fieldLabel || 'العنوان')}</span></span>
-          <span class="dp-cell"><span class="dp-zone${c.zone ? '' : ' none'}" title="${esc(`الزون: ${c.zone || 'بلا زون'}`)}">🗺️ ${esc(c.zone || 'بلا زون')}</span></span>
+          <span class="dp-cell"><span class="dp-zone${c.zone ? '' : ' none'}">🗺️ ${esc(c.zone || 'بلا مدينة')}</span></span>
         </div>`).join('');
     }
     // 🔴 **مفيش أي صف أو بانر للزون جوّه المدينة هنا** (واجهة v2.6.0) — عن قصد.
@@ -4260,7 +4275,7 @@ async function chooseCrossCity(cityId, cityName, districtId, districtName) {
   districtOverride[dpOrderId] = { cityId, cityName, districtId, districtName };
   applyFilters();
   await loadDpCity(cityId);
-  showToast(`المدينة بقت ${cityName} والمنطقة ${districtName}`, 'success', 5000);
+  showToast(`المحافظة بقت ${cityName} والمنطقة ${districtName}`, 'success', 5000);
 }
 
 // ↺ = شيل أي تدخّل يدوي وبس. الزرار ده كان بيثبّت الصف على المحافظة —
@@ -4308,8 +4323,8 @@ function pinDistrictToZone() {
   if (!r) return;
   const z = dpEffectiveZone(r);
   if (!z || !z.zoneId) {
-    showToast(z ? `زون ${z.label} مالوش zoneId في الكتالوج — مينفعش الرفع عليه`
-                : 'مفيش زون متحدد — اختر زون من القايمة فوق الأول', 'error', 6000);
+    showToast(z ? `مدينة ${z.label} مالهاش zoneId في الكتالوج — مينفعش الرفع عليها`
+                : 'لا توجد مدينة محددة — اختر مدينة من القايمة فوق الأول', 'error', 6000);
     return;
   }
   const cityName = dpCities.find(c => c.cityId === dpCityId)?.cityName || r.cityName;
@@ -4319,7 +4334,7 @@ function pinDistrictToZone() {
   };
   renderDistrictList();
   applyFilters();
-  showToast(`اتثبّت على زون ${z.id} — مش هتتبعت منطقة`, 'success', 5000);
+  showToast(`اتثبّت على مدينة ${z.id} — مش هتتبعت منطقة`, 'success', 5000);
 }
 
 function pinDistrictToProvince() {
@@ -4363,7 +4378,7 @@ function startUpload() {
   //    بإيده. مش منع — تنبيه أخير قبل شحنة على مدينة غلط.
   const doubt = ok.filter(rowNeedsCityDecision);
   if (doubt.length) {
-    showToast(`⚠️ ${fmtNum(doubt.length)} أوردر مدينته مشكوك فيها هيترفعوا على المدينة اللي من الجدول ` +
+    showToast(`⚠️ ${fmtNum(doubt.length)} أوردر محافظته مشكوك فيها هيترفعوا على المحافظة اللي من الجدول ` +
               `(${doubt.slice(0, 3).map(r => r.orderNumber).join(' · ')}${doubt.length > 3 ? ' …' : ''})`,
               'warning', 8000);
   }
@@ -4524,7 +4539,7 @@ async function postUploadRE(chunk, j) {
             error: b ? `${cycleCodeLabel(b.code)}: ${b.action}`
                      : (d.missing || []).includes(r.orderNumber)
                        ? 'شوبيفاي ما رجّعتش الأوردر ده وقت الرفع — الدفعة كلها اتوقفت قبل أي شحنة'
-                       : 'الدفعة اتوقفت كلها بسبب أوردرات تانية في نفس الدفعة — **مفيش ولا شحنة اتعملت**',
+                       : 'الدفعة اتوقفت كلها بسبب أوردرات تانية في نفس الدفعة — **لم يتم إنشاء أي شحنة**',
           };
         }),
       };
@@ -4547,7 +4562,7 @@ function openCycleBlockModal(d, j) {
   parts.push(`<p style="font-weight:700;line-height:1.9;">${esc(d.error || 'الرفع اتوقف')}</p>`);
   // ⚠️ السطر ده مهم أكتر من القايمة نفسها: الموظف لازم يعرف إنه **مش** محتاج
   //    يروح يلغي حاجة عند بوسطة.
-  parts.push(`<p style="color:var(--green);font-weight:800;">✅ مفيش ولا شحنة اتعملت — الرفع اتوقف قبل أي نداء لبوسطة.</p>`);
+  parts.push(`<p style="color:var(--green);font-weight:800;">✅ لم يتم إنشاء أي شحنة — الرفع اتوقف قبل أي نداء لبوسطة.</p>`);
   if (rows.length) {
     parts.push('<div class="dup-list">' + rows.map(b =>
       `<div style="padding:7px 0;border-bottom:1px solid var(--border);">
@@ -4768,8 +4783,8 @@ async function exportOrdersXLSX() {
     { header: 'رقم الأوردر', key: 'orderNumber', width: 14 },
     { header: 'العميل', key: 'customer', width: 24 },
     { header: 'المحافظة (شوبيفاي)', key: 'province', width: 18 },
-    { header: 'مدينة بوسطة', key: 'cityName', width: 16 },
-    { header: 'مدينة المطابقة التلقائية', key: 'cityAuto', width: 20 },
+    { header: 'محافظة بوسطة', key: 'cityName', width: 16 },
+    { header: 'محافظة المطابقة التلقائية', key: 'cityAuto', width: 20 },
     { header: 'المنطقة', key: 'district', width: 20 },
     { header: 'حالة العنوان', key: 'addrMode', width: 24 },
     { header: 'العنوان', key: 'address', width: 40 },
@@ -5038,13 +5053,13 @@ async function submitStatusConfirm() {
 }
 
 async function exportResultsXLSX() {
-  if (!lastResults.length) { showToast('مفيش نتايج للتصدير', 'warning'); return; }
+  if (!lastResults.length) { showToast('لا توجد نتائج للتصدير', 'warning'); return; }
   await buildXLSX('نتيجة الرفع', [
     { header: 'رقم الأوردر', key: 'orderNumber', width: 14 },
     { header: 'النتيجة', key: 'status', width: 12 },
     { header: 'رقم التتبع', key: 'trackingNumber', width: 18 },
     { header: 'العقد', key: 'contractUsed', width: 14 },
-    { header: 'المدينة', key: 'citySent', width: 16 },
+    { header: 'المحافظة', key: 'citySent', width: 16 },
     { header: 'المنطقة', key: 'districtSent', width: 20 },
     { header: 'ما تم فعليًا', key: 'actions', width: 46 },
     { header: 'السبب / التحذير', key: 'reason', width: 50 },

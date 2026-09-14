@@ -23,7 +23,7 @@ const api=new Function('document','window','localStorage','Chart','ExcelJS', src
     dpPickOptions, dpPickCurrent, dpPickZone, dpPickToggle, dpPickFilter, renderDistrictList,
     chooseDistrict, setSearch(q){ document.getElementById('dpSearch').value = q; },
     pinDistrictToZone, pinDistrictToProvince, dpEffectiveZone, dpChosenDistrictId,
-    rowAddrMode, addrModeInfo,
+    rowAddrMode, addrModeInfo, ADDR_MODE_LABEL,
     zf(){ return dpZoneFilter; }, ov(){ return districtOverride; },
     setZf(z){ dpZoneFilter = z; }, open(){ return dpPickOpen; } };`
 )(doc,win,{getItem:()=>null,setItem(){},removeItem(){}});
@@ -281,11 +281,11 @@ console.log('\n── ⑪ الزون بيتحدّث من المنطقة ──')
   chk('والمطابقة التلقائية كمان بتحدّث الزون',
       /Nasr City/.test(api.dpPickCurrent('zone').text), api.dpPickCurrent('zone').text);
 
-  // ⚠️ «بلا زون» حالة حقيقية في الكتالوج — تتقال صريحة مش «الكل»
+  // ⚠️ «بلا مدينة» حالة حقيقية في الكتالوج — تتقال صريحة مش «الكل»
   api.setup([row],[{id:'n1',name:'NoZone',nameAr:'بلا',zone:'',zoneAr:''}],cities,'B','q');
   api.chooseDistrict('n1','NoZone');
   const nz = api.dpPickCurrent('zone');
-  chk('ومنطقة بلا زون بتقول «بلا زون» مش «الكل»', nz.text === 'بلا زون', nz.text);
+  chk('ومنطقة بلا مدينة بتقول «بلا مدينة» مش «الكل»', nz.text === 'بلا مدينة', nz.text);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -303,14 +303,14 @@ console.log('\n── ⑫ البحث بيخرج برّه القصر ──');
   api.renderDistrictList();
   const narrowed = (listHTML.match(/class="dp-item/g)||[]).length;
   chk('القصر شغّال من غير بحث', narrowed === 6, `ظهر ${narrowed}`);
-  chk('و«مدينة نصر» (برّه الزون) مخفية', !/Nasr City/.test(listHTML));
+  chk('و«مدينة نصر» (برّه القصر) مخفية', !/Nasr City/.test(listHTML));
 
-  // 🔴 دي النقطة: البحث على منطقة **برّه** الزون لازم يلاقيها
+  // 🔴 دي النقطة: البحث على منطقة **برّه** القصر لازم يلاقيها
   api.setSearch('nasr');
   api.renderDistrictList();
-  chk('البحث بيلاقي منطقة برّه الزون', /Nasr City/.test(listHTML), listHTML.slice(0,200));
+  chk('البحث بيلاقي منطقة برّه القصر', /Nasr City/.test(listHTML), listHTML.slice(0,200));
   chk('والبانر بيقول إن البحث خرج برّه القصر',
-      /كل مناطق المدينة/.test(listHTML));
+      /كل مناطق المحافظة/.test(listHTML));
   chk('والقصر لسه متسجّل (مش اتمسح)', api.zf() === 'Obour', api.zf());
 
   // وأول ما البحث يفضى، القصر يرجع زي ما هو
@@ -352,8 +352,9 @@ console.log('\n── ⑬ ارفع على الزون بس ──');
   // 🔴 الخانة لازم تعكس التثبيت — 🟢 لأنه اللي هيتبعت فعلًا
   const zbox = api.dpPickCurrent('zone');
   chk('وخانة الزون 🟢 ومعاها اسمه', zbox.cls === 'set' && /Obour/.test(zbox.text), JSON.stringify(zbox));
-  // 🔴 والمنطقة لازم تبقى «مفيش» — درجة واحدة بتتبعت، والخانتين مايتناقضوش
-  chk('وخانة المنطقة بقت «مفيش»', /مفيش/.test(api.dpPickCurrent('district').text),
+  // 🔴 والمنطقة لازم تبقى فاضية — درجة واحدة بتتبعت، والخانتين مايتناقضوش
+  chk('وخانة المنطقة بقت «لا توجد منطقة محددة»',
+      /لا توجد منطقة محددة/.test(api.dpPickCurrent('district').text),
       api.dpPickCurrent('district').text);
   chk('والمنطقة السارية اتلغت فعلًا', api.dpChosenDistrictId(row) === null);
 
@@ -369,6 +370,53 @@ console.log('\n── ⑬ ارفع على الزون بس ──');
   delete api.ov()['B'];
   api.pinDistrictToZone();
   chk('وزون بلا zoneId مابيتثبّتش', !api.ov()['B'], JSON.stringify(api.ov()['B']));
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⑬ تلميحات النافذة — التلاتة الباقية والباقي مشال (v2.8.0)
+//
+// 🔴 البند اللي بيحميه: قرار أحمد كان **يشيل كل tooltips النافذة ما عدا
+//    شروح الخانات التلاتة**. الشروح التلاتة دي هي الحاجة الوحيدة اللي
+//    بتفرّق بين «القيمة دي هتتبعت لبوسطة» (🟢) و«دي ترشيح عرض بس» (🔵) —
+//    الخانة بتعرض نفس النص في الحالتين واللون لوحده مابيكفيش.
+//    ⚠️ ومن الناحية التانية: أي `title=` بيرجع على صفوف القايمة أو البادج
+//    معناه إن حد رجّع التلميحات المشالة من غير قصد.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑬ تلميحات النافذة ──');
+{
+  api.setup([row],cairo,cities,'B','c');
+  delete api.ov()['B'];
+  api.renderDistrictList();
+
+  // الباقية: التلات خانات
+  for (const k of ['city','zone','district']) {
+    chk(`خانة ${k} لسه ليها شرح`, !!(api.dpPickCurrent(k).hint || '').trim());
+  }
+  // المشالة: صفوف القايمة
+  chk('ومفيش أي title على صفوف القايمة', !/title=/.test(listHTML),
+      (listHTML.match(/title="[^"]*"/) || [''])[0]);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⑭ بانر التغطية اتشال — **والمنع فضل** (v2.8.0 · بند ٧)
+//
+// 🔴 ده أخطر حارس في الملف ده. الرسالة اتشالت بطلب صريح، بس المنع نفسه
+//    (`mode = coverageBlocked` → الصف مايترفعش) **مالوش أي علاقة بيها** —
+//    عايش في الـ Worker ومتغطّى في `coverage-and-degree` ⑥ب.
+//    الاختبار ده بيمسك الحالة العكسية: إن حد «ينضّف» فيشيل المنع مع الرسالة.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑭ بانر التغطية اتشال والمنع فضل ──');
+{
+  const blockedRow = { ...row, mode: 'coverageBlocked',
+                       blockedDistricts: [{ id: 'tb', name: 'Taba', nameAr: 'طابا' }] };
+  api.setup([blockedRow],cairo,cities,'B','c');
+  delete api.ov()['B'];
+  api.renderDistrictList();
+  chk('مفيش بانر تغطية في النافذة', !/خارج تغطية بوسطة/.test(listHTML));
+  // والحالة لسه باينة في عنوان النافذة — المعلومة ما ضاعتش، الرسالة بس هي اللي اتشالت
+  chk('وبادج «خارج التغطية» لسه هو تسمية الحالة',
+      api.ADDR_MODE_LABEL?.coverageBlocked === '🚫 خارج التغطية',
+      api.ADDR_MODE_LABEL?.coverageBlocked);
 }
 
 console.log(`\n${p}/${n} نجحت`);
