@@ -703,7 +703,17 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
    ⚠️ اللوحة `position:absolute` جوّه خانة `position:relative` — مش `fixed`:
    السياق بيتعاد رسمه بالكامل مع كل اختيار، ولوحة عايشة برّه الشجرة كانت
    هتفضل معلّقة على الشاشة بعد ما مصدرها يتمسح. */
-.dp-pick{position:relative;flex:1;min-width:0;}
+/* 🔴 اللوحة **بتتعلّق على الصف كله مش على الخانة** (v2.6.2). `.dp-pick` بقت
+   `static` عن قصد عشان الحاوية الموضعية تبقى `.dp-src` — فاللوحة بتاخد عرض
+   الصف بالكامل (`inset-inline:0`) وتنزل تحته.
+   السبب: أسماء المناطق **سطر واحد طويل** («B1 Factories (10th of Ramadan) —
+   B1 مصانع (العاشر من رمضان)») وعرض الخانة تُلت النافذة، فالاسم كان بيتلف على
+   تلات سطور والقراءة بتبقى تخمين.
+   ⚠️ وده كمان **بيلغي خطر الخروج برّه النافذة** من أصله: العرض = عرض الصف
+   بالظبط، مهما كانت الخانة فين — فمفيش شريط تمرير أفقي ومفيش حاجة تتقص.
+   الزرار المفتوح بيفضل مميّز بلونه فمعروف اللوحة بتاعة مين. */
+.dp-src{position:relative;}
+.dp-pick{position:static;flex:1;min-width:0;}
 .dp-pick-btn{width:100%;min-width:0;display:flex;align-items:center;gap:6px;
   padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--border-strong);
   background:var(--surface);font-family:inherit;font-size:12px;font-weight:800;
@@ -725,21 +735,20 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
    حافة النافذة — فـ`.eco-modal-body` (عليها `overflow-y:auto`، يعني الأفقي
    بيحسب `auto` كمان) كانت بتطلّع **شريط تمرير أفقي** والمحتوى يزحف.
    الحل إن آخر خانة تتثبّت من ناحية النهاية فتمتد لجوّه. */
-.dp-pick-panel{display:none;position:absolute;z-index:40;inset-inline-start:0;top:calc(100% + 4px);
-  width:max(340px,100%);max-width:min(92vw,460px);background:var(--surface);
-  border:1px solid var(--border-strong);
+.dp-pick-panel{display:none;position:absolute;z-index:40;inset-inline:0;top:calc(100% + 4px);
+  background:var(--surface);border:1px solid var(--border-strong);
   border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,.16);overflow:hidden;}
 .dp-pick.open .dp-pick-panel{display:block;}
-.dp-f:last-child .dp-pick-panel{inset-inline-start:auto;inset-inline-end:0;}
 .dp-pick-search{width:100%;height:30px;border:none;border-bottom:1px solid var(--border);
   padding:0 10px;font-family:inherit;font-size:12px;background:var(--surface-2);outline:none;}
 .dp-pick-search:focus{background:var(--surface);}
-.dp-pick-list{max-height:240px;overflow-y:auto;}
+.dp-pick-list{max-height:300px;overflow-y:auto;}
 /* الاسم بيلف والعدّاد مابيتزقّش — الاسمين (إنجليزي — عربي) بيعدّوا السطر
    بسهولة، ومن غير `min-width:0` الفليكس بيرفض يقصّرهم فالعمودين بيركبوا. */
 .dp-pick-opt{padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;
   display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);}
-.dp-pick-opt > span:first-child{flex:1;min-width:0;line-height:1.5;}
+.dp-pick-opt > span:first-child{flex:1;min-width:0;line-height:1.6;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .dp-pick-opt:first-child{border-top:none;}
 .dp-pick-opt:hover{background:var(--accent-light);}
 .dp-pick-opt.cur{background:var(--green-light);color:var(--green-dark);}
@@ -880,6 +889,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <span class="cl-ver-date">14-09-2026</span>
         </div>
         <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>🗺️ <b>زرار «ارفع على الزون بس»</b> جنب «ارفع على المحافظة بس». قبل كده درجة الزون كانت <b>تلقائية بس</b> — الموظف اللي شايف المطابقة مش مظبوطة بس <b>عارف الزون</b> ماكانش قدامه غير المحافظة، وهي بتاخد <b>هب افتراضي</b> والزون بياخد <b>هب محدد</b>؛ يعني كان بينزل درجتين بدل واحدة. ⚠️ الزون بيتبعت بالـ <code>zoneId</code> مش بالاسم (الاسم بيتكرر بين المدن)، والـ Worker بيتحقق إنه <b>في مدينة الرفع</b> ومش كل مناطقه مقفولة — ولو لأ <b>بيوقف الصف</b>.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>القايمة المنسدلة بقت بعرض الصف كله</b> بدل عرض الخانة. أسماء المناطق (<code>B1 Factories (10th of Ramadan) — B1 مصانع (العاشر من رمضان)</code>) كانت بتتلف على <b>تلات سطور</b> والقراءة تبقى تخمين. ✅ وده كمان بيلغي خطر الخروج برّه النافذة من أصله: العرض = عرض الصف بالظبط.</span></li>
           <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🗺️ <b>خانة الزون ما كانتش بتتحدّث لما تختار منطقة.</b> المنطقة جوّه زون <b>واحد بالظبط</b>، فأول ما منطقة تتحدد الزون بقى محسوم — وكانت الخانة لسه بتقول «الكل»، فالتلات خانات تقرا كأن العنوان ناقص درجة وهو كامل. دلوقتي بتعرض زون المنطقة المختارة (تلقائية كانت أو يدوية) بالأخضر. ⚠️ والزون هنا <b>مشتقّ مش مبعوت</b>: الأداة بتبعت <code>districtId</code> وبوسطة بتحطّ الزون لوحدها منه.</span></li>
           <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>البحث كان بيرجّع «مفيش مناطق مطابقة» على منطقة موجودة فعلًا.</b> لما القايمة تكون مقصورة على زون، البحث كان بيدوّر <b>جوّه الزون بس</b> — فالموظف يكتب اسم منطقة في نفس المدينة ويلاقي طريق مسدود من غير أي خطأ. دلوقتي <b>البحث بيلف على كل مناطق المدينة</b> والقصر بيرجع أول ما خانة البحث تفضى. (الفخ ده بقى أقرب بعد ما القصر بقى بيتطبّق لوحده على صف الزون.)</span></li>
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🗺️ <b>الزون بقى مكان واحد بدل تلاتة.</b> كان فيه بانر «الشحنة هتترفع على زون…» وصف «اضغط عشان تشوف مناطقه بس» <b>فوق</b> القايمة، والاتنين بيقولوا نفس اللي خانة الزون في صف بوسطة بتقوله. الاتنين اتشالوا — <b>والقايمة تحت بقت تتقصر على الزون تلقائيًا</b> أول ما تفتح النافذة. (اقتراح <b>المدن التانية</b> فضل — ده بيغيّر المدينة ومش معروض في أي مكان تاني.)</span></li>
@@ -1217,6 +1228,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
     </div>
     <div class="eco-modal-ftr">
       <button class="btn-ghost" onclick="resetDistrictToAuto()">↺ رجّع للمطابقة التلقائية</button>
+      <button class="btn-ghost" id="dpPinZone" onclick="pinDistrictToZone()">🗺️ ارفع على الزون بس</button>
       <button class="btn-ghost" onclick="pinDistrictToProvince()">🏙️ ارفع على المحافظة بس</button>
       <button class="btn-modal-save" onclick="closeDistrictPicker()">تم</button>
     </div>
@@ -1885,12 +1897,12 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.6.1';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.7.0';   // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
 //    القديم من غير ما حد ياخد باله. الحارس بيتنده في `checkWorkerVersion`.
-const MIN_WORKER_VERSION = '2.1.1';
+const MIN_WORKER_VERSION = '2.1.2';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -2962,7 +2974,9 @@ function applySpecificMonth(scope, year, month) {
 let allRows = [];
 let visibleRows = [];   // الصفوف المعروضة حسب الفلتر الحالي — مصدر «رفع الكل»
 let selected = new Set();
-let districtOverride = {};      // orderId → { districtId, districtName } أو { forceProvince:true }
+// orderId → { districtId, districtName } أو { forceZone:true, zoneId, zoneName }
+// أو { forceProvince:true } — والتلاتة ممكن يبقى معاهم { cityId, cityName }
+let districtOverride = {};
 let searchTerm = '';
 let fltOpen = true, tblOpen = true;
 
@@ -3068,6 +3082,7 @@ function rowAddrMode(r) {
   if (!r.addressOk) return 'blocked';
   const ov = districtOverride[r.orderId];
   if (ov?.districtId) return 'district';
+  if (ov?.forceZone) return 'zone';
   if (ov?.forceProvince) return 'province';
   if (ov?.cityId) return 'cityFixed';     // المدينة اتعدّلت يدويًا ولسه من غير منطقة
   if (r.ambiguous) return 'ambiguous';
@@ -3117,6 +3132,9 @@ function addrModeInfo(r) {
   const cityTxt = ov?.cityId && ov.cityId !== r.cityId ? ` (مدينة ${ov.cityName})` : '';
   if (ov?.districtId)   return { label: `📍 ${ov.districtName}${cityTxt}`, set: true,
     hint: `منطقة متحدّدة يدويًا — الشحنة هتترفع على مدينة ${ov.cityName || r.cityName} بـ districtId عليها` };
+  if (ov?.forceZone) return { label: `🗺️ ${ov.zoneName} · مثبّت`, set: true,
+    hint: `متثبّت يدويًا على زون ${ov.zoneName} — الشحنة هتترفع بالـ zoneId ده، `
+        + 'يعني هب وكود فرز محددين بدل الهب الافتراضي للمحافظة. مش هتتبعت منطقة.' };
   if (ov?.forceProvince) return { label: `🏙️ ${ov.cityName || r.cityName} بس · مثبّت`, set: false,
     hint: 'متثبّت يدويًا على مستوى المدينة — مش هتتبعت منطقة حتى لو المطابقة نجحت وقت الرفع' };
   if (ov?.cityId) return { label: `🏙️ ${ov.cityName} · مدينة معدّلة`, set: false,
@@ -3747,12 +3765,16 @@ function dpPickOptions(key) {
       const id = z || zAr;
       const prev = byKey.get(id);
       if (prev) { prev.count++; continue; }
-      byKey.set(id, { id, name: z, nameAr: zAr, count: 1 });
+      // 🔴 `zoneId` بيتحمل مع الاسم — هو اللي بيترفع، والاسم للعرض بس.
+      //    زون بلا id ينفع كمُرشِّح، بس **مايترفعش عليه** (زرار «ارفع على
+      //    الزون بس» بيتقفل عليه).
+      byKey.set(id, { id, name: z, nameAr: zAr, zoneId: d.zoneId || null, count: 1 });
     }
     return [...byKey.values()]
       .sort((a, b) => a.id.localeCompare(b.id, 'en'))
       .map(z => ({
         id: z.id,
+        zoneId: z.zoneId,
         label: `${z.name || z.nameAr}${z.nameAr && z.nameAr !== z.name ? ` — ${z.nameAr}` : ''}`,
         sub: `${fmtNum(z.count)} منطقة`,
         blocked: false,
@@ -3789,6 +3811,10 @@ function dpPickOptions(key) {
 //    أصلًا — فالموظف يختار منطقة والزون يفضل «الكل».
 function dpChosenDistrictId(r) {
   const ov = districtOverride[dpOrderId];
+  // 🔴 التثبيت على الزون أو المحافظة **بيلغي المنطقة** — الـ payload بيبعت
+  //    درجة واحدة بس. من غير السطر ده الخانتين بيتناقضوا: منطقة خضرا معروضة
+  //    والشحنة بتترفع على الزون.
+  if (ov?.forceZone || ov?.forceProvince) return null;
   return ov?.districtId || (dpCityId === r.cityId ? r.districtId : null);
 }
 
@@ -3825,6 +3851,14 @@ function dpPickCurrent(key) {
     //    ⚠️ والزون هنا **مشتقّ مش مبعوت**: الـ payload بيبعت `districtId` بس،
     //    وبوسطة بتحطّ الزون لوحدها منه. بس هو **جزء من العنوان اللي هيتسجّل
     //    على الشحنة فعلًا**، فبياخد 🟢 زي المنطقة — مش 🔵 (دي للترشيح).
+    // 🔴 التثبيت اليدوي على الزون أسبق من كل حاجة — ده **قرار الموظف** وهو
+    //    اللي هيتبعت، فبياخد 🟢 زي المنطقة المختارة بالظبط.
+    const ovZ = districtOverride[dpOrderId];
+    if (ovZ?.forceZone) {
+      return { text: ovZ.zoneName, cls: 'set',
+               hint: `متثبّت يدويًا — الشحنة هتترفع على زون ${ovZ.zoneName} (zoneId) `
+                   + 'ومش هتتبعت منطقة. «↺ رجّع للمطابقة التلقائية» بتشيل التثبيت.' };
+    }
     const chosenId = dpChosenDistrictId(r);
     const chosenD  = chosenId ? dpDistricts.find(d => d.id === chosenId) : null;
     if (chosenD) {
@@ -3856,12 +3890,16 @@ function dpPickCurrent(key) {
     return { text: 'الكل', cls: 'muted',
              hint: 'اختر زون عشان تقصّر قايمة المناطق تحت — الزون ترشيح، مابيحددش منطقة' };
   }
-  const dm = addrModeInfo(r);
   if (cur) return { text: cur.label, cls: 'set',
                     hint: 'المنطقة اللي الشحنة هتترفع عليها (districtId) — أدق درجة عنوان' };
-  // مفيش منطقة متحددة — البادج نفسه مش منطقة، فكتابته هنا بتقرا كأن الشحنة
-  // عليها منطقة وهي مالهاش.
-  return { text: dm.set && dpCityId === r.cityId ? dm.label : '— مفيش —', cls: 'muted',
+  // 🔴 البادج بيتستعار هنا **بس لو الدرجة درجة منطقة فعلًا** (`district` أو
+  //    `zoneName`). من غير الشرط ده الخانة بتاخد تسمية البادج أيًا كانت — فصف
+  //    مثبّت على الزون كان بيعرض «🗺️ Obour · مثبّت» **في خانة المنطقة**،
+  //    والخانتين يقروا نفس القيمة لدرجتين مختلفتين.
+  const isDistrictDegree = ['district', 'zoneName'].includes(rowAddrMode(r));
+  const dm = addrModeInfo(r);
+  return { text: isDistrictDegree && dm.set && dpCityId === r.cityId ? dm.label : '— مفيش —',
+           cls: 'muted',
            hint: 'مفيش منطقة متحددة — الشحنة هتترفع على درجة أقل دقة (زون أو محافظة)' };
 }
 
@@ -3942,6 +3980,16 @@ function renderDpPickList(key) {
 function renderDpControls() {
   const r = allRows.find(x => x.orderId === dpOrderId);
   if (!r) return;
+  // 🔴 الزرار بيتقفل لما مفيش زون صالح — زرار شغّال بيرمي رسالة خطأ أسوأ من
+  //    زرار مقفول بيقول السبب على الـ hover.
+  const pinZ = document.getElementById('dpPinZone');
+  if (pinZ) {
+    const z = dpEffectiveZone(r);
+    pinZ.disabled = !z?.zoneId;
+    pinZ.title = z?.zoneId
+      ? `الشحنة هتترفع على زون ${z.id} بدل المنطقة — هب وكود فرز محددين بدل الهب الافتراضي للمحافظة`
+      : 'مفيش زون متحدد — اختر زون أو منطقة من القوايم فوق الأول';
+  }
   for (const key of Object.keys(DP_PICKS)) {
     const wrap = document.getElementById(`dpPick-${key}`);
     const btn  = document.getElementById(`dpPickBtn-${key}`);
@@ -4230,6 +4278,50 @@ async function resetDistrictToAuto() {
 }
 // تثبيت صريح على المدينة من غير منطقة — بيمنع أي منطقة تتبعت حتى لو الكتالوج
 // طابق وقت الرفع. المدينة المختارة بتفضل زي ما هي.
+// ─── الزون اللي «ارفع على الزون بس» هيشتغل عليه ───
+// 🔴 الترتيب هو **نفس ترتيب خانة الزون** بالظبط: زون المنطقة المختارة ← القصر
+//    ← درجة الزون التلقائية. لو اختلفوا، الموظف هيضغط الزرار وياخد زون غير
+//    اللي قدامه في الخانة.
+function dpEffectiveZone(r) {
+  const ov = districtOverride[dpOrderId];
+  if (ov?.forceZone) return { id: ov.zoneName, zoneId: ov.zoneId, label: ov.zoneName };
+  const chosenId = dpChosenDistrictId(r);
+  const chosenD  = chosenId ? dpDistricts.find(d => d.id === chosenId) : null;
+  const name = chosenD ? (chosenD.zone || chosenD.zoneAr || '')
+             : dpZoneFilter
+             || ((r.mode === 'zone' && dpCityId === r.cityId) ? r.zoneName : '');
+  if (!name) return null;
+  const opt = dpPickOptions('zone').find(o => o.id.toLowerCase() === String(name).toLowerCase());
+  return opt ? { id: opt.id, zoneId: opt.zoneId, label: opt.label } : null;
+}
+
+// 🔴 **ارفع على الزون بس** — درجة وسيطة يختارها الموظف (v2.6.2).
+//    كانت درجة الزون **تلقائية بس**: مفيش مطابقة منطقة + زون واحد + مفيش شك
+//    مدينة. يعني الموظف اللي شايف المطابقة التلقائية مش مظبوطة **بس عارف
+//    الزون** ماكانش قدامه غير «المحافظة بس» — وهي بتاخد **هب افتراضي**
+//    والزون بياخد **هب محدد** (مقيس بمقارنة بوليصتين · `bosta-api-helper`
+//    8.10.2). يعني كان بيضطر ينزل درجتين بدل واحدة.
+// ⚠️ بيمسح أي منطقة مختارة عن قصد — الزون والمنطقة درجتين مختلفتين، وبعتهم
+//    مع بعض معناه إن الـ payload يبعت المنطقة والزون يتجاهل.
+function pinDistrictToZone() {
+  const r = allRows.find(x => x.orderId === dpOrderId);
+  if (!r) return;
+  const z = dpEffectiveZone(r);
+  if (!z || !z.zoneId) {
+    showToast(z ? `زون ${z.label} مالوش zoneId في الكتالوج — مينفعش الرفع عليه`
+                : 'مفيش زون متحدد — اختر زون من القايمة فوق الأول', 'error', 6000);
+    return;
+  }
+  const cityName = dpCities.find(c => c.cityId === dpCityId)?.cityName || r.cityName;
+  districtOverride[dpOrderId] = {
+    forceZone: true, zoneId: z.zoneId, zoneName: z.id,
+    ...(dpCityId !== r.cityId ? { cityId: dpCityId, cityName } : {}),
+  };
+  renderDistrictList();
+  applyFilters();
+  showToast(`اتثبّت على زون ${z.id} — مش هتتبعت منطقة`, 'success', 5000);
+}
+
 function pinDistrictToProvince() {
   const r = allRows.find(x => x.orderId === dpOrderId);
   if (!r) return;
@@ -4376,6 +4468,10 @@ async function postUploadS1(chunk, j, allowDuplicate) {
       //    تبع المدينة دي فعلًا وبيوقف الصف لو لأ — مش بيرجع للتلقائي بصمت.
       cityId: ov.cityId || undefined,
       districtId: ov.districtId || undefined,
+      // 🔴 الزون بيتبعت بالـ `zoneId` مش بالاسم — الاسم بيتكرر بين المدن،
+      //    والـ id هو اللي بيترفع فعلًا. والـ Worker بيتحقق إنه تبع المدينة دي.
+      forceZone: ov.forceZone || undefined,
+      zoneId: ov.zoneId || undefined,
       forceProvince: ov.forceProvince || undefined,
       allowDuplicate: allowDuplicate && r.alreadyUploaded ? true : undefined,
     };
@@ -4395,6 +4491,8 @@ async function postUploadRE(chunk, j) {
     overrides[r.orderGid] = {
       cityId: ov.cityId || undefined,
       districtId: ov.districtId || undefined,
+      forceZone: ov.forceZone || undefined,
+      zoneId: ov.zoneId || undefined,
       forceProvince: ov.forceProvince || undefined,
     };
   }

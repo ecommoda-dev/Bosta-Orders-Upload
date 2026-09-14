@@ -77,7 +77,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.1.1';
+const WORKER_VERSION = '2.1.2';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2051,6 +2051,21 @@ function buildAddressObject(plan, mode, firstLine) {
   return { city: plan.cityName, firstLine };
 }
 
+// ─── §BOSTA::resolveZoneOverride ───
+// 🔴 الزون المختار يدويًا بيتحقّق **زي المنطقة بالظبط**: لازم يكون موجود في
+//    مدينة الرفع ومن مناطق متاحة للتسليم. مش لاقيينه = **وقف الصف**، مش رجوع
+//    صامت لدرجة تانية — الموظف اختار صراحةً، والرفع على حاجة تانية من غير ما
+//    يعرف = شحنة بفلوس على عنوان مش اللي وافق عليه.
+// ⚠️ والبحث على `zoneId` مش على الاسم: الاسم بيتكرر بين المدن، والـ id هو
+//    اللي بيترفع فعلًا (`bosta-api-helper` 8.10.4).
+function resolveZoneOverride(catalog, cityId, zoneId) {
+  const city = catalog.cities.find(c => c.cityId === cityId);
+  const { list } = availableDistricts(city);
+  const hit = list.find(d => d.zoneId && d.zoneId === zoneId);
+  if (!hit) return null;
+  return { zoneId: hit.zoneId, zoneName: hit.zone || hit.zoneAr || '' };
+}
+
 // ─── §BOSTA::addressDegree ───
 // درجة العنوان اللي اتبعت فعلًا — بتتسجّل في D1 جنب `contract_used`.
 // 🔴 `contract_used` **لوحده بقى ناقص** (8.10.4): الزون والمحافظة الاتنين
@@ -2496,6 +2511,21 @@ async function uploadOne(env, token, order, catalog, override) {
     mode = 'district';
     planUsed.districtId = d.id;
     planUsed.districtName = d.name;
+  } else if (override?.forceZone) {
+    // 🔴 «ارفع على الزون بس» — درجة وسيطة **يختارها الموظف**، مش تلقائية بس.
+    //    الفايدة مقيسة: هب وكود فرز محددين بدل الهب الافتراضي للمحافظة
+    //    (`bosta-api-helper` 8.10.2). الحالة دي بتحصل لما المطابقة التلقائية
+    //    مش واثقة من المنطقة، بس الموظف عارف الزون.
+    const z = resolveZoneOverride(catalog, planUsed.cityId, override.zoneId);
+    if (!z) {
+      row.status = 'error';
+      row.error  = `الزون المختار يدويًا مش موجود (أو كل مناطقه مقفولة للتسليم) في ` +
+                   `مدينة ${planUsed.cityName} عند بوسطة — الرفع اتوقف. افتح النافذة واختر من الأول.`;
+      return row;
+    }
+    mode = 'zone';
+    planUsed.zoneId   = z.zoneId;
+    planUsed.zoneName = z.zoneName;
   } else if (override?.forceProvince || row.cityOverridden) {
     // مدينة متعدّلة من غير منطقة = رفع على مستوى المدينة الجديدة (أفضل بكتير
     // من المدينة الغلط، وبيدخل مسار العناوين غير الواضحة عند بوسطة عادي)
@@ -2951,6 +2981,17 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     mode = 'district';
     planUsed.districtId   = d.id;
     planUsed.districtName = d.name;
+  } else if (override?.forceZone) {
+    // 🔴 نفس حارس §UPLOAD بالحرف — الوقف مش الرجوع الصامت.
+    const z = resolveZoneOverride(catalog, planUsed.cityId, override.zoneId);
+    if (!z) {
+      row.error = `الزون المختار يدويًا مش موجود (أو كل مناطقه مقفولة للتسليم) في `
+                + `مدينة ${planUsed.cityName} عند بوسطة — الرفع اتوقف. افتح النافذة واختر من الأول.`;
+      return row;
+    }
+    mode = 'zone';
+    planUsed.zoneId   = z.zoneId;
+    planUsed.zoneName = z.zoneName;
   } else if (override?.forceProvince || row.cityOverridden) {
     mode = 'province';
   }
