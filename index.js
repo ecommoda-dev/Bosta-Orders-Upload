@@ -77,7 +77,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.1.2';
+const WORKER_VERSION = '2.1.3';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -1933,7 +1933,7 @@ function resolveAddress(order, catalog) {
     // هتشحن على المدينة الغلط. (اتمسكت في `tests/re-payload.test.cjs` ⑨.)
     return {
       ok: false,
-      error: `مدينة بوسطة "${row.cityName}" (${row.cityId}) مش موجودة في الكتالوج الحي — `
+      error: `محافظة بوسطة "${row.cityName}" (${row.cityId}) مش موجودة في الكتالوج الحي — `
            + 'كتالوج بوسطة اتغيّر. راجع الجدول في ecommoda-constants §3.5.',
     };
   }
@@ -2320,7 +2320,7 @@ function humanizeBostaError(res, job = null) {
   }
   if (code === '3003')  return 'بوسطة رافضة: المنطقة غير موجودة عندها (District Not Found)';
   if (code === '3002')  return 'بوسطة رافضة: الزون غير موجود عندها (Zone Not Found)';
-  if (code === '3000')  return 'بوسطة رافضة: بيانات العنوان ناقصة — لازم درجة عنوان (منطقة أو زون أو مدينة) مع نص العنوان';
+  if (code === '3000')  return 'بوسطة رافضة: بيانات العنوان ناقصة — لازم درجة عنوان (منطقة أو مدينة أو محافظة) مع نص العنوان';
   if (code === '3009')  return 'بوسطة رافضة: العنوان من غير مفتاح درجة — لازم city أو zoneId أو districtId';
   if (code === '3007')  return `بوسطة رافضة: أقصى مبلغ تحصيل ${COD_MAX.toLocaleString('en-US')} جنيه`;
   if (code === '3008')  return `بوسطة رافضة: أقصى مبلغ استرداد عند الباب ${COD_REFUND_MIN} جنيه`;
@@ -2486,8 +2486,8 @@ async function uploadOne(env, token, order, catalog, override) {
     const ovCity = catalog.cities.find(c => c.cityId === ovCityId);
     if (!ovCity) {
       row.status = 'error';
-      row.error  = `المدينة المختارة يدويًا (${ovCityId}) مش موجودة في كتالوج بوسطة — ` +
-                   `الرفع اتوقف بدل ما يتبعت على المدينة الأصلية`;
+      row.error  = `المحافظة المختارة يدويًا (${ovCityId}) مش موجودة في كتالوج بوسطة — ` +
+                   `الرفع اتوقف بدل ما يتبعت على المحافظة الأصلية`;
       return row;
     }
     planUsed.cityId   = ovCity.cityId;
@@ -2505,7 +2505,7 @@ async function uploadOne(env, token, order, catalog, override) {
     if (!d) {
       row.status = 'error';
       row.error  = `المنطقة المختارة يدويًا مش موجودة (أو مش متاحة للتسليم) في ` +
-                   `مدينة ${planUsed.cityName} عند بوسطة — الرفع اتوقف. افتح النافذة واختر من الأول.`;
+                   `محافظة ${planUsed.cityName} عند بوسطة — الرفع اتوقف. افتح النافذة واختر من الأول.`;
       return row;
     }
     mode = 'district';
@@ -2519,8 +2519,8 @@ async function uploadOne(env, token, order, catalog, override) {
     const z = resolveZoneOverride(catalog, planUsed.cityId, override.zoneId);
     if (!z) {
       row.status = 'error';
-      row.error  = `الزون المختار يدويًا مش موجود (أو كل مناطقه مقفولة للتسليم) في ` +
-                   `مدينة ${planUsed.cityName} عند بوسطة — الرفع اتوقف. افتح النافذة واختر من الأول.`;
+      row.error  = `المدينة المختارة يدويًا مش موجودة (أو كل مناطقها مقفولة للتسليم) في ` +
+                   `محافظة ${planUsed.cityName} عند بوسطة — الرفع اتوقف. افتح النافذة واختر من الأول.`;
       return row;
     }
     mode = 'zone';
@@ -2957,8 +2957,8 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   if (ovCityId && ovCityId !== plan.cityId) {
     const ovCity = catalog.cities.find((c) => c.cityId === ovCityId);
     if (!ovCity) {
-      row.error = `المدينة المختارة يدويًا (${ovCityId}) مش موجودة في كتالوج بوسطة — `
-                + 'الرفع اتوقف بدل ما يتبعت على المدينة الأصلية';
+      row.error = `المحافظة المختارة يدويًا (${ovCityId}) مش موجودة في كتالوج بوسطة — `
+                + 'الرفع اتوقف بدل ما يتبعت على المحافظة الأصلية';
       return row;
     }
     planUsed.cityId   = ovCity.cityId;
@@ -2975,7 +2975,7 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     //    عنوان مش اللي وافق عليه.
     if (!d) {
       row.error = `المنطقة المختارة يدويًا مش موجودة (أو مش متاحة للتسليم) في `
-                + `مدينة ${planUsed.cityName} عند بوسطة — الرفع اتوقف. افتح النافذة واختر من الأول.`;
+                + `محافظة ${planUsed.cityName} عند بوسطة — الرفع اتوقف. افتح النافذة واختر من الأول.`;
       return row;
     }
     mode = 'district';
@@ -2985,8 +2985,8 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     // 🔴 نفس حارس §UPLOAD بالحرف — الوقف مش الرجوع الصامت.
     const z = resolveZoneOverride(catalog, planUsed.cityId, override.zoneId);
     if (!z) {
-      row.error = `الزون المختار يدويًا مش موجود (أو كل مناطقه مقفولة للتسليم) في `
-                + `مدينة ${planUsed.cityName} عند بوسطة — الرفع اتوقف. افتح النافذة واختر من الأول.`;
+      row.error = `المدينة المختارة يدويًا مش موجودة (أو كل مناطقها مقفولة للتسليم) في `
+                + `محافظة ${planUsed.cityName} عند بوسطة — الرفع اتوقف. افتح النافذة واختر من الأول.`;
       return row;
     }
     mode = 'zone';
@@ -3068,7 +3068,7 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     );
   }
   if (row.cityOverridden) {
-    row.warnings.push(`المدينة اتغيّرت يدويًا من ${row.cityAuto} إلى ${row.citySent}`);
+    row.warnings.push(`المحافظة اتغيّرت يدويًا من ${row.cityAuto} إلى ${row.citySent}`);
   }
 
   // 🔴 من هنا ورايح الشحنة **موجودة وبتكلّف فلوس**. أي حاجة بعدها warning،
