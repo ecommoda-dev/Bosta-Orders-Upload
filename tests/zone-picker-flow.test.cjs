@@ -21,6 +21,7 @@ const api=new Function('document','window','localStorage','Chart','ExcelJS', src
     setup(rows,districts,cities,orderId,cityId){ allRows=rows; dpDistricts=districts; dpCities=cities;
       dpOrderId=orderId; dpCityId=cityId; dpLoading=false; },
     dpPickOptions, dpPickCurrent, dpPickZone, dpPickToggle, dpPickFilter, renderDistrictList,
+    chooseDistrict, setSearch(q){ document.getElementById('dpSearch').value = q; },
     zf(){ return dpZoneFilter; }, ov(){ return districtOverride; },
     setZf(z){ dpZoneFilter = z; }, open(){ return dpPickOpen; } };`
 )(doc,win,{getItem:()=>null,setItem(){},removeItem(){}});
@@ -238,6 +239,74 @@ console.log('\n── ⑩ مفيش عدّاد مقفولة ──');
   api.setZf(null);
   chk('والمنطقة المقفولة نفسها لسه معلّمة',
       /مقفولة/.test(api.dpPickOptions('district').find(o=>o.id==='x1')?.sub || ''));
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⑪ خانة الزون بتتحدّث من المنطقة المختارة (واجهة v2.6.1)
+// 🔴 المنطقة جوّه زون **واحد بالظبط**، فأول ما منطقة تتحدد الزون بقى محسوم.
+//    قبل كده كانت الخانة بتقرا `dpZoneFilter` بس، فالموظف يختار منطقة
+//    والزون يفضل «الكل» — والتلات خانات تقرا كأن العنوان ناقص درجة وهو كامل.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑪ الزون بيتحدّث من المنطقة ──');
+{
+  api.setup([row],cairo,cities,'B','q');
+  api.setZf(null);
+  delete api.ov()['B'];
+  chk('من غير منطقة → «الكل»', api.dpPickCurrent('zone').text === 'الكل',
+      api.dpPickCurrent('zone').text);
+
+  // الموظف اختار منطقة جوّه زون العبور
+  api.chooseDistrict('o3','District 01 (Obour)');
+  const z = api.dpPickCurrent('zone');
+  chk('بعد اختيار المنطقة الزون بقى زونها', /Obour/.test(z.text), z.text);
+  // 🔴 🟢 مش 🔵: الزون هنا **جزء من العنوان اللي هيتسجّل**، مش ترشيح عرض
+  chk('ولونه 🟢 مش 🔵 ترشيح', z.cls === 'set', z.cls);
+  chk('والشرح بيقول إنه مشتقّ من المنطقة', /المنطقة المختارة/.test(z.hint || ''), z.hint);
+
+  // ⚠️ والمطابقة التلقائية زي اليدوية بالظبط — مش محتاجة الموظف يضغط
+  delete api.ov()['B'];
+  api.setup([{ ...row, mode:'district', districtId:'c1', districtName:'Nasr City', cityId:'q' }],
+            cairo,cities,'B','q');
+  chk('والمطابقة التلقائية كمان بتحدّث الزون',
+      /Nasr City/.test(api.dpPickCurrent('zone').text), api.dpPickCurrent('zone').text);
+
+  // ⚠️ «بلا زون» حالة حقيقية في الكتالوج — تتقال صريحة مش «الكل»
+  api.setup([row],[{id:'n1',name:'NoZone',nameAr:'بلا',zone:'',zoneAr:''}],cities,'B','q');
+  api.chooseDistrict('n1','NoZone');
+  const nz = api.dpPickCurrent('zone');
+  chk('ومنطقة بلا زون بتقول «بلا زون» مش «الكل»', nz.text === 'بلا زون', nz.text);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⑫ البحث بيلغي قصر الزون (واجهة v2.6.1)
+// 🔴 القصر أداة **تصفّح** والبحث أداة **وصول**. قبل كده البحث كان بيتطبّق
+//    **بعد** القصر، فالموظف يكتب اسم منطقة موجودة فعلًا في المدينة ويقرا
+//    «مفيش مناطق مطابقة» — طريق مسدود من غير أي خطأ. والفخ بقى أقرب من
+//    v2.6.0 لأن القصر بقى بيتطبّق **لوحده** على صف الزون أول ما النافذة تفتح.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑫ البحث بيخرج برّه القصر ──');
+{
+  api.setup([row],cairo,cities,'B','q');
+  delete api.ov()['B'];
+  api.setZf('Obour');          // القايمة مقصورة على ٦ مناطق العبور
+  api.renderDistrictList();
+  const narrowed = (listHTML.match(/class="dp-item/g)||[]).length;
+  chk('القصر شغّال من غير بحث', narrowed === 6, `ظهر ${narrowed}`);
+  chk('و«مدينة نصر» (برّه الزون) مخفية', !/Nasr City/.test(listHTML));
+
+  // 🔴 دي النقطة: البحث على منطقة **برّه** الزون لازم يلاقيها
+  api.setSearch('nasr');
+  api.renderDistrictList();
+  chk('البحث بيلاقي منطقة برّه الزون', /Nasr City/.test(listHTML), listHTML.slice(0,200));
+  chk('والبانر بيقول إن البحث خرج برّه القصر',
+      /كل مناطق المدينة/.test(listHTML));
+  chk('والقصر لسه متسجّل (مش اتمسح)', api.zf() === 'Obour', api.zf());
+
+  // وأول ما البحث يفضى، القصر يرجع زي ما هو
+  api.setSearch('');
+  api.renderDistrictList();
+  const back = (listHTML.match(/class="dp-item/g)||[]).length;
+  chk('وبيرجع بعد ما البحث يفضى', back === 6, `ظهر ${back}`);
 }
 
 console.log(`\n${p}/${n} نجحت`);
