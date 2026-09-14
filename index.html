@@ -413,6 +413,20 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .results-count{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:34px;padding:0 10px;
   font-family:var(--font-mono);font-size:17px;font-weight:800;color:var(--purple);background:var(--purple-light);
   border:1.5px solid var(--purple-border);border-radius:var(--radius-sm);}
+/* ── نافذة نتيجة الرفع (واجهة v2.2.0) ───────────────────────── */
+.res-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.res-count-lbl{font-size:14px;font-weight:800;color:var(--text-primary);white-space:nowrap;}
+.res-head .summary-row{padding:0;}
+/* التفاصيل بتتطوى بالكامل — مش بـ`max-height:0` اللي بيسيب الجدول مقروء
+   للسكرين ريدر وبيخلي الـ scroll يزحف جوّه نافذة مقفولة */
+.res-details{border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
+.res-details.collapsed{display:none;}
+.res-verdict{font-size:13px;font-weight:800;line-height:1.8;padding:9px 12px;margin-bottom:10px;
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface-2);color:var(--text-secondary);}
+.res-verdict.ok{border-color:var(--green-border);background:var(--green-light);color:var(--green-dark);}
+.res-verdict.warn{border-color:var(--amber-border);background:var(--amber-light);color:var(--amber-dark);}
+.res-verdict.bad{border-color:var(--red-border);background:var(--red-light);color:var(--red);}
 .tbl-toggle{font-size:13px;color:var(--text-muted);transition:transform .25s;}
 .tbl-toggle.open{transform:rotate(180deg);}
 .act-btn{display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:var(--radius-sm);
@@ -515,28 +529,42 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
    الحقول بمصدرها بيخلّي المقارنة سطرين فوق بعض بدل تمشيط ٨ مربعات متشابهة.
    ورقم الأوردر/العميل/حالة S1 اتشالوا — الرقم في عنوان النافذة، والاتنين
    التانيين مالهمش أي دخل بقرار المنطقة. */
-.dp-src{display:flex;align-items:stretch;border:1px solid var(--border);
-  border-radius:var(--radius-sm);overflow:hidden;margin-bottom:6px;}
-.dp-src-tag{display:flex;align-items:center;gap:5px;flex-shrink:0;padding:6px 10px;
+/* 🔴 السياق كله **جدول واحد** مالوش فواصل بين صفوفه: نفس عمود التسمية ونفس
+   عرض الخانات في التلات صفوف، زي جدول إكسيل. الصفوف المنفصلة اللي كان بينها
+   فراغ كانت بتخلّي خانة «المدينة» الزرقا وخانة «المدينة» الحمرا مش فوق بعض،
+   والمقارنة بينهم هي **كل** الشغل في النافذة دي.
+   ⚠️ عرض عمود التسمية مكتوب رقم ثابت (128px) في التلات صفوف عن قصد — `auto`
+   بيتحسب لكل صف لوحده (كل صف grid مستقل) فالأعمدة بتزحف على بعضها. */
+.dp-tbl{border:1px solid var(--border-strong);border-radius:var(--radius-sm);
+  overflow:hidden;margin-bottom:8px;}
+.dp-tbl > * + *{border-top:1px solid var(--border-strong);}
+.dp-src{display:grid;grid-template-columns:128px repeat(2,minmax(0,1fr));align-items:stretch;}
+.dp-src-tag{display:flex;align-items:center;gap:5px;padding:6px 10px;
   font-size:11px;font-weight:800;letter-spacing:.2px;white-space:nowrap;}
-.dp-src.shopify{border-color:var(--accent-border);background:var(--accent-light);}
+.dp-src.shopify{background:var(--accent-light);}
 .dp-src.shopify .dp-src-tag{background:var(--accent);color:var(--on-accent);}
-.dp-src.bosta{border-color:var(--red-border);background:var(--red-light);}
+.dp-src.bosta{background:var(--red-light);}
 .dp-src.bosta .dp-src-tag{background:var(--red);color:#fff;}
-.dp-src-fields{display:flex;flex-wrap:wrap;align-items:center;flex:1;min-width:0;}
-.dp-f{display:flex;align-items:baseline;gap:6px;padding:6px 10px;min-width:0;
-  border-inline-start:1px solid rgba(0,0,0,.06);}
-.dp-f:first-child{border-inline-start:none;}
+.dp-f{display:flex;align-items:center;gap:6px;padding:6px 10px;min-width:0;
+  border-inline-start:1px solid rgba(0,0,0,.10);}
 .dp-f-k{font-size:10.5px;font-weight:700;color:var(--text-secondary);white-space:nowrap;}
 .dp-f-v{font-size:12.5px;font-weight:800;color:var(--text-primary);word-break:break-word;}
 .dp-f-v.muted{color:var(--text-muted);font-weight:600;}
 .dp-f-v.set{color:var(--green-dark);}
-/* العنوان الحر سطر لوحده وبخط أوضح — هو المصدر الوحيد للمطابقة */
-.dp-addr{border:1px solid var(--border-strong);border-radius:var(--radius-sm);
-  background:var(--surface-2);padding:7px 10px;margin-bottom:6px;}
-.dp-addr-k{font-size:10.5px;font-weight:800;color:var(--text-muted);margin-inline-end:8px;}
-.dp-addr-v{font-size:13px;font-weight:700;color:var(--text-primary);line-height:1.7;}
+/* 🔴 العنوان الكامل **فوق** الصفين وبالأخضر — هو المصدر الوحيد اللي المطابقة
+   بتقرا منه، والموظف بيقراه الأول وبعدين يقارن الأزرق بالأحمر. */
+.dp-addr{display:grid;grid-template-columns:128px repeat(2,minmax(0,1fr));
+  background:var(--green-light);}
+.dp-addr-k{display:flex;align-items:center;padding:6px 10px;background:var(--green);color:#fff;
+  font-size:11px;font-weight:800;letter-spacing:.2px;white-space:nowrap;}
+.dp-addr-v{grid-column:span 2;padding:6px 10px;font-size:13px;font-weight:700;
+  color:var(--green-dark);line-height:1.7;word-break:break-word;}
 .dp-addr-v.muted{color:var(--text-muted);font-weight:600;}
+@media (max-width:640px){
+  .dp-src,.dp-addr{grid-template-columns:1fr;}
+  .dp-addr-v{grid-column:auto;}
+  .dp-f{border-inline-start:none;border-top:1px solid rgba(0,0,0,.10);}
+}
 /* النافذة نفسها Compact — الحشو الكبير كان بينزّل القايمة تحت طيّة الشاشة */
 .eco-modal.dp .eco-modal-hdr{padding:10px 14px;}
 .eco-modal.dp .eco-modal-body{padding:12px 14px;}
@@ -587,6 +615,14 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           background:var(--surface-2);color:var(--text-secondary);}
 .dp-state.ok{border-color:var(--green-border);background:var(--green-light);color:var(--green-dark);}
 .dp-state.doubt{border-color:var(--amber-border);background:var(--amber-light);color:var(--amber-dark);}
+/* 🔴 «حالة العنوان» بقت في **عنوان** النافذة — ونفس القيمة اللي في عمود
+   الجدول وفلتر «حالة العنوان» بالحرف (ADDR_MODE_LABEL). والشرح الطويل اتحوّل
+   لـ tooltip على نفس البادج، فالمعلومة ما ضاعتش. */
+.dp-hdr-state{display:inline-block;margin-inline-start:6px;padding:1px 9px;border-radius:12px;
+  font-size:11.5px;font-weight:800;vertical-align:middle;white-space:nowrap;
+  background:var(--surface-2);color:var(--text-secondary);border:1px solid var(--border);cursor:help;}
+.dp-hdr-state.ok{background:var(--green-light);color:var(--green-dark);border-color:var(--green-border);}
+.dp-hdr-state.doubt{background:var(--amber-light);color:var(--amber-dark);border-color:var(--amber-border);}
 /* الاحتمالات مثبّتة فوق القايمة وقابلة للضغط — قبل كده كانت نص رمادي في سطر
    السياق، والموظف لازم يدوّر عليها بإيده وسط ٤٠٠ منطقة */
 .dp-group-hdr{padding:7px 12px;font-size:11.5px;font-weight:800;letter-spacing:.2px;
@@ -603,11 +639,12 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .dp-item.cross:hover{background:var(--amber-border);}
 .dp-main{display:flex;flex-direction:column;gap:2px;min-width:0;}
 .dp-why{font-size:11px;font-weight:600;color:var(--text-muted);line-height:1.6;word-break:break-word;}
-.dp-city-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
-.dp-city-row label{font-size:12px;font-weight:700;color:var(--text-secondary);white-space:nowrap;}
-.dp-city-select{flex:1;min-width:180px;padding:5px 9px;border-radius:var(--radius-sm);
+/* 🔴 قايمة المدن جوّه صف بوسطة نفسه — مش في صف لوحدها تحت. المدينة اللي
+   هتتبعت والمدينة اللي المطابقة وصلت لها لازم يكونوا **نفس الخانة**: صف
+   منفصل معناه إن الموظف يقرا مدينة في السطر الأحمر ويغيّر مدينة تانية تحت. */
+.dp-city-select{width:100%;min-width:0;padding:4px 8px;border-radius:var(--radius-sm);
   border:1px solid var(--border-strong);background:var(--surface);color:var(--text-primary);
-  font-family:var(--font-body);font-size:12.5px;font-weight:600;cursor:pointer;}
+  font-family:var(--font-body);font-size:12.5px;font-weight:700;cursor:pointer;}
 .dp-city-select.changed{border-color:var(--amber);background:var(--amber-light);color:var(--amber);}
 /* شرح الزون اتلمّ في سطر واحد وتفاصيله بتتفتح بالطلب — كان ٣ سطور ثابتة
    بينزّلوا القايمة نفسها تحت طيّة الشاشة. العدّاد (كام منطقة ليها زون) فاضل
@@ -735,6 +772,24 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">14-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>اسم واحد للمفهوم: «حالة العنوان».</b> الفلتر كان اسمه «شكل العنوان» والعمود اللي جنبه اسمه «نوع المطابقة» وهما <b>نفس القيمة بالحرف</b> — اسمين لحاجة واحدة معناهم إن الموظف يفتكرهم حاجتين. دلوقتي الاتنين (وتصدير XLSX وعنوان نافذة اختيار المنطقة) اسمهم <b>حالة العنوان</b>.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>قيمة <code>📍 بالمنطقة (مطابقة مؤكدة)</code> بقت <b><code>📍 عنوان مظبوط</code></b> — في الفلتر والعمود والتصدير مع بعض (مصدر واحد).</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>جدول النتايج اتشال، والتوست بقى نافذة تأكيد.</b> التوست كان بيختفي لوحده بعد ٨ ثواني — لو الموظف بصّ بعيد لحظة، الرقم الوحيد اللي بيقول إن فيه صف <b>فشل</b> أو <b>«تم جزئيًا»</b> كان بيروح. دلوقتي بتيجي <b>نافذة مستنية ضغطة</b>: في النجاح الكامل بتقول العدد بس، و<b>في أي حالة تانية بتفتح التفاصيل كاملة لوحدها</b>. وزرار <b>▾ عرض التفاصيل</b> بيفتحها بالإيد كمان — زرار <b>✕ إلغاء الشحنة</b> على صفوف R/E الناجحة عايش جوّاها.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>حالة الصف <b><code>✓ تم</code></b> بقت <b><code>✓ نجاح</code></b> — في النافذة وفي تصدير النتيجة. «تم» كانت بتتلخبط مع «⚠ تم جزئيًا»، واللي بينهم شحنة بفلوس حقيقية.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>⚠️ <b>نافذة الرفض (⛔ الرفع اتوقف) لسه هي الأولى.</b> لو الحارس رفض الدفعة، نافذة النتيجة <b>بتستنى</b> لحد ما تقفلها — عشان سطر «✅ مفيش ولا شحنة اتعملت» مايتغطّاش.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>سياق نافذة اختيار المنطقة بقى جدول واحد.</b> الفاصل بين صف <b>شوبيفاي</b> الأزرق وصف <b>بوسطة</b> الأحمر اتشال، والخانات بقت <b>متساوية العرض</b> في الصفين — فخانة «المدينة» الزرقا بقت فوق خانة «المدينة» الحمرا بالظبط. المقارنة دي هي كل الشغل في النافذة دي.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>«العنوان (سطر ١)» بقى «العنوان بالكامل» وطلع فوق الصفين بلون أخضر</b> — وبيعرض نفس نص عمود «العنوان كامل» في الجدول (سطر ١ · سطر ٢ · المدينة). هو المصدر الوحيد اللي المطابقة بتقرا منه، والصفين اللي تحته نتيجة قراءته.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>قايمة «مدينة بوسطة» اتنقلت جوّه صف بوسطة نفسه</b> بدل صف لوحدها تحت — نفس الخانة اللي بتعرض المدينة هي اللي بتغيّرها.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>سطر «الحالي: …» اتشال من جسم النافذة وطلع لعنوانها:</b> <code>📍 اختر المنطقة — #12345 — حالة العنوان: 🏙️ بالمحافظة بس</code>. الشرح الطويل بقى على الـ hover على البادج، والقيمة نفسها هي اللي في العمود والفلتر بالحرف.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.1.1</span>
           <span class="cl-ver-date">14-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -919,23 +974,24 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <ol>
             <li>الموظف يدخل بالـ PIN، والأداة بتستعلم من شوبيفاي لحظيًا (مفيش عدد محفوظ — الرقم بيتحرك خلال اليوم).</li>
             <li>لكل أوردر: المحافظة بتتحوّل لمدينة بوسطة بجدول حتمي مقفول، وبعدين الأداة بتحاول تطابق المنطقة من نص العنوان الحر (عربي وإنجليزي) على كتالوج بوسطة.</li>
-            <li>عمود <strong>المنطقة</strong> بيقول بالظبط هيتبعت إيه: <code>📍 اسم منطقة</code> = المطابقة نجحت والشحنة هتترفع بالمنطقة · <code>🗺️ اسم زون</code> = محافظة اتلغت إداريًا وبتتبعت كزون · <code>❓ N احتمالات</code> = المطابقة غامضة والاحتمالات مثبّتة فوق قايمة النافذة · <code>🟠 المدينة مشكوك فيها</code> = مفيش مطابقة جوه مدينة الجدول والعنوان طابق منطقة في <strong>مدينة تانية</strong> · <code>🏙️ المحافظة بس</code> = مفيش مطابقة، الشحنة بتترفع على المحافظة وبتدخل مسار العناوين غير الواضحة عند بوسطة (<strong>مش فشل</strong>). الشرح كامل على الـ hover، وعمود <strong>نوع المطابقة</strong> جنبه بيكرّر نفس التصنيف بنص فلتر «شكل العنوان» بالحرف — عشان الفرز والفلترة والقراءة يبقوا على نفس القيمة.</li>
+            <li>عمود <strong>المنطقة</strong> بيقول بالظبط هيتبعت إيه: <code>📍 اسم منطقة</code> = المطابقة نجحت والشحنة هتترفع بالمنطقة · <code>🗺️ اسم زون</code> = محافظة اتلغت إداريًا وبتتبعت كزون · <code>❓ N احتمالات</code> = المطابقة غامضة والاحتمالات مثبّتة فوق قايمة النافذة · <code>🟠 المدينة مشكوك فيها</code> = مفيش مطابقة جوه مدينة الجدول والعنوان طابق منطقة في <strong>مدينة تانية</strong> · <code>🏙️ المحافظة بس</code> = مفيش مطابقة، الشحنة بتترفع على المحافظة وبتدخل مسار العناوين غير الواضحة عند بوسطة (<strong>مش فشل</strong>). الشرح كامل على الـ hover، وعمود <strong>حالة العنوان</strong> جنبه بيكرّر نفس التصنيف بنص فلتر <strong>حالة العنوان</strong> بالحرف — نفس الاسم ونفس القيمة في الفلتر والعمود وعنوان نافذة اختيار المنطقة.</li>
             <li>🟠 <strong>«المدينة مشكوك فيها» حالة مختلفة عن «المحافظة بس»، ومش أقل خطورة منها.</strong> «المحافظة بس» = المدينة صح والمنطقة ناقصة. «المدينة مشكوك فيها» = <strong>المدينة نفسها على الأرجح غلط</strong> — والمدينة بتحدد الفرع والتسعيرة، مش بس دقة العنوان. بيحصل لسببين: تصنيف بوسطة مش التقسيم الإداري (<strong>العبور</strong> إداريًا القليوبية وعند بوسطة تحت <strong>القاهرة</strong>)، أو العميل غلط في اختيار المحافظة. الصفوف دي <strong>مستثناة من «تحديد الكل»</strong> وليها فلتر خاص — تتراجع وتتحدد بالإيد.</li>
             <li>🎯 <strong>الزون داخل في المطابقة دلوقتي.</strong> لما نص العنوان مايطابقش أي منطقة، الأداة بتدوّر على <strong>اسم الزون</strong> — وده اللي بيلقط <strong>العبور</strong>: اسم المنطقة عند بوسطة <code>المنطقة 01 (العبور)</code> محدش بيكتبها، لكن الزون اسمه «العبور». الاقتراح بيطلع جاهز، والضغطة <strong>بتظبّط المدينة وتقصّر القايمة على مناطق الزون بس</strong>. ⚠️ الزون <strong>بيحسم المدينة مش المنطقة</strong> — فيه مناطق كتير واختيار واحدة تخمين.</li>
             <li>🗺️ <strong>الزون</strong> عمود قايم بذاته في قايمة النافذة (القايمة جدول: <strong>المنطقة · الزون · سبب المطابقة</strong>). بوسطة هرمها <strong>مدينة ← زون ← منطقة</strong>، والزون هو المستوى الأوسط. البحث بيشمله (كتابة «العبور» بتجيب كل مناطق زون العبور)، والمنطقة اللي مالهاش زون بتتكتب <strong>«بلا زون»</strong> صراحةً. 🔴 اسم الزون بيتعرض <strong>كامل من غير قص</strong> — الجزء المقصوص هو بالظبط اللي بيفرّق بين زونين، والزون هو اللي بيحسم المدينة.</li>
-            <li>نافذة المنطقة بتعرض بيانات شوبيفاي في <strong>حقول منفصلة</strong> — المحافظة · المدينة · سطر العنوان ١ و٢ — مش سطر واحد مدموج: الترجيح بيفرّق بين خانة <code>city</code> وخانة <code>address1</code>، فدمجهم في العرض بيخفي الخانة اللي المطابقة اتبنت عليها.</li>
-            <li>جوّه نافذة المنطقة فيه <strong>منتقي مدينة</strong>. لو غيّرت المدينة، الرفع بيتبعت عليها هي — وعمود «مدينة بوسطة» في الجدول بيوريها بعلامة ✎ والمدينة الأصلية على الـ hover. اقتراحات المدن التانية بتتحط فوق القايمة، والضغط عليها بيغيّر المدينة والمنطقة مع بعض.</li>
+            <li>سياق نافذة المنطقة <strong>جدول واحد بأعمدة متطابقة</strong>: فوق <strong>العنوان بالكامل</strong> (أخضر) — هو المصدر الوحيد اللي المطابقة بتقرا منه — وتحته صف <strong>🛍️ شوبيفاي</strong> (المحافظة · المدينة) وصف <strong>🚚 بوسطة</strong> (المدينة · المنطقة) من غير أي فاصل بينهم، فالخانة الزرقا بتقع فوق الخانة الحمرا بالظبط. خانات شوبيفاي بتفضل <strong>منفصلة</strong>: الترجيح بيفرّق بين خانة <code>city</code> وخانة <code>address1</code>، فدمجهم في العرض بيخفي الخانة اللي المطابقة اتبنت عليها. و<strong>حالة العنوان</strong> بقت في <strong>عنوان النافذة</strong> نفسه (<code>📍 اختر المنطقة — #12345 — حالة العنوان: …</code>) والشرح الكامل على الـ hover عليها.</li>
+            <li><strong>منتقي المدينة جوّه صف بوسطة نفسه</strong> — نفس الخانة اللي بتعرض المدينة هي اللي بتغيّرها، مش صف تاني تحت. لو غيّرت المدينة، الرفع بيتبعت عليها هي — وعمود «مدينة بوسطة» في الجدول بيوريها بعلامة ✎ والمدينة الأصلية على الـ hover. اقتراحات المدن التانية بتتحط فوق القايمة، والضغط عليها بيغيّر المدينة والمنطقة مع بعض.</li>
             <li>أي صف ينفع يتفتح بزرار <em>اختر المنطقة</em> — والنافذة فيها <strong>↺ رجّع للمطابقة التلقائية</strong> (بتشيل التدخّل اليدوي) و<strong>🏙️ ارفع على المحافظة بس</strong> (بتثبّت الصف على المحافظة حتى لو المطابقة نجحت وقت الرفع). الاختيار كله اختياري، والرفع شغّال من غيره.</li>
             <li>الموظف يحدد الأوردرات ويضغط <strong>رفع المحدد</strong>، أو يضغط <strong>⬆ رفع الكل</strong> اللي بيحدد <strong>كل المعروض حسب الفلتر الحالي</strong> (والعدد مكتوب جوّه الزرار) ويسأل تأكيد قبل ما يرفع. صفوف 🟠 <strong>المدينة مشكوك فيها مستثناة من الاتنين</strong> — تتحدد بالإيد بعد المراجعة. والأوردر المرفوع قبل كده بيطلب تأكيد صريح.</li>
             <li>الرفع بيحصل على دفعات، وكل صف بيجيب نتيجته الخاصة ومعاه رقم تتبعه.</li>
             <li>بعد كل نجاح: اللي في عمود «بيكتب إيه» في جدول الأوضاع فوق — بيختلف بالوضع.</li>
-            <li>🔴 <strong>لو الشحنة اتعملت وحاجة بعدها فشلت، الصف بيبقى <em>أصفر</em> مش أحمر.</strong> الأصفر معناه <strong>الشحنة موجودة عند بوسطة ومعاها رقم تتبع</strong> — إعادة الرفع بتشتري شحنة تانية بفلوس. الحل: صلّح باليد، أو اضغط <strong>✕ إلغاء الشحنة</strong> في جدول النتايج وبعدين ارفع تاني (الإلغاء بيحرّر المرجع الفريد عند بوسطة).</li>
+            <li>بعد ما الرفع يخلص بتيجي <strong>نافذة نتيجة الرفع</strong> — مستنية ضغطة، مش توست بيختفي لوحده. في النجاح الكامل بتقول العدد بس، و<strong>في أي حالة تانية بتفتح التفاصيل لوحدها</strong> (صف بصف: رقم التتبع · العقد · المدينة والمنطقة المبعوتة · ما تم فعليًا · السبب). وزرار <strong>▾ عرض التفاصيل</strong> بيفتحها بالإيد حتى لما يكون كله نجاح.</li>
+            <li>🔴 <strong>لو الشحنة اتعملت وحاجة بعدها فشلت، الصف بيبقى <em>أصفر</em> مش أحمر.</strong> الأصفر معناه <strong>الشحنة موجودة عند بوسطة ومعاها رقم تتبع</strong> — إعادة الرفع بتشتري شحنة تانية بفلوس. الحل: صلّح باليد، أو اضغط <strong>✕ إلغاء الشحنة</strong> في تفاصيل نافذة النتيجة وبعدين ارفع تاني (الإلغاء بيحرّر المرجع الفريد عند بوسطة).</li>
           </ol>
 
           <h4>نتيجة كل صف — أربع حالات</h4>
           <table>
             <tr><th>الحالة</th><th>معناها</th></tr>
-            <tr><td>✓ تم</td><td>الشحنة اترفعت واتأكدت، والكتابة على شوبيفاي تمت</td></tr>
+            <tr><td>✓ نجاح</td><td>الشحنة اترفعت واتأكدت، والكتابة على شوبيفاي تمت</td></tr>
             <tr><td>⚠ تم جزئيًا</td><td>الشحنة <strong>موجودة فعلًا</strong> على بوسطة، بس حاجة بعدها ما تمّتش (الكتابة على شوبيفاي مثلًا). <strong>متعيدش الرفع</strong> — هتعمل شحنة مكررة</td></tr>
             <tr><td>✗ فشل</td><td>الشحنة ما اترفعتش، والسبب معروض</td></tr>
             <tr><td>⏭️ اتخطّى</td><td>الأوردر مرفوع قبل كده ومفيش تأكيد صريح</td></tr>
@@ -1012,12 +1068,10 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <button class="modal-close-x" onclick="closeDistrictPicker()">✕</button>
     </div>
     <div class="eco-modal-body">
+      <!-- 🔴 السياق كله جدول واحد: العنوان الكامل (أخضر) فوق، وتحته شوبيفاي
+           وبوسطة بنفس الأعمدة. قايمة المدن جوّه صف بوسطة نفسه — مش صف لوحدها.
+           وسطر «الحالي:» اتشال خالص: حالة العنوان بقت في عنوان النافذة. -->
       <div id="dpContext"></div>
-      <div class="dp-state" id="dpState"></div>
-      <div class="dp-city-row">
-        <label for="dpCity">مدينة بوسطة:</label>
-        <select class="dp-city-select" id="dpCity" onchange="chooseCity(this.value)"></select>
-      </div>
       <details class="dp-note" id="dpZoneNote"></details>
       <div class="search-wrap" style="max-width:none;margin-bottom:8px;">
         <input type="text" class="search-input" id="dpSearch" oninput="renderDistrictList(); toggleSearchActiveState(this);" />
@@ -1029,6 +1083,56 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <button class="btn-ghost" onclick="resetDistrictToAuto()">↺ رجّع للمطابقة التلقائية</button>
       <button class="btn-ghost" onclick="pinDistrictToProvince()">🏙️ ارفع على المحافظة بس</button>
       <button class="btn-modal-save" onclick="closeDistrictPicker()">تم</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     نتيجة الرفع — نافذة تأكيد (واجهة v2.2.0)
+     🔴 الجدول الدايم تحت الشريط اتشال، والتوست بقى النافذة دي. التوست كان
+     بيختفي لوحده بعد ٨ ثواني: لو الموظف بصّ بعيد لحظة، الرقم الوحيد اللي
+     بيقول إن فيه صف فشل أو اتحذّر كان بيروح، والجدول تحته بيفضل مفتوح على
+     شاشة مليانة صفوف خضرا. النافذة بتستنى ضغطة.
+     🔴 والتفاصيل بتتفتح **لوحدها** في أي حالة غير النجاح الكامل — الصف
+     الأصفر معناه شحنة موجودة عند بوسطة بفلوس، وده مش وقت ضغطة زيادة.
+     ⚠️ وبتفضل قابلة للفتح بالإيد حتى في النجاح الكامل: زرار «✕ إلغاء الشحنة»
+     على صفوف R/E الناجحة عايش جوّه التفاصيل دي. -->
+<div class="eco-overlay" id="resultsOverlay" onclick="if(event.target===this)closeResultsModal()">
+  <div class="eco-modal" style="max-width:1100px;">
+    <div class="eco-modal-hdr">
+      <span id="resTitle">نتيجة الرفع</span>
+      <button class="modal-close-x" onclick="closeResultsModal()">✕</button>
+    </div>
+    <div class="eco-modal-body">
+      <div class="res-verdict" id="resVerdict"></div>
+      <div class="res-head">
+        <span class="res-count-lbl">إجمالي الصفوف:</span>
+        <span class="results-count" id="resCount">—</span>
+        <span id="resSummary" class="summary-row"></span>
+      </div>
+      <div class="res-details collapsed" id="resDetails">
+        <div class="tbl-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>رقم الأوردر</th>
+              <th>النتيجة</th>
+              <th>رقم التتبع</th>
+              <th>العقد</th>
+              <th>المدينة</th>
+              <th>المنطقة المبعوتة</th>
+              <th>ما تم فعليًا</th>
+              <th>السبب / التحذير</th>
+              <th>إجراء</th>
+            </tr></thead>
+            <tbody id="resBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="eco-modal-ftr">
+      <button class="btn-ghost" id="resDetailsBtn" onclick="toggleResultDetails()">▾ عرض التفاصيل</button>
+      <button class="btn-ghost" onclick="exportResultsXLSX()">⬇ تصدير النتيجة</button>
+      <button class="btn-modal-save" onclick="closeResultsModal()">تمام</button>
     </div>
   </div>
 </div>
@@ -1221,42 +1325,6 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
   <div class="warn-banner"   id="catalogBanner" style="display:none;"></div>
   <div class="warn-banner"   id="loadErrorBanner" style="display:none;"></div>
 
-  <!-- ─── §TOOL::results ─── -->
-  <div class="unified-section" id="resultsPanel" style="display:none;">
-    <div class="tbl-bar" onclick="toggleResults()">
-      <div class="tbl-bar-right">
-        <span class="tbl-toggle open" id="resToggleIcon">▲</span>
-        <div class="results-wrap">
-          <span class="results-label">نتيجة آخر رفع:</span>
-          <span class="results-count" id="resCount">—</span>
-        </div>
-      </div>
-      <div class="tbl-bar-left">
-        <span id="resSummary" class="summary-row"></span>
-        <button class="act-btn export" onclick="event.stopPropagation(); exportResultsXLSX();">⬇ تصدير النتيجة</button>
-        <button class="act-btn refresh" onclick="event.stopPropagation(); hideResults();">✕ إخفاء</button>
-      </div>
-    </div>
-    <div class="tbl-body-wrap" id="resBodyWrap">
-      <div class="tbl-scroll">
-        <table class="data-table">
-          <thead><tr>
-            <th>رقم الأوردر</th>
-            <th>النتيجة</th>
-            <th>رقم التتبع</th>
-            <th>العقد</th>
-            <th>المدينة</th>
-            <th>المنطقة المبعوتة</th>
-            <th>ما تم فعليًا</th>
-            <th>السبب / التحذير</th>
-            <th>إجراء</th>
-          </tr></thead>
-          <tbody id="resBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
   <!-- ─── §TOOL::mainTable ─── -->
   <!-- مبدّل نوع الرفع — v2.0.0. الترتيب مقصود: الشحن العادي الأول وهو
        الافتراضي، والاتنين اللي بيعملوا شحنات R/E بعده وبلون تاني. -->
@@ -1350,7 +1418,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
         </div>
 
         <div class="flt-g">
-          <span class="flt-label">شكل العنوان</span>
+          <span class="flt-label">حالة العنوان</span>
           <div class="ms-wrap" id="msWrap-addrMode">
             <button class="ms-btn" id="msBtn-addrMode" onclick="msToggle('addrMode')">
               <span id="msBtnLabel-addrMode">الكل</span><span class="ms-arrow">▾</span>
@@ -1682,7 +1750,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.1.1';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.2.0';   // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2394,7 +2462,7 @@ async function doLogout() {
 
   // إعادة ضبط حالة الأداة
   allRows = []; selected.clear(); districtOverride = {}; lastResults = [];
-  renderTable([]); hideResults();
+  renderTable([]); closeResultsModal(); resultsPending = false;
   document.getElementById('activeUserBtn').textContent = '👤 —';
   document.getElementById('loginOverlay').classList.remove('hidden');
 }
@@ -2419,7 +2487,7 @@ const UP_STATE_ITEMS = [
   { value: 'blocked',  label: '⛔ موقوف (بيانات ناقصة)' },
 ];
 const ADDR_MODE_ITEMS = [
-  { value: 'district', label: '📍 بالمنطقة (مطابقة مؤكدة)' },
+  { value: 'district', label: '📍 عنوان مظبوط' },
   { value: 'zoneName', label: '🗺️ بزون المحافظة الخاصة' },
   { value: 'province', label: '🏙️ بالمحافظة بس' },
   { value: 'ambiguous',label: '❓ أكتر من مطابقة — محتاج اختيار' },
@@ -2427,7 +2495,8 @@ const ADDR_MODE_ITEMS = [
   { value: 'cityFixed',label: '🏙️ مدينة معدّلة يدويًا' },
   { value: 'blocked',  label: '⛔ محافظة مش في الجدول' },
 ];
-// مصدر واحد لتسمية شكل العنوان: الفلتر والعمود بيقروا منه الاتنين
+// مصدر واحد لتسمية «حالة العنوان»: الفلتر والعمود وعنوان نافذة اختيار
+// المنطقة بيقروا منه التلاتة — اسم واحد للمفهوم في كل الشاشات
 const ADDR_MODE_LABEL = Object.fromEntries(ADDR_MODE_ITEMS.map(it => [it.value, it.label]));
 // 🔴 القيم دي لازم تطابق اللي الـ Worker بيكتبه **حرفيًا** — قيمة مكتوبة غلط
 //    هنا بتدّي فلتر بيرجّع صفر صف من غير أي خطأ. التلاتة الأولانية بتاعة الشحن
@@ -2461,7 +2530,7 @@ const msState = {
   logEmp:   { owner: 'log',  items: [], selected: new Set(), search: '', mode: 'list' },
 };
 const filterLabels = {
-  s1: 'الحالة', province: 'المحافظة (شوبيفاي)', upState: 'حالة الرفع', addrMode: 'شكل العنوان',
+  s1: 'الحالة', province: 'المحافظة (شوبيفاي)', upState: 'حالة الرفع', addrMode: 'حالة العنوان',
   logType: 'نوع العملية', logEmp: 'الموظف',
 };
 
@@ -2949,7 +3018,7 @@ function districtCell(r) {
                   onclick="openDistrictPicker('${jsq(r.orderId)}')">${esc(info.label)}</button>`;
 }
 
-// نوع المطابقة = **نفس** قيمة فلتر «شكل العنوان» بالحرف. مصدر واحد
+// عمود «حالة العنوان» = **نفس** قيمة الفلتر بالحرف. مصدر واحد
 // (ADDR_MODE_LABEL) عشان الفلتر والعمود مايفترقوش لما تتضاف حالة جديدة.
 function addrModeCell(r) {
   const mode = rowAddrMode(r);
@@ -2978,7 +3047,7 @@ function tableColumns() {
     { key: 'province',    label: 'المحافظة (شوبيفاي)', sort: 'province', cell: r => esc(r.province || '—') },
     { key: 'cityName',    label: 'مدينة بوسطة', sort: 'cityName', cell: cityCell },
     { key: 'district',    label: 'المنطقة', cell: districtCell },
-    { key: 'addrMode',    label: 'نوع المطابقة', sort: 'addrMode', cell: addrModeCell },
+    { key: 'addrMode',    label: 'حالة العنوان', sort: 'addrMode', cell: addrModeCell },
   ];
 
   if (re) {
@@ -3200,7 +3269,7 @@ async function switchJob(key) {
 
   // مسح كامل — مفيش حاجة من الوضع اللي فات بتعدّي للجديد
   allRows = []; visibleRows = []; selected.clear(); districtOverride = {};
-  lastResults = []; hideResults();
+  lastResults = []; closeResultsModal(); resultsPending = false;
   excelState = { exported: false, orders: [], allowRepeat: false };
   sortState = { key: null, dir: null };
   msState.s1.selected.clear();
@@ -3324,9 +3393,15 @@ function dpField(key, val, cls) {
   return `<div class="dp-f"><span class="dp-f-k">${esc(key)}</span>` +
          `<span class="dp-f-v${empty ? ' muted' : (cls ? ' ' + cls : '')}">${empty ? '—' : esc(val)}</span></div>`;
 }
+// خانة فيها عنصر تحكّم (قايمة المدن) — نفس مقاس خانة النص بالظبط عشان
+// الأعمدة تفضل متطابقة بين الصفين
+function dpControlField(key, html) {
+  return `<div class="dp-f"><span class="dp-f-k">${esc(key)}</span>${html}</div>`;
+}
+// 🔴 الخانات بقت أولاد مباشرين للـ grid — من غير `dp-src-fields` — عشان عمود
+//    الخانة الأولى في الصف الأزرق يقع فوق عمود الخانة الأولى في الأحمر بالظبط.
 function dpSrcRow(kind, tag, fields) {
-  return `<div class="dp-src ${kind}"><span class="dp-src-tag">${tag}</span>` +
-         `<div class="dp-src-fields">${fields}</div></div>`;
+  return `<div class="dp-src ${kind}"><span class="dp-src-tag">${tag}</span>${fields}</div>`;
 }
 function dpAddrRow(key, val) {
   const empty = !String(val ?? '').trim();
@@ -3340,19 +3415,38 @@ function dpAddrRow(key, val) {
 //    الأحمر ده ولا لأ؟ رقم الأوردر في عنوان النافذة، والعميل وحالة S1 اتشالوا
 //    لأنهم مالهمش دخل بقرار المنطقة.
 function dpContextHTML(r) {
-  const c  = effCity(r);
   const dm = addrModeInfo(r);
-  return dpSrcRow('shopify', '🛍️ شوبيفاي',
+  return '<div class="dp-tbl">' +
+         // 🔴 العنوان الكامل أول سطر — هو المصدر الوحيد اللي المطابقة بتقرا منه،
+         //    والسطرين اللي تحته هما نتيجة قراءته. نفس نص عمود «العنوان كامل»
+         //    في الجدول بالحرف (`fullAddressText`) — مصدر واحد.
+         dpAddrRow('العنوان بالكامل', fullAddressText(r)) +
+         dpSrcRow('shopify', '🛍️ شوبيفاي',
            dpField('المحافظة', r.province) +
            dpField('المدينة', r.addressCity)) +
          dpSrcRow('bosta', '🚚 بوسطة',
-           dpField('المدينة', c.cityName, c.changed ? 'set' : '') +
+           // 🔴 المدينة هنا **قايمة منسدلة** مش نص: المدينة اللي معروضة هي
+           //    اللي هتتبعت فعلًا، فتغييرها لازم يحصل في نفس الخانة اللي
+           //    الموظف بيقراها — مش في صف تاني تحت.
+           dpControlField('المدينة',
+             `<select class="dp-city-select" id="dpCity" onchange="chooseCity(this.value)"></select>`) +
            // 🔴 المنطقة بتتكتب بس لو فيه منطقة فعلًا. في حالات الشك بادج الحالة
            //    نفسها مش منطقة — كتابتها هنا بتقرا كأن الشحنة عليها منطقة وهي مالهاش.
-           dpField('المنطقة', dm.set ? dm.label : '', 'set') +
-           dpField('شكل المطابقة', ADDR_MODE_LABEL[rowAddrMode(r)] || rowAddrMode(r))) +
-         dpAddrRow('العنوان (سطر ١)', r.address1) +
-         (String(r.address2 || '').trim() ? dpAddrRow('العنوان (سطر ٢)', r.address2) : '');
+           dpField('المنطقة', dm.set ? dm.label : '', 'set')) +
+         '</div>';
+}
+
+// عنوان النافذة = رقم الأوردر + **حالة العنوان** بنفس قيمة العمود والفلتر،
+// والشرح الطويل في الـ tooltip. قبل كده كان سطر كامل جوّه الجسم بيدفع القايمة
+// تحت طيّة الشاشة، ومكرر مع خانة «شكل المطابقة» في صف بوسطة.
+function renderDpTitle(r) {
+  const el = document.getElementById('dpTitle');
+  if (!el) return;
+  const mode = rowAddrMode(r);
+  const info = addrModeInfo(r);
+  const cls  = info.set ? ' ok' : (mode === 'cityDoubt' || mode === 'cityFixed' ? ' doubt' : '');
+  el.innerHTML = `📍 اختر المنطقة — ${esc(r.orderNumber)} — حالة العنوان:` +
+    `<span class="dp-hdr-state${cls}" title="${esc(info.hint)}">${esc(ADDR_MODE_LABEL[mode] || mode)}</span>`;
 }
 
 async function openDistrictPicker(orderId) {
@@ -3360,8 +3454,9 @@ async function openDistrictPicker(orderId) {
   if (!r) return;
   if (!r.addressOk) { showToast(r.addressError || 'المحافظة مش معروفة', 'error', 6000); return; }
   dpOrderId = orderId;
-  document.getElementById('dpTitle').textContent = `📍 اختر المنطقة — ${r.orderNumber}`;
+  renderDpTitle(r);
   document.getElementById('dpContext').innerHTML = dpContextHTML(r);
+  renderDpCitySelect();
   document.getElementById('dpSearch').value = '';
   toggleSearchActiveState(document.getElementById('dpSearch'));
   document.getElementById('districtOverlay').classList.add('open');
@@ -3423,15 +3518,16 @@ async function chooseCity(cityId) {
 }
 
 function renderDistrictState() {
-  const el = document.getElementById('dpState');
-  const r  = allRows.find(x => x.orderId === dpOrderId);
-  if (!el || !r) return;
+  const r = allRows.find(x => x.orderId === dpOrderId);
+  if (!r) return;
   // صفّ بوسطة بيتغيّر مع كل اختيار جوّه النافذة — لو ما اتعادش رسمه هيفضل
   // معروض المدينة/المنطقة القديمة، وده بالظبط الغموض اللي بيوقّع في مدينة غلط
   document.getElementById('dpContext').innerHTML = dpContextHTML(r);
-  const info = addrModeInfo(r);
-  el.className = `dp-state ${info.set ? 'ok' : (rowAddrMode(r) === 'cityDoubt' ? 'doubt' : '')}`;
-  el.innerHTML = `<b>الحالي:</b> ${esc(info.label)} — ${esc(info.hint)}`;
+  // 🔴 قايمة المدن جوّه نفس الـ innerHTML، فإعادة رسم السياق **بتمسحها**.
+  //    إعادة تعبئتها هنا إلزامية — من غيرها القايمة بتفضل فاضية بعد أول
+  //    اختيار من غير أي خطأ، والموظف يفتكر إن المدن مالهاش بديل.
+  renderDpCitySelect();
+  renderDpTitle(r);
 }
 
 // صف منطقة واحد — `why` سطر بيقول ده طابق إيه ومن أنهي خانة
@@ -3654,6 +3750,8 @@ function closeDistrictPicker() {
 let uploadRunning = false;
 let lastResults   = [];
 let pendingUpload = null;   // { ready:[], dups:[] }
+// نتيجة مستنية عشان نافذة الرفض مفتوحة — بتتفتح أول ما تتقفل
+let resultsPending = false;
 
 function startUpload() {
   if (uploadRunning) return;
@@ -3711,7 +3809,7 @@ async function runUpload(rows, allowDuplicate) {
   document.getElementById('clearSelBtn').disabled = true;
   renderJobBar();          // الأوضاع بتتقفل أثناء الرفع
   lastResults = [];
-  showResults();
+  resultsPending = false;
 
   const j = job();
   const chunks = [];
@@ -3750,8 +3848,15 @@ async function runUpload(rows, allowDuplicate) {
   const s = summarize(lastResults);
   if (s.error || s.warning) playBeep(s.error ? 'error' : 'warn');
   else playBeep('success');
-  showToast(`تم: ${fmtNum(s.success)} ✓ | تحذير: ${fmtNum(s.warning)} ⚠ | فشل: ${fmtNum(s.error)} ✗ | اتخطّى: ${fmtNum(s.skipped)} ⏭️`,
-            s.error ? 'error' : (s.warning ? 'warning' : 'success'), 8000);
+  // ⚠️ نافذة الرفض (`cycleBlockOverlay`) أهم من دي: هي اللي بتقول «مفيش ولا
+  //    شحنة اتعملت». فتح نتيجة الرفع فوقها بيخفي السطر ده. النتيجة بتستنى
+  //    لحد ما الموظف يقفل نافذة الرفض، وساعتها بتتفتح لوحدها.
+  if (document.getElementById('cycleBlockOverlay').classList.contains('open')) {
+    renderResults();
+    resultsPending = true;
+  } else {
+    openResultsModal();
+  }
 
   selected.clear();
   await loadOrders(false);
@@ -3862,7 +3967,11 @@ function openCycleBlockModal(d, j) {
   document.getElementById('cycleBlockOverlay').classList.add('open');
   playBeep('error');
 }
-function closeCycleBlockModal() { document.getElementById('cycleBlockOverlay').classList.remove('open'); }
+function closeCycleBlockModal() {
+  document.getElementById('cycleBlockOverlay').classList.remove('open');
+  // النتيجة اللي اتأجّلت عشان ماتخفيش نافذة الرفض — دورها دلوقتي
+  if (resultsPending) openResultsModal();
+}
 
 // ─── §TOOL-JS::cancelShipment ───
 // 🔴 الإلغاء **بيحرّر** `uniqueBusinessReference`، فإعادة الرفع بعد التصحيح
@@ -3902,34 +4011,49 @@ function summarize(rows) {
     skipped: rows.filter(r => r.status === 'skipped').length,
   };
 }
-function showResults() { document.getElementById('resultsPanel').style.display = ''; renderResults(); }
-function hideResults() { document.getElementById('resultsPanel').style.display = 'none'; }
-function toggleResults() {
-  const wrap = document.getElementById('resBodyWrap');
-  const open = wrap.classList.contains('collapsed');
-  wrap.classList.toggle('collapsed', !open);
-  document.getElementById('resToggleIcon').classList.toggle('open', open);
-}
-
+// 🔴 «تم جزئيًا» (أصفر) **مش فشل**: الشحنة موجودة عند بوسطة ومعاها رقم تتبع
+//    وحاجة بعدها ما تمّتش. إعادة الرفع بتعمل شحنة تانية بفلوس — الحل تصحيح
+//    يدوي أو إلغاء وإعادة رفع مصححة.
 const RESULT_BADGE = {
-  success: '<span class="badge badge-success">✓ تم</span>',
+  success: '<span class="badge badge-success">✓ نجاح</span>',
   warning: '<span class="badge badge-warn">⚠ تم جزئيًا</span>',
   error:   '<span class="badge badge-danger">✗ فشل</span>',
   skipped: '<span class="badge badge-muted">⏭️ اتخطّى</span>',
 };
+
+// 🔴 أي صف مش «نجاح» بيفتح التفاصيل لوحده. وصف اتسجّلش في D1 بيتحسب معاهم:
+//    العملية تمت والسجل ناقص — وده بالظبط اللي بيخلي الموظف يعيد الرفع بعدين.
+function resultsNeedDetails(rows) {
+  return rows.some(r => r.status !== 'success' || r.logged === false);
+}
+function openResultsModal() {
+  resultsPending = false;
+  renderResults();
+  setResultDetails(resultsNeedDetails(lastResults));
+  document.getElementById('resultsOverlay').classList.add('open');
+}
+function closeResultsModal() { document.getElementById('resultsOverlay').classList.remove('open'); }
+function setResultDetails(open) {
+  document.getElementById('resDetails').classList.toggle('collapsed', !open);
+  document.getElementById('resDetailsBtn').textContent = open ? '▲ اخفي التفاصيل' : '▾ عرض التفاصيل';
+}
+function toggleResultDetails() {
+  setResultDetails(document.getElementById('resDetails').classList.contains('collapsed'));
+}
 function renderResults() {
   const s = summarize(lastResults);
   document.getElementById('resCount').textContent = fmtNum(lastResults.length);
   document.getElementById('resSummary').innerHTML =
-    `<span class="badge badge-success">تم ${fmtNum(s.success)}</span>` +
+    `<span class="badge badge-success">نجاح ${fmtNum(s.success)}</span>` +
     `<span class="badge badge-warn">تحذير ${fmtNum(s.warning)}</span>` +
     `<span class="badge badge-danger">فشل ${fmtNum(s.error)}</span>` +
     `<span class="badge badge-muted">اتخطّى ${fmtNum(s.skipped)}</span>`;
+  renderResultVerdict(s);
   const body = document.getElementById('resBody');
   if (!lastResults.length) {
     // 🔴 العدد بيتقرا من الترويسة نفسها — كان مكتوب 8 بالإيد، وعمود «إجراء»
     //    اللي اتضاف في v2.0.0 خلّاه 9 من غير ما حاجة تشتكي.
-    const nCols = document.querySelectorAll('#resBodyWrap thead th').length || 9;
+    const nCols = document.querySelectorAll('#resDetails thead th').length || 9;
     body.innerHTML = `<tr class="empty-row"><td colspan="${nCols}"><span class="loading-spinner"></span></td></tr>`;
     return;
   }
@@ -3951,6 +4075,34 @@ function renderResults() {
       <td>${resultAction(r)}</td>
     </tr>`;
   }).join('');
+}
+
+// سطر الحكم فوق النافذة — الجملة اللي كانت في التوست، بس مستنية ضغطة.
+// 🔴 الأصفر بيقول صراحةً إن الشحنة **اتعملت فعلًا** عند بوسطة: من غير السطر ده
+//    الموظف بيقرا «تحذير» ويعيد الرفع، ويطلّع شحنة تانية بفلوس حقيقية.
+function renderResultVerdict(s) {
+  const el = document.getElementById('resVerdict');
+  if (!el) return;
+  const j = job();
+  if (s.error) {
+    el.className = 'res-verdict bad';
+    el.innerHTML = `✗ <b>${fmtNum(s.error)}</b> صف فشل في ${esc(j.label)}` +
+      (s.success || s.warning ? ` — و<b>${fmtNum(s.success + s.warning)}</b> اتعملت لهم شحنة فعلًا.` : '.') +
+      ` راجع التفاصيل تحت قبل أي إعادة رفع.`;
+  } else if (s.warning) {
+    el.className = 'res-verdict warn';
+    el.innerHTML = `⚠ <b>${fmtNum(s.warning)}</b> صف «تم جزئيًا» — ` +
+      `<b>الشحنة اتعملت عند بوسطة ومعاها رقم تتبع</b>، وحاجة بعدها ما تمّتش. ` +
+      `إعادة الرفع بتعمل شحنة تانية بفلوس — صحّح يدويًا أو ألغي الشحنة وارفع تاني.`;
+  } else if (s.skipped) {
+    el.className = 'res-verdict warn';
+    el.innerHTML = `⏭️ <b>${fmtNum(s.skipped)}</b> صف اتخطّى — شوف السبب في التفاصيل.`;
+  } else {
+    el.className = 'res-verdict ok';
+    el.innerHTML = `✅ <b>${fmtNum(s.success)}</b> شحنة ${esc(j.label)} اترفعت بنجاح.`;
+  }
+  document.getElementById('resTitle').textContent =
+    s.error ? `✗ نتيجة الرفع — فيه فشل` : s.warning ? `⚠️ نتيجة الرفع — فيه تحذير` : `✅ نتيجة الرفع`;
 }
 
 // 🔴 زرار الإلغاء بيبان **بس** لما تكون فيه شحنة فعلًا (رقم تتبع) في وضع R/E.
@@ -4004,7 +4156,7 @@ async function exportOrdersXLSX() {
     { header: 'مدينة بوسطة', key: 'cityName', width: 16 },
     { header: 'مدينة المطابقة التلقائية', key: 'cityAuto', width: 20 },
     { header: 'المنطقة', key: 'district', width: 20 },
-    { header: 'نوع المطابقة', key: 'addrMode', width: 24 },
+    { header: 'حالة العنوان', key: 'addrMode', width: 24 },
     { header: 'العنوان', key: 'address', width: 40 },
     { header: 'التحصيل', key: 'cod', width: 12 },
     { header: 'قيمة البضاعة', key: 'goodsValue', width: 14 },
