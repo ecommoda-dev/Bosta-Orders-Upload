@@ -563,11 +563,14 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
    فراغ كانت بتخلّي خانة «المدينة» الزرقا وخانة «المدينة» الحمرا مش فوق بعض،
    والمقارنة بينهم هي **كل** الشغل في النافذة دي.
    ⚠️ عرض عمود التسمية مكتوب رقم ثابت (128px) في التلات صفوف عن قصد — `auto`
-   بيتحسب لكل صف لوحده (كل صف grid مستقل) فالأعمدة بتزحف على بعضها. */
+   بيتحسب لكل صف لوحده (كل صف grid مستقل) فالأعمدة بتزحف على بعضها.
+   🔴 وعدد الأعمدة **تلاتة في الصفين** (v2.5.0) — الصف الأزرق والأحمر لازم
+   يفضلوا بنفس العدد، وإلا خانة بوسطة مابتقعش فوق خانة شوبيفاي اللي بتقابلها
+   والمقارنة (اللي هي كل الشغل في النافذة دي) بتبقى غلط بصريًا. */
 .dp-tbl{border:1px solid var(--border-strong);border-radius:var(--radius-sm);
   overflow:hidden;margin-bottom:8px;}
 .dp-tbl > * + *{border-top:1px solid var(--border-strong);}
-.dp-src{display:grid;grid-template-columns:128px repeat(2,minmax(0,1fr));align-items:stretch;}
+.dp-src{display:grid;grid-template-columns:128px repeat(3,minmax(0,1fr));align-items:stretch;}
 .dp-src-tag{display:flex;align-items:center;gap:5px;padding:6px 10px;
   font-size:11px;font-weight:800;letter-spacing:.2px;white-space:nowrap;}
 .dp-src.shopify{background:var(--accent-light);}
@@ -582,11 +585,11 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .dp-f-v.set{color:var(--green-dark);}
 /* 🔴 العنوان الكامل **فوق** الصفين وبالأخضر — هو المصدر الوحيد اللي المطابقة
    بتقرا منه، والموظف بيقراه الأول وبعدين يقارن الأزرق بالأحمر. */
-.dp-addr{display:grid;grid-template-columns:128px repeat(2,minmax(0,1fr));
+.dp-addr{display:grid;grid-template-columns:128px repeat(3,minmax(0,1fr));
   background:var(--green-light);}
 .dp-addr-k{display:flex;align-items:center;padding:6px 10px;background:var(--green);color:#fff;
   font-size:11px;font-weight:800;letter-spacing:.2px;white-space:nowrap;}
-.dp-addr-v{grid-column:span 2;padding:6px 10px;font-size:13px;font-weight:700;
+.dp-addr-v{grid-column:span 3;padding:6px 10px;font-size:13px;font-weight:700;
   color:var(--green-dark);line-height:1.7;word-break:break-word;}
 .dp-addr-v.muted{color:var(--text-muted);font-weight:600;}
 @media (max-width:640px){
@@ -681,10 +684,45 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 /* 🔴 قايمة المدن جوّه صف بوسطة نفسه — مش في صف لوحدها تحت. المدينة اللي
    هتتبعت والمدينة اللي المطابقة وصلت لها لازم يكونوا **نفس الخانة**: صف
    منفصل معناه إن الموظف يقرا مدينة في السطر الأحمر ويغيّر مدينة تانية تحت. */
-.dp-city-select{width:100%;min-width:0;padding:4px 8px;border-radius:var(--radius-sm);
-  border:1px solid var(--border-strong);background:var(--surface);color:var(--text-primary);
-  font-family:var(--font-body);font-size:12.5px;font-weight:700;cursor:pointer;}
-.dp-city-select.changed{border-color:var(--amber);background:var(--amber-light);color:var(--amber);}
+/* ── قايمة منسدلة ببحث — بتتكرر تلات مرات في صف بوسطة (واجهة v2.5.0) ──
+   🔴 `<select>` العادي مالوش بحث، و**٢٠٧ منطقة في القليوبية لوحدها** (والجيزة
+   ٣٣١) — يعني التمرير مش وسيلة اختيار. المكوّن ده زرار + لوحة فيها خانة بحث
+   وقايمة، ونفس الشكل في التلاتة عشان الموظف يتعلم حركة واحدة.
+   ⚠️ اللوحة `position:absolute` جوّه خانة `position:relative` — مش `fixed`:
+   السياق بيتعاد رسمه بالكامل مع كل اختيار، ولوحة عايشة برّه الشجرة كانت
+   هتفضل معلّقة على الشاشة بعد ما مصدرها يتمسح. */
+.dp-pick{position:relative;flex:1;min-width:0;}
+.dp-pick-btn{width:100%;min-width:0;display:flex;align-items:center;gap:6px;
+  padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--border-strong);
+  background:var(--surface);font-family:inherit;font-size:12px;font-weight:800;
+  color:var(--text-primary);cursor:pointer;text-align:start;}
+.dp-pick-btn:hover{border-color:var(--accent);}
+.dp-pick-btn .dp-pick-cur{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dp-pick-btn .dp-pick-cur.muted{color:var(--text-muted);font-weight:600;}
+.dp-pick-btn.changed{border-color:var(--amber);background:var(--amber-light);color:var(--amber);}
+.dp-pick-btn.set{border-color:var(--green-border);background:var(--green-light);color:var(--green-dark);}
+.dp-pick-btn[disabled]{cursor:not-allowed;opacity:.55;background:var(--surface-2);}
+.dp-pick-panel{display:none;position:absolute;z-index:40;inset-inline-start:0;top:calc(100% + 4px);
+  width:max(260px,100%);background:var(--surface);border:1px solid var(--border-strong);
+  border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,.16);overflow:hidden;}
+.dp-pick.open .dp-pick-panel{display:block;}
+.dp-pick-search{width:100%;height:30px;border:none;border-bottom:1px solid var(--border);
+  padding:0 10px;font-family:inherit;font-size:12px;background:var(--surface-2);outline:none;}
+.dp-pick-search:focus{background:var(--surface);}
+.dp-pick-list{max-height:240px;overflow-y:auto;}
+.dp-pick-opt{padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;gap:6px;border-top:1px solid var(--border);}
+.dp-pick-opt:first-child{border-top:none;}
+.dp-pick-opt:hover{background:var(--accent-light);}
+.dp-pick-opt.cur{background:var(--green-light);color:var(--green-dark);}
+.dp-pick-opt-sub{margin-inline-start:auto;font-size:10.5px;font-weight:700;color:var(--text-muted);
+  white-space:nowrap;}
+/* 🔴 المقفولة للتسليم بتبان هنا كمان — نفس قاعدة القايمة الكبيرة (8.11):
+   تتعرض معلّمة ومش قابلة للضغط، مش تتشال بصمت. */
+.dp-pick-opt.blocked{background:var(--red-light);color:var(--red-dark);cursor:not-allowed;
+  text-decoration:line-through;}
+.dp-pick-opt.blocked:hover{background:var(--red-light);}
+.dp-pick-empty{padding:10px;font-size:11.5px;font-weight:700;color:var(--text-muted);text-align:center;}
 /* شرح الزون اتلمّ في سطر واحد وتفاصيله بتتفتح بالطلب — كان ٣ سطور ثابتة
    بينزّلوا القايمة نفسها تحت طيّة الشاشة. العدّاد (كام منطقة ليها زون) فاضل
    ظاهر دايمًا لأنه هو اللي بيفرّق بين «بلا زون» و«الكتالوج مارجّعش الحقل». */
@@ -814,6 +852,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <span class="cl-ver-date">14-09-2026</span>
         </div>
         <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>🔽 <b>صف بوسطة بقى تلات قوايم منسدلة ببحث: المدينة · الزون · المنطقة.</b> قبل كده كانت المدينة بس قايمة، والمنطقة نص للقراءة — يعني الاختيار كله من القايمة الكبيرة تحت. دلوقتي التلاتة قابلة للتغيير من نفس المكان اللي الموظف بيقرا فيه القيمة. ⚠️ و<b>الزون بيقصّر القايمة، مابيختارش منطقة</b> — الزون جواه مناطق كتير (زون العبور = ٦) واختيار واحدة منهم تلقائيًا تخمين.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>الأعمدة التلاتة بقت تقابل بعضها عمود بعمود:</b> محافظة شوبيفاي ↔ مدينة بوسطة · مدينة شوبيفاي ↔ الزون (دي الخانة اللي العميل بيكتب فيها «العبور») · عنوان شوبيفاي ↔ المنطقة. يعني السؤال «الأحمر ده جاي منين؟» بقى ليه إجابة فوقه على طول.</span></li>
           <li class="cl-item"><span class="cl-tag new">جديد</span><span>🚫 <b>المناطق اللي بوسطة مش بتسلّم فيها بقت باينة.</b> قبل كده كانت بتتشال من القايمة <b>في صمت</b> — الموظف يشوف ٧ مناطق بدل ٩ ومش عارف إن عنوان العميل أصلًا <b>برّه تغطية بوسطة</b>، فيضغط «ارفع على المحافظة بس» فاكرها مسار احتياطي سليم، والشحنة تتشحن بفلوس وترجع بعد أيام. دلوقتي بتتعرض في نفس القايمة <b>معلّمة ومش قابلة للضغط</b>، والعنوان اللي بيطابق واحدة منها <b>بيوقف الصف</b> بحالة جديدة <b>🚫 برّه تغطية بوسطة</b> — الأوردر يتحوّل لخدمة العملاء (عنوان بديل · كوريَر تاني · إلغاء).</span></li>
           <li class="cl-item"><span class="cl-tag new">جديد</span><span>🗺️ <b>درجة الزون — مستوى جديد بين المنطقة والمحافظة.</b> الأوردر اللي مالوش مطابقة منطقة بس عنوانه طابق <b>زون واحد</b> بقى يترفع بالزون بدل ما ينزل على طول للمحافظة. الفرق مقيس على بوليصتين: «المحافظة بس» بتاخد <b>هب افتراضي</b> وكود فرز <code>G-02</code>، والزون بياخد <b>هب محدد</b> وكود <code>G-08</code> — يعني تحويلة أقل. السلّم بقى <b>منطقة ← زون ← محافظة</b>، والنزول بيحصل لما اللي فوقه يترفض بس.</span></li>
           <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>قيمة البضاعة تحت ١٠٠ جنيه كانت بترجّع رفض مبهم من بوسطة.</b> بوسطة عندها حد <b>مش مكتوب في التوثيق</b> (١٠٠–٥٠٠٠٠) ورسالة الرفض بتتكلم عن «قيمة الطرد» من غير ما تقول إن فيه حد أصلًا. دلوقتي الصف <b>بيتوقف قبل النداء</b> برسالة واضحة. ⚠️ الحالة دي أقرب بكتير في <b>الاسترجاع/الاستبدال</b>: القيمة هناك متحسبة من سعر القطع اللي بتسافر مش من إجمالي الأوردر.</span></li>
@@ -1807,7 +1847,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.4.0';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.5.0';   // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -3496,8 +3536,18 @@ function dpAddrRow(key, val) {
 // 🔴 والتقسيم بالمصدر (شوبيفاي مقابل بوسطة) هو السؤال نفسه: الأزرق ده يساوي
 //    الأحمر ده ولا لأ؟ رقم الأوردر في عنوان النافذة، والعميل وحالة S1 اتشالوا
 //    لأنهم مالهمش دخل بقرار المنطقة.
+// 🔴 **الأعمدة التلاتة بتقابل بعضها عمود بعمود** (v2.5.0) — مش مجرد زيادة خانة:
+//
+//      شوبيفاي   المحافظة   │   المدينة      │   العنوان
+//      بوسطة     المدينة    │   الزون        │   المنطقة
+//
+//    كل عمود هو **مصدر القيمة اللي تحته**: المحافظة بتتحول لمدينة بوسطة من
+//    الجدول المقفول · وخانة `city` بتاعة شوبيفاي هي اللي العميل بيكتب فيها اسم
+//    الزون («العبور») · واسم المنطقة بيتلقط من نص العنوان. والترجيح نفسه بيرتّب
+//    الخانات كده بالظبط (`city` تغلب `address1`). يعني الترتيب ده مش تجميل —
+//    هو اللي بيخلي السؤال «الأحمر ده جاي منين؟» ليه إجابة فوقه على طول.
+// ⚠️ ولازم الصفين يفضلوا **نفس عدد الأعمدة**، وإلا الخانات مابتقعش فوق بعضها.
 function dpContextHTML(r) {
-  const dm = addrModeInfo(r);
   return '<div class="dp-tbl">' +
          // 🔴 العنوان الكامل أول سطر — هو المصدر الوحيد اللي المطابقة بتقرا منه،
          //    والسطرين اللي تحته هما نتيجة قراءته. نفس نص عمود «العنوان كامل»
@@ -3505,17 +3555,44 @@ function dpContextHTML(r) {
          dpAddrRow('العنوان بالكامل', fullAddressText(r)) +
          dpSrcRow('shopify', '🛍️ شوبيفاي',
            dpField('المحافظة', r.province) +
-           dpField('المدينة', r.addressCity)) +
+           dpField('المدينة', r.addressCity) +
+           dpField('العنوان', [r.address1, r.address2].filter(Boolean).join(' - '))) +
          dpSrcRow('bosta', '🚚 بوسطة',
-           // 🔴 المدينة هنا **قايمة منسدلة** مش نص: المدينة اللي معروضة هي
-           //    اللي هتتبعت فعلًا، فتغييرها لازم يحصل في نفس الخانة اللي
-           //    الموظف بيقراها — مش في صف تاني تحت.
-           dpControlField('المدينة',
-             `<select class="dp-city-select" id="dpCity" onchange="chooseCity(this.value)"></select>`) +
-           // 🔴 المنطقة بتتكتب بس لو فيه منطقة فعلًا. في حالات الشك بادج الحالة
-           //    نفسها مش منطقة — كتابتها هنا بتقرا كأن الشحنة عليها منطقة وهي مالهاش.
-           dpField('المنطقة', dm.set ? dm.label : '', 'set')) +
+           // 🔴 التلاتة **قوايم منسدلة ببحث** مش نص: القيمة المعروضة هي اللي
+           //    هتتبعت فعلًا، فتغييرها لازم يحصل في نفس الخانة اللي الموظف
+           //    بيقراها — مش في صف تاني تحت ولا في القايمة الكبيرة بس.
+           dpControlField('المدينة',   dpPickHTML('city')) +
+           dpControlField('الزون',     dpPickHTML('zone')) +
+           dpControlField('المنطقة',   dpPickHTML('district'))) +
          '</div>';
+}
+
+// ─── §TOOL-JS::dpPick — قايمة منسدلة ببحث ────────────────────
+// 🔴 التلاتة **نفس المكوّن** بمصدر بيانات مختلف. نسخ تلات قوايم بشكل مختلف
+//    معناه إن الموظف يتعلّم تلات حركات لنفس الفعل، وإن أي إصلاح في واحدة
+//    مايوصلش للتانيتين.
+// ⚠️ كل اللوحات عايشة جوّه `#dpContext`، و`renderDistrictState` بتعيد كتابته
+//    بالكامل — فالحالة (`dpPickOpen` · `dpPickSearch`) عايشة **برّه** الـ DOM
+//    وبتترسم من الأول كل مرة. حالة محفوظة في الـ DOM كانت هتتمسح بصمت.
+const DP_PICKS = {
+  city:     { label: 'المدينة',  placeholder: 'ابحث عن مدينة…' },
+  zone:     { label: 'الزون',    placeholder: 'ابحث عن زون…' },
+  district: { label: 'المنطقة',  placeholder: 'ابحث عن منطقة…' },
+};
+let dpPickOpen = null;               // أنهي قايمة مفتوحة دلوقتي (واحدة بالكتير)
+const dpPickSearch = { city: '', zone: '', district: '' };
+
+function dpPickHTML(key) {
+  return `<div class="dp-pick" id="dpPick-${key}">
+    <button type="button" class="dp-pick-btn" id="dpPickBtn-${key}"
+            onclick="event.stopPropagation();dpPickToggle('${key}')"></button>
+    <div class="dp-pick-panel" onclick="event.stopPropagation()">
+      <input type="text" class="dp-pick-search" id="dpPickSearch-${key}"
+             placeholder="${esc(DP_PICKS[key].placeholder)}"
+             oninput="dpPickFilter('${key}', this.value)">
+      <div class="dp-pick-list" id="dpPickList-${key}"></div>
+    </div>
+  </div>`;
 }
 
 // عنوان النافذة = رقم الأوردر + **حالة العنوان** بنفس قيمة العمود والفلتر،
@@ -3538,9 +3615,12 @@ async function openDistrictPicker(orderId) {
   if (!r) return;
   if (!r.addressOk) { showToast(r.addressError || 'المحافظة مش معروفة', 'error', 6000); return; }
   dpOrderId = orderId;
+  // أي بحث أو لوحة مفتوحة من أوردر قبله مالهاش معنى هنا
+  dpPickOpen = null;
+  dpPickSearch.city = dpPickSearch.zone = dpPickSearch.district = '';
   renderDpTitle(r);
   document.getElementById('dpContext').innerHTML = dpContextHTML(r);
-  renderDpCitySelect();
+  renderDpControls();
   document.getElementById('dpSearch').value = '';
   toggleSearchActiveState(document.getElementById('dpSearch'));
   document.getElementById('districtOverlay').classList.add('open');
@@ -3557,7 +3637,7 @@ async function openDistrictPicker(orderId) {
 async function loadDpCity(cityId) {
   dpCityId = cityId;
   dpZoneFilter = null;   // القصر تبع مدينة معيّنة — مايعديش معاها
-  renderDpCitySelect();
+  renderDpControls();
   document.getElementById('dpList').innerHTML =
     '<div style="padding:20px;text-align:center;"><span class="loading-spinner"></span></div>';
   dpDistricts = []; dpBlockedCount = 0; dpLoading = true;
@@ -3581,18 +3661,187 @@ async function loadDpCity(cityId) {
   renderDistrictList();
 }
 
-function renderDpCitySelect() {
-  const r  = allRows.find(x => x.orderId === dpOrderId);
-  const el = document.getElementById('dpCity');
-  if (!el || !r) return;
-  const list = dpCities.length ? dpCities : [{ cityId: r.cityId, cityName: r.cityName, cityAr: '' }];
-  el.innerHTML = list.map(c =>
-    `<option value="${esc(c.cityId)}" ${c.cityId === dpCityId ? 'selected' : ''}>` +
-    `${esc(c.cityName)}${c.cityAr ? ` — ${esc(c.cityAr)}` : ''}` +
-    // «٧ من ٩» بيقول إن المدينة دي تغطيتها ناقصة أصلًا — الرقم لوحده كان
-    // بيتقرا كأنه كل مناطق المدينة.
-    `${c.blockedCount ? ` · 🚫 ${fmtNum(c.blockedCount)} مقفولة` : ''}</option>`).join('');
-  el.classList.toggle('changed', dpCityId !== r.cityId);
+// ─── مصادر الخيارات — كل واحدة بترجّع صفوف موحّدة الشكل ───
+// { id, label, sub, blocked, cur }
+function dpPickOptions(key) {
+  const r = allRows.find(x => x.orderId === dpOrderId);
+  if (!r) return [];
+
+  if (key === 'city') {
+    const list = dpCities.length ? dpCities : [{ cityId: r.cityId, cityName: r.cityName, cityAr: '' }];
+    return list.map(c => ({
+      id: c.cityId,
+      label: `${c.cityName}${c.cityAr && c.cityAr !== c.cityName ? ` — ${c.cityAr}` : ''}`,
+      // 🔴 «🚫 ٢ مقفولة» جنب اسم المدينة — من غيره عدد المناطق بيتقرا كأنه
+      //    كل مناطق المدينة، والموظف مش عارف إن التغطية ناقصة أصلًا.
+      sub: c.blockedCount ? `🚫 ${fmtNum(c.blockedCount)} مقفولة` : '',
+      blocked: false,
+      cur: c.cityId === dpCityId,
+    }));
+  }
+
+  if (key === 'zone') {
+    // 🔴 الزون بيتبني من مناطق المدينة المعروضة — **المتاحة بس**. زون كل مناطقه
+    //    مقفولة مالوش معنى كمُرشِّح: القايمة تحته هتفضل فاضية.
+    const byKey = new Map();
+    for (const d of dpDistricts) {
+      if (d.blocked) continue;
+      const z = (d.zone || '').trim(), zAr = (d.zoneAr || '').trim();
+      if (!z && !zAr) continue;
+      const id = z || zAr;
+      const prev = byKey.get(id);
+      if (prev) { prev.count++; continue; }
+      byKey.set(id, { id, name: z, nameAr: zAr, count: 1 });
+    }
+    return [...byKey.values()]
+      .sort((a, b) => a.id.localeCompare(b.id, 'en'))
+      .map(z => ({
+        id: z.id,
+        label: `${z.name || z.nameAr}${z.nameAr && z.nameAr !== z.name ? ` — ${z.nameAr}` : ''}`,
+        sub: `${fmtNum(z.count)} منطقة`,
+        blocked: false,
+        cur: dpZoneFilter != null && dpZoneFilter.toLowerCase() === z.id.toLowerCase(),
+      }));
+  }
+
+  // المنطقة — 🔴 المقفولة **معروضة ومعلّمة** زي القايمة الكبيرة بالظبط (8.11)
+  const ov = districtOverride[dpOrderId];
+  const chosen = ov?.districtId || (dpCityId === r.cityId ? r.districtId : null);
+  let list = dpDistricts;
+  // لو الموظف قصر على زون، القايمة هنا بتتقصر معاه — وإلا الرقمين بيختلفوا
+  // والموظف يفتكر إن القصر مابيشتغلش.
+  if (dpZoneFilter) {
+    const zf = dpZoneFilter.toLowerCase();
+    list = list.filter(d => (d.zone || '').toLowerCase() === zf || (d.zoneAr || '').toLowerCase() === zf);
+  }
+  return [...list]
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'en'))
+    .map(d => ({
+      id: d.id,
+      label: `${d.name}${d.nameAr && d.nameAr !== d.name ? ` — ${d.nameAr}` : ''}`,
+      sub: d.blocked ? '🚫 مقفولة للتسليم' : zoneLabel(d).text,
+      blocked: !!d.blocked,
+      cur: d.id === chosen,
+    }));
+}
+
+// النص المعروض على الزرار وهو مقفول — القيمة السارية فعلًا
+function dpPickCurrent(key) {
+  const r = allRows.find(x => x.orderId === dpOrderId);
+  if (!r) return { text: '—', cls: 'muted' };
+  const opts = dpPickOptions(key);
+  const cur  = opts.find(o => o.cur);
+  if (key === 'city') {
+    return { text: cur?.label || r.cityName || '—',
+             cls: dpCityId !== r.cityId ? 'changed' : '' };
+  }
+  if (key === 'zone') {
+    // ⚠️ الزون **مُرشِّح مش اختيار**: هو بيقصّر القايمة ومابيحددش منطقة، لأن
+    //    الزون جواه مناطق كتير واختيار واحدة منها تخمين (`bosta-api-helper` 8.10).
+    //    الاستثناء إن الشحنة نفسها هتترفع بالزون (`mode: 'zone'`) — ساعتها هو
+    //    قيمة حقيقية بتتبعت، مش ترشيح.
+    if (dpZoneFilter) return { text: cur?.label || dpZoneFilter, cls: 'changed' };
+    if (r.mode === 'zone' && r.zoneName && dpCityId === r.cityId) {
+      return { text: r.zoneName, cls: 'set' };
+    }
+    return { text: 'الكل', cls: 'muted' };
+  }
+  const dm = addrModeInfo(r);
+  if (cur) return { text: cur.label, cls: 'set' };
+  // مفيش منطقة متحددة — البادج نفسه مش منطقة، فكتابته هنا بتقرا كأن الشحنة
+  // عليها منطقة وهي مالهاش.
+  return { text: dm.set && dpCityId === r.cityId ? dm.label : '— مفيش —', cls: 'muted' };
+}
+
+function dpPickToggle(key) {
+  dpPickOpen = dpPickOpen === key ? null : key;
+  dpPickSearch[key] = '';
+  renderDpControls();
+  if (dpPickOpen === key) {
+    const el = document.getElementById(`dpPickSearch-${key}`);
+    if (el) el.focus();
+  }
+}
+function dpPickFilter(key, q) {
+  dpPickSearch[key] = q;
+  renderDpPickList(key);
+}
+function dpPickClose() {
+  if (!dpPickOpen) return;
+  dpPickOpen = null;
+  renderDpControls();
+}
+
+async function dpPickChoose(key, id) {
+  if (key === 'city')     { dpPickOpen = null; await chooseCity(id); return; }
+  if (key === 'zone')     { dpPickOpen = null; dpPickZone(id); return; }
+  // 🔴 المنطقة المقفولة بتتمنع في `chooseDistrict` نفسها — الحارس هناك مش هنا،
+  //    عشان يغطي القايمة الكبيرة كمان.
+  const opt = dpPickOptions('district').find(o => o.id === id);
+  dpPickOpen = null;
+  chooseDistrict(id, (opt?.label || '').split(' — ')[0]);
+}
+
+// 🔴 اختيار زون = **قصر القايمة**، مش اختيار منطقة. الزون جواه مناطق كتير،
+//    واختيار واحدة منها تلقائيًا تخمين (8.10). و«الكل» بيشيل القصر.
+function dpPickZone(id) {
+  // ⚠️ «الكل» بتيجي بـ`id` فاضي — لازم تتحوّل لـ`null` صريح، لأن كل الفحوص
+  //    تحت `if (dpZoneFilter)` والنص الفاضي بيعدّي كـ«مفيش قصر» بالصدفة بس.
+  const next = !id ? null
+    : (dpZoneFilter && dpZoneFilter.toLowerCase() === String(id).toLowerCase()) ? null : id;
+  dpZoneFilter = next;
+  renderDistrictList();
+  showToast(next ? `القايمة مقصورة على زون ${next} — اختر المنطقة` : 'القصر اتشال — كل مناطق المدينة',
+            'success', 4000);
+}
+
+function renderDpPickList(key) {
+  const el = document.getElementById(`dpPickList-${key}`);
+  if (!el) return;
+  const q = (dpPickSearch[key] || '').trim().toLowerCase();
+  let opts = dpPickOptions(key);
+  if (q) opts = opts.filter(o => `${o.label} ${o.sub}`.toLowerCase().includes(q));
+
+  // «الكل» في قايمة الزون بس — هو اللي بيشيل القصر ويرجّع كل مناطق المدينة
+  const head = (key === 'zone' && !q)
+    ? `<div class="dp-pick-opt${dpZoneFilter ? '' : ' cur'}"
+            onclick="dpPickChoose('zone','')">🗺️ كل الزونات
+         <span class="dp-pick-opt-sub">${fmtNum(dpDistricts.filter(d => !d.blocked).length)} منطقة</span>
+       </div>`
+    : '';
+
+  if (!opts.length && !head) {
+    el.innerHTML = `<div class="dp-pick-empty">مفيش نتايج${q ? ` لـ"${esc(q)}"` : ''}</div>`;
+    return;
+  }
+  // القايمة مقصوصة على ٤٠٠ زي القايمة الكبيرة — والبحث هو وسيلة الوصول
+  el.innerHTML = head + opts.slice(0, 400).map(o =>
+    `<div class="dp-pick-opt${o.cur ? ' cur' : ''}${o.blocked ? ' blocked' : ''}"
+          ${o.blocked ? 'title="بوسطة مش بتسلّم في المنطقة دي — العنوان برّه التغطية"'
+                      : `onclick="dpPickChoose('${key}','${jsq(o.id)}')"`}>
+       <span>${esc(o.label)}</span>${o.sub ? `<span class="dp-pick-opt-sub">${esc(o.sub)}</span>` : ''}
+     </div>`).join('');
+}
+
+// 🔴 التلات قوايم عايشين جوّه `#dpContext`، وإعادة رسم السياق **بتمسحهم**.
+//    إعادة تعبئتهم هنا إلزامية — من غيرها القوايم بتفضل فاضية بعد أول اختيار
+//    **من غير أي خطأ**، والموظف يفتكر إن مفيش بدايل. (الفخ ده كان موجود على
+//    قايمة المدن لوحدها قبل v2.5.0، ودلوقتي بقى على التلاتة.)
+function renderDpControls() {
+  const r = allRows.find(x => x.orderId === dpOrderId);
+  if (!r) return;
+  for (const key of Object.keys(DP_PICKS)) {
+    const wrap = document.getElementById(`dpPick-${key}`);
+    const btn  = document.getElementById(`dpPickBtn-${key}`);
+    if (!wrap || !btn) continue;
+    const cur = dpPickCurrent(key);
+    btn.className = `dp-pick-btn${cur.cls && cur.cls !== 'muted' ? ` ${cur.cls}` : ''}`;
+    btn.innerHTML = `<span class="dp-pick-cur${cur.cls === 'muted' ? ' muted' : ''}">${esc(cur.text)}</span><span>▾</span>`;
+    wrap.classList.toggle('open', dpPickOpen === key);
+    const search = document.getElementById(`dpPickSearch-${key}`);
+    if (search) search.value = dpPickSearch[key] || '';
+    renderDpPickList(key);
+  }
 }
 
 // 🔴 تغيير المدينة تدخّل مقصود — بيتسجّل على الصف فورًا حتى من غير اختيار
@@ -3611,6 +3860,10 @@ async function chooseCity(cityId) {
   await loadDpCity(cityId);
 }
 
+// الضغط في أي مكان تاني بيقفل اللوحة المفتوحة — الزراير نفسها بتعمل
+// `stopPropagation` فالضغط عليها مابيقفلهاش قبل ما تشتغل.
+document.addEventListener('click', () => { if (dpPickOpen) dpPickClose(); });
+
 function renderDistrictState() {
   const r = allRows.find(x => x.orderId === dpOrderId);
   if (!r) return;
@@ -3620,7 +3873,7 @@ function renderDistrictState() {
   // 🔴 قايمة المدن جوّه نفس الـ innerHTML، فإعادة رسم السياق **بتمسحها**.
   //    إعادة تعبئتها هنا إلزامية — من غيرها القايمة بتفضل فاضية بعد أول
   //    اختيار من غير أي خطأ، والموظف يفتكر إن المدن مالهاش بديل.
-  renderDpCitySelect();
+  renderDpControls();
   renderDpTitle(r);
 }
 
@@ -3871,6 +4124,7 @@ function closeDistrictPicker() {
   document.getElementById('districtOverlay').classList.remove('open');
   dpOrderId = null;
   dpZoneFilter = null;
+  dpPickOpen = null;
 }
 
 // ─── §TOOL-JS::upload ───

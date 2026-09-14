@@ -20,7 +20,9 @@ const api=new Function('document','window','localStorage','Chart','ExcelJS', src
  `\nreturn { renderDistrictList, chooseZone, clearZoneFilter, addrModeInfo,
     setup(rows,districts,cities,orderId,cityId){ allRows=rows; dpDistricts=districts; dpCities=cities;
       dpOrderId=orderId; dpCityId=cityId; dpLoading=false; },
-    zf(){ return dpZoneFilter; }, ov(){ return districtOverride; } };`
+    dpPickOptions, dpPickCurrent, dpPickZone, dpPickToggle, dpPickFilter,
+    zf(){ return dpZoneFilter; }, ov(){ return districtOverride; },
+    setZf(z){ dpZoneFilter = z; }, open(){ return dpPickOpen; } };`
 )(doc,win,{getItem:()=>null,setItem(){},removeItem(){}});
 
 const D=(id,name,nameAr,zone,zoneAr)=>({id,name,nameAr,zone,zoneAr});
@@ -75,6 +77,47 @@ console.log('\n── ④ شيل القصر ──');
 api.clearZoneFilter();
 const all=(listHTML.match(/class="dp-item/g)||[]).length;
 chk('كل المناطق رجعت', all === 8, `ظهر ${all}`);
+
+// ══════════════════════════════════════════════════════════════
+// ⑤ القوايم التلاتة في صف بوسطة (واجهة v2.5.0)
+// 🔴 القاعدة اللي الجزء ده بيحميها: **الزون بيقصّر القايمة، مابيختارش منطقة.**
+//    الزون جواه مناطق كتير (زون العبور = ٦)، واختيار واحدة منها تلقائيًا تخمين
+//    (`bosta-api-helper` 8.10). أي تعديل بيخلي اختيار الزون يسجّل `districtId`
+//    بيحوّل الاقتراح لقرار، والشحنة بتروح منطقة محدش اختارها.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑤ القوايم التلاتة ──');
+api.setup([row],cairo,cities,'B','c');
+delete api.ov()['B'];
+api.setZf(null);
+
+const zones = api.dpPickOptions('zone');
+chk('قايمة الزون بتتبني من مناطق المدينة', zones.length === 3, JSON.stringify(zones.map(z=>z.id)));
+chk('وبتقول كل زون فيه كام منطقة',
+    zones.find(z=>z.id==='Obour')?.sub === '6 منطقة', zones.find(z=>z.id==='Obour')?.sub);
+
+api.dpPickZone('Obour');
+chk('اختيار زون بيقصّر القايمة', api.zf() === 'Obour');
+// 🔴 دي النقطة كلها
+chk('ومابيختارش منطقة خالص', !api.ov()['B']?.districtId, JSON.stringify(api.ov()['B']));
+const dOpts = api.dpPickOptions('district');
+chk('وقايمة المنطقة بتتقصر مع القصر', dOpts.length === 6, `${dOpts.length}`);
+
+api.dpPickZone('Obour');
+chk('نفس الزون تاني = شيل القصر', api.zf() === null);
+api.dpPickZone('Obour'); api.dpPickZone('');
+chk('و«الكل» بتشيل القصر كـ null صريح مش نص فاضي', api.zf() === null, JSON.stringify(api.zf()));
+
+// المقفولة للتسليم بتبان في القايمة المنسدلة كمان، معلّمة ومش قابلة للضغط
+api.setup([row],[...cairo,{id:'x1',name:'Taba',nameAr:'طابا',zone:'Taba',zoneAr:'طابا',blocked:true}],
+          cities,'B','c');
+api.setZf(null);
+const withBlocked = api.dpPickOptions('district');
+const taba = withBlocked.find(o => o.id === 'x1');
+chk('المنطقة المقفولة ظاهرة في القايمة المنسدلة', !!taba);
+chk('ومعلّمة إنها مقفولة', taba?.blocked === true && /مقفولة/.test(taba?.sub || ''), JSON.stringify(taba));
+// 🔴 ومابتظهرش في قايمة الزون — زون كل مناطقه مقفولة مالوش معنى كمُرشِّح،
+//    القايمة تحته هتفضل فاضية.
+chk('وزونها مش في قايمة الزون', !api.dpPickOptions('zone').some(z => z.id === 'Taba'));
 
 console.log(`\n${p}/${n} نجحت`);
 process.exit(p===n?0:1);
