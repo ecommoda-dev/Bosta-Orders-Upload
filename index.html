@@ -19,7 +19,7 @@
   --border:#e5e7eb; --border-strong:#d1d5db;
   --text-primary:#111827; --text-secondary:#6b7280; --text-muted:#6b7280; --text-mid:#374151;
   --accent:#2563eb; --accent-light:#eff6ff; --accent-dark:#1d4ed8;
-  --green:#16a34a; --green-light:#f0fdf4; --green-border:#86efac;
+  --green:#16a34a; --green-light:#f0fdf4; --green-border:#86efac; --green-hover:#dcfce7;
   --red:#dc2626; --red-light:#fef2f2; --red-border:#fca5a5;
   --amber:#d97706; --amber-light:#fffbeb; --amber-border:#fde68a;
   --purple:#7c3aed; --purple-light:#f5f3ff; --purple-border:#c4b5fd;
@@ -413,10 +413,39 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .results-count{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:34px;padding:0 10px;
   font-family:var(--font-mono);font-size:17px;font-weight:800;color:var(--purple);background:var(--purple-light);
   border:1.5px solid var(--purple-border);border-radius:var(--radius-sm);}
-/* ── نافذة نتيجة الرفع (واجهة v2.2.0) ───────────────────────── */
-.res-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
-.res-count-lbl{font-size:14px;font-weight:800;color:var(--text-primary);white-space:nowrap;}
-.res-head .summary-row{padding:0;}
+/* ── نافذة نتيجة الرفع (واجهة v2.3.0) ───────────────────────── */
+/* 🔴 عدّادات النتيجة مربعات — مش بادجات في سطر واحد. البادجات كانت بنفس
+   حجم أي بادج تانية في الصفحة (بادج حالة الصف · بادج الدورة · بادج العقد)،
+   فالرقم اللي بيقول إن فيه صف **فشل** كان بيتقرا كأنه وسم عادي. المربع
+   بيحط الرقم أولًا وكبير والاسم تحته، فالقراءة بقت «٦ نجاح» من بصّة واحدة.
+   ⚠️ والصفر بيفضل **رمادي** — التلوين للقيمة اللي فيها شغل فعلًا، وتلوين
+   «فشل 0» بالأحمر بيخلي الشاشة تبان فيها فشل وهي كلها نجاح. */
+.res-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px;margin-bottom:12px;}
+.res-stat{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  padding:14px 8px;border:2px solid var(--border);border-radius:var(--radius);
+  background:var(--surface-2);text-align:center;}
+.res-stat-num{font-family:var(--font-mono);font-size:30px;font-weight:800;line-height:1;
+  color:var(--text-secondary);}
+.res-stat-lbl{font-size:13px;font-weight:800;color:var(--text-secondary);white-space:nowrap;}
+.res-stat.on.total{border-color:var(--purple-border);background:var(--purple-light);}
+.res-stat.on.total .res-stat-num,.res-stat.on.total .res-stat-lbl{color:var(--purple);}
+.res-stat.on.success{border-color:var(--green-border);background:var(--green-light);}
+.res-stat.on.success .res-stat-num,.res-stat.on.success .res-stat-lbl{color:var(--green-dark);}
+.res-stat.on.warn{border-color:var(--amber-border);background:var(--amber-light);}
+.res-stat.on.warn .res-stat-num,.res-stat.on.warn .res-stat-lbl{color:var(--amber-dark);}
+.res-stat.on.error{border-color:var(--red-border);background:var(--red-light);}
+.res-stat.on.error .res-stat-num,.res-stat.on.error .res-stat-lbl{color:var(--red-dark);}
+.res-stat.on.skip{border-color:var(--border-strong);background:var(--surface);}
+.res-stat.on.skip .res-stat-num,.res-stat.on.skip .res-stat-lbl{color:var(--text-mid);}
+/* أزرار تذييل النافذة — «عرض التفاصيل» و«تصدير النتيجة» كانوا btn-ghost
+   رمادي زي أي زرار تاني، والتفاصيل هي اللي فيها زرار «✕ إلغاء الشحنة». */
+.res-ftr-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:var(--radius-sm);
+  border:2px solid;background:var(--surface);font-family:var(--font-body);font-size:13.5px;
+  font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.res-ftr-btn.details{border-color:var(--accent-border);background:var(--accent-light);color:var(--accent-dark);}
+.res-ftr-btn.details:hover{border-color:var(--accent-hover-border);background:var(--accent-hover);}
+.res-ftr-btn.export{border-color:var(--green-border);background:var(--green-light);color:var(--green-dark);}
+.res-ftr-btn.export:hover{border-color:var(--green);background:var(--green-hover);}
 /* التفاصيل بتتطوى بالكامل — مش بـ`max-height:0` اللي بيسيب الجدول مقروء
    للسكرين ريدر وبيخلي الـ scroll يزحف جوّه نافذة مقفولة */
 .res-details{border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
@@ -775,6 +804,18 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <span class="cl-ver-date">14-09-2026</span>
         </div>
         <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>عدّادات نافذة النتيجة بقت مربعات — الرقم فوق والاسم تحته.</b> كانت بادجات صغيرة في سطر واحد (<code>نجاح 6</code> · <code>فشل 0</code>) بنفس حجم أي بادج تانية في الصفحة، فالرقم اللي بيقول إن فيه صف <b>فشل</b> أو <b>«تم جزئيًا»</b> كان بيتقرا كأنه وسم عادي. دلوقتي خمس مربعات: <b>الإجمالي · نجاح · تحذير · فشل · اتخطّى</b>. ⚠️ و<b>الصفر بيفضل رمادي</b> — التلوين للقيمة اللي فيها شغل فعلًا، عشان «فشل 0» مايخليش شاشة كلها نجاح تبان فيها فشل.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>الإجمالي والتفاصيل بقوا من مصدر واحد</b> (<code>RESULT_STATS</code>) — الإجمالي كان مكتوب في خانة لوحده والتفاصيل في خانة تانية، فكان ممكن تتضاف حالة جديدة وتتحسب في الإجمالي من غير ما يبقى ليها مربع.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>زرار «▾ عرض التفاصيل» و«⬇ تصدير النتيجة (Excel)» بقى ليهم تصميم واضح</b> — الأزرق للتفاصيل والأخضر للتصدير بدل الرمادي الباهت. ⚠️ زرار <b>«✕ إلغاء الشحنة»</b> عايش <b>جوّه</b> التفاصيل دي حتى على الصفوف الناجحة، فالزرار اللي بيفتحها لازم يبان.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.2.0</span>
+          <span class="cl-ver-date">14-09-2026</span>
+        </div>
+        <ul class="cl-items">
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>اسم واحد للمفهوم: «حالة العنوان».</b> الفلتر كان اسمه «شكل العنوان» والعمود اللي جنبه اسمه «نوع المطابقة» وهما <b>نفس القيمة بالحرف</b> — اسمين لحاجة واحدة معناهم إن الموظف يفتكرهم حاجتين. دلوقتي الاتنين (وتصدير XLSX وعنوان نافذة اختيار المنطقة) اسمهم <b>حالة العنوان</b>.</span></li>
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span>قيمة <code>📍 بالمنطقة (مطابقة مؤكدة)</code> بقت <b><code>📍 عنوان مظبوط</code></b> — في الفلتر والعمود والتصدير مع بعض (مصدر واحد).</span></li>
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>جدول النتايج اتشال، والتوست بقى نافذة تأكيد.</b> التوست كان بيختفي لوحده بعد ٨ ثواني — لو الموظف بصّ بعيد لحظة، الرقم الوحيد اللي بيقول إن فيه صف <b>فشل</b> أو <b>«تم جزئيًا»</b> كان بيروح. دلوقتي بتيجي <b>نافذة مستنية ضغطة</b>: في النجاح الكامل بتقول العدد بس، و<b>في أي حالة تانية بتفتح التفاصيل كاملة لوحدها</b>. وزرار <b>▾ عرض التفاصيل</b> بيفتحها بالإيد كمان — زرار <b>✕ إلغاء الشحنة</b> على صفوف R/E الناجحة عايش جوّاها.</span></li>
@@ -1088,7 +1129,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════
-     نتيجة الرفع — نافذة تأكيد (واجهة v2.2.0)
+     نتيجة الرفع — نافذة تأكيد (واجهة v2.2.0 · العدّادات مربعات في v2.3.0)
      🔴 الجدول الدايم تحت الشريط اتشال، والتوست بقى النافذة دي. التوست كان
      بيختفي لوحده بعد ٨ ثواني: لو الموظف بصّ بعيد لحظة، الرقم الوحيد اللي
      بيقول إن فيه صف فشل أو اتحذّر كان بيروح، والجدول تحته بيفضل مفتوح على
@@ -1105,11 +1146,10 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
     </div>
     <div class="eco-modal-body">
       <div class="res-verdict" id="resVerdict"></div>
-      <div class="res-head">
-        <span class="res-count-lbl">إجمالي الصفوف:</span>
-        <span class="results-count" id="resCount">—</span>
-        <span id="resSummary" class="summary-row"></span>
-      </div>
+      <!-- 🔴 العدّادات مربعات: الرقم فوق والاسم تحته، ومصدرها JS واحد
+           (`RESULT_STATS`) — الإجمالي والتفاصيل من نفس القايمة، فمستحيل
+           يتعرض إجمالي من غير خانة من خاناته. -->
+      <div class="res-stats" id="resStats"></div>
       <div class="res-details collapsed" id="resDetails">
         <div class="tbl-scroll">
           <table class="data-table">
@@ -1130,8 +1170,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       </div>
     </div>
     <div class="eco-modal-ftr">
-      <button class="btn-ghost" id="resDetailsBtn" onclick="toggleResultDetails()">▾ عرض التفاصيل</button>
-      <button class="btn-ghost" onclick="exportResultsXLSX()">⬇ تصدير النتيجة</button>
+      <button class="res-ftr-btn details" id="resDetailsBtn" onclick="toggleResultDetails()">▾ عرض التفاصيل</button>
+      <button class="res-ftr-btn export" onclick="exportResultsXLSX()">⬇ تصدير النتيجة (Excel)</button>
       <button class="btn-modal-save" onclick="closeResultsModal()">تمام</button>
     </div>
   </div>
@@ -1750,7 +1790,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.2.0';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.3.0';   // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -4040,14 +4080,29 @@ function setResultDetails(open) {
 function toggleResultDetails() {
   setResultDetails(document.getElementById('resDetails').classList.contains('collapsed'));
 }
+// 🔴 مربعات العدّادات — مصدر واحد للإجمالي وللتفاصيل (واجهة v2.3.0).
+//    الترتيب هنا هو ترتيب العرض، والصفر بيفضل رمادي: «فشل 0» بالأحمر
+//    بيخلي شاشة كلها نجاح تبان فيها فشل.
+const RESULT_STATS = [
+  { key: 'total',   cls: 'total',   label: 'الإجمالي', pick: (s, n) => n },
+  { key: 'success', cls: 'success', label: 'نجاح',     pick: s => s.success },
+  { key: 'warning', cls: 'warn',    label: 'تحذير',    pick: s => s.warning },
+  { key: 'error',   cls: 'error',   label: 'فشل',      pick: s => s.error },
+  { key: 'skipped', cls: 'skip',    label: 'اتخطّى',    pick: s => s.skipped },
+];
+function renderResultStats(s, total) {
+  const el = document.getElementById('resStats');
+  if (!el) return;
+  el.innerHTML = RESULT_STATS.map(st => {
+    const v = st.pick(s, total) || 0;
+    return `<div class="res-stat ${st.cls}${v ? ' on' : ''}">` +
+           `<span class="res-stat-num">${fmtNum(v)}</span>` +
+           `<span class="res-stat-lbl">${esc(st.label)}</span></div>`;
+  }).join('');
+}
 function renderResults() {
   const s = summarize(lastResults);
-  document.getElementById('resCount').textContent = fmtNum(lastResults.length);
-  document.getElementById('resSummary').innerHTML =
-    `<span class="badge badge-success">نجاح ${fmtNum(s.success)}</span>` +
-    `<span class="badge badge-warn">تحذير ${fmtNum(s.warning)}</span>` +
-    `<span class="badge badge-danger">فشل ${fmtNum(s.error)}</span>` +
-    `<span class="badge badge-muted">اتخطّى ${fmtNum(s.skipped)}</span>`;
+  renderResultStats(s, lastResults.length);
   renderResultVerdict(s);
   const body = document.getElementById('resBody');
   if (!lastResults.length) {

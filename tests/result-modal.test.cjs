@@ -11,6 +11,8 @@
 //   ④ حالة الصف بقت «نجاح» مش «تم» — «تم» كانت بتتلخبط مع «تم جزئيًا»
 //   ⑤ سياق نافذة اختيار المنطقة: العنوان الكامل فوق · قايمة المدن جوّه صف
 //      بوسطة · سطر «الحالي:» اتشال وحالة العنوان بقت في العنوان
+//   ⑥ 🔴 مربعات العدّادات: الإجمالي والتفاصيل من نفس المصدر، والصفر بيفضل
+//      رمادي — «فشل 0» ملوّن بالأحمر بيخلي شاشة كلها نجاح تبان فيها فشل
 // ══════════════════════════════════════════════════════════════
 const fs = require('fs');
 const path = require('path');
@@ -33,6 +35,7 @@ const win = { addEventListener(){}, matchMedia:()=>({matches:false,addEventListe
 const api = new Function('document','window','localStorage','Chart','ExcelJS', src + `
 return { ADDR_MODE_ITEMS, ADDR_MODE_LABEL, filterLabels, tableColumns, RESULT_BADGE,
          resultsNeedDetails, dpContextHTML, renderDpTitle, rowAddrMode,
+         RESULT_STATS, renderResultStats, summarize,
          setRows(r){ allRows = r; }, setPicked(id){ dpOrderId = id; } };`
 )(doc, win, { getItem:()=>null, setItem(){}, removeItem(){} }, undefined, undefined);
 
@@ -109,6 +112,35 @@ ok('العنوان فيه رقم الأوردر', title.includes('#54617'), titl
 ok('العنوان فيه «حالة العنوان:»', title.includes('حالة العنوان:'), title);
 ok('وبنفس قيمة العمود بالحرف', title.includes(api.ADDR_MODE_LABEL[api.rowAddrMode(row)]), title);
 ok('والشرح الطويل في الـ tooltip', /title="[^"]*مسار العناوين غير الواضحة/.test(title));
+
+// ─── ⑥ مربعات العدّادات ──────────────────────────────────────
+console.log('\n⑥ مربعات عدّادات النتيجة');
+ok('خمس خانات: الإجمالي + الأربع حالات', api.RESULT_STATS.length === 5, api.RESULT_STATS.length);
+ok('أول خانة هي الإجمالي', api.RESULT_STATS[0].key === 'total');
+// 🔴 كل حالة بيرجّعها summarize لازم يكون ليها مربع — الإجمالي من غير
+//    خانة من خاناته بيخلي الموظف يدوّر على الفرق ومايلاقيهوش
+const sumKeys = Object.keys(api.summarize([]));
+ok('كل حالة في summarize ليها مربع',
+   sumKeys.every(k => api.RESULT_STATS.some(st => st.key === k)), sumKeys);
+
+const rows6 = [ R('success'), R('success'), R('warning'), R('skipped') ];
+api.renderResultStats(api.summarize(rows6), rows6.length);
+const tiles = els.resStats.innerHTML;
+const tile = cls => (tiles.match(new RegExp(`res-stat ${cls}[^"]*"><span class="res-stat-num">([^<]*)`)) || [])[1];
+const isOn  = cls => new RegExp(`res-stat ${cls} on"`).test(tiles);
+ok('الإجمالي 4',  tile('total')   === '4', tile('total'));
+ok('نجاح 2',      tile('success') === '2', tile('success'));
+ok('تحذير 1',     tile('warn')    === '1', tile('warn'));
+ok('فشل 0',       tile('error')   === '0', tile('error'));
+ok('اتخطّى 1',    tile('skip')    === '1', tile('skip'));
+// الصفر رمادي — مافيش كلاس `on`
+ok('خانة الفشل الفاضية مش ملوّنة', isOn('error') === false);
+ok('وخانة النجاح ملوّنة',          isOn('success') === true);
+ok('الاسم تحت الرقم في نفس المربع', /res-stat-num">2<\/span><span class="res-stat-lbl">نجاح/.test(tiles));
+// الأزرار: التفاصيل جوّاها زرار «✕ إلغاء الشحنة» — لازم تبان
+ok('زرار التفاصيل ليه تصميم خاص', html.includes('class="res-ftr-btn details"'));
+ok('وزرار التصدير كمان',          html.includes('class="res-ftr-btn export"'));
+ok('البادجات القديمة اتشالت من النافذة', !html.includes('id="resSummary"'));
 
 console.log(`\n${fail === 0 ? '✅' : '❌'} ${pass} نجحت · ${fail} فشلت`);
 process.exit(fail === 0 ? 0 : 1);

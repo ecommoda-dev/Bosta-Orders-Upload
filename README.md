@@ -165,7 +165,7 @@ node tests/re-payload.test.cjs         # عقد شحنة الاسترجاع/ال
 node tests/upload-flow.test.cjs        # مسار الرفع كامل على fetch مزيّف
 node tests/job-modes.test.cjs          # الأوضاع التلاتة في الواجهة
 node tests/re-endpoints.test.cjs       # الـ handler نفسه من الطلب للرد
-node tests/result-modal.test.cjs       # نافذة النتيجة واسم «حالة العنوان»
+node tests/result-modal.test.cjs       # نافذة النتيجة · مربعات العدّادات · اسم «حالة العنوان»
 ```
 
 النشر أوتوماتيك على `main` عبر Cloudflare Workers Builds. الواجهة على GitHub Pages.
