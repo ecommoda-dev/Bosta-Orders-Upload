@@ -62,6 +62,30 @@
 //    داشبورد بوسطة بالإيد، فتحديث الحالة خطوة يدوية منفصلة بمودال وchecklist،
 //    مش أثر جانبي للرفع.
 //
+// v2.3.0 (15-09-2026) — **الاسترجاع بيحرّك الحالة وقت الرفع.**
+// طلب أحمد: رفع شحنة استرجاع ناجحة بيكتب `custom.status_2_r_e = In-Return`.
+// 🔴 **السبب (أحمد 15-09-2026): أوردر الاسترجاع مالوش بوليصة بتتطبع** — بوسطة
+// بتروح تجيب المرتجع من عند العميل على طول. يعني **مفيش حدث طباعة** بعد الرفع
+// يحمل النقلة، والرفع هو **آخر خطوة عندنا** في المسار ده. قاعدة v2.0.1
+// («النقلة عند الطباعة») مبنية على وجود طباعة — فهي **مالهاش محل** هنا،
+// وتطبيقها كان معناه إن الحالة ماتتحركش أبدًا والأوردر يفضل `Confirmed + RETURN`
+// للأبد ما لم يتدخّل حد بإيده.
+// ده **استثناء معلن** عن قاعدة v2.0.1 فوق، **للاسترجاع لوحده**:
+//   · الاستبدال زي ما هو — فيه طرد **خارج** للعميل، فالبوليصة بتتطبع ونقلة
+//     `Ready` لسه بتحصل عند الطباعة.
+//   · `printing_time_s2` **لسه مابيتكتبش** في أي وضع — وفي الاسترجاع ده مش
+//     تأجيل لحد الطباعة، **مفيش طباعة** أصلًا.
+// الكتابة جوّه **نفس** نداء `metafieldsSet` بتاع رقم التتبع (نداء واحد بيعدّي
+// كله أو يقع كله)، والسجل بيقرا من `r.s2Written` — حقيقة مؤكَّدة من شوبيفاي،
+// مش نيّة. ومعاها رجع صف `metafields_change` لكل نقلة حصلت فعلًا (KPIs زمن
+// الدورة بتتقرا من هناك بس).
+// ⚠️ **النتيجة اللي لازم تتوقعها:** أوردر الاسترجاع **بيخرج من القايمة** بعد
+//    الرفع والتحديث — فلتر الترشيح بيقرا `Confirmed + RETURN`. ده عكس الشحن
+//    العادي والاستبدال، واللي بيحمي من الرفع المكرر فيهم (التاج · رقم التتبع ·
+//    حارس `uniqueBusinessReference`) لسه شغّال هنا زي ما هو.
+// ⚠️ وأي تقرير بيعدّ «مرتجعات مستنية» بـ`status_2_r_e = Confirmed + RETURN`
+//    هيشوف العدد بيقلّ بعد الرفع — معنى العدّاد اتغيّر، مش عطل.
+//
 // العقد المرجعي الكامل: SPEC.md في نفس الريبو.
 // ══════════════════════════════════════════════════════════════
 
@@ -77,7 +101,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.2.0';
+const WORKER_VERSION = '2.3.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -122,6 +146,19 @@ const START_DATE        = '2026-08-01';                         // بتوقيت 
 // مكنة حالة S2 — منفصلة تمامًا عن S1 (`ecommoda-order-lifecycle` Rule 15)
 const S2_STATUS_BY_JOB  = { [JOB_RETURN]: 'Confirmed + RETURN', [JOB_EXCHANGE]: 'Confirmed + EXCHANGE' };
 const S2_NEXT_BY_JOB    = { [JOB_RETURN]: 'In-Return',          [JOB_EXCHANGE]: 'Ready' };
+// 🔴 الحالة اللي **الرفع المباشر** (`upload_re`) بيكتبها — استثناء معلن عن
+//    قاعدة «الرفع مابيحركش الحالة» (v2.3.0 · طلب أحمد 15-09-2026)، و**للاسترجاع
+//    لوحده**. السبب مادي مش تفضيل: **مفيش بوليصة بتتطبع لأوردر استرجاع** —
+//    بوسطة بتروح تجيب المرتجع من العميل، فمفيش حدث طباعة يحمل النقلة والرفع
+//    هو آخر خطوة عندنا. الاستبدال لسه على القاعدة (فيه طرد خارج والبوليصة
+//    بتتطبع): نقلة `Ready` بتحصل عند الطباعة.
+//    ⚠️ `printing_time_s2` **لسه مابيتكتبش** في التلات أوضاع — في الاستبدال
+//    والشحن لأنه وقت طباعة حقيقي مايتكتبش قبلها، وفي الاسترجاع لأن **مفيش
+//    طباعة** من أصله.
+//    ⚠️ **والنتيجة اللي لازم تتوقعها**: الأوردر **بيخرج من القايمة** بعد الرفع
+//    والتحديث (فلتر الترشيح بيقرا `Confirmed + RETURN`) — عكس الاستبدال والشحن
+//    العادي اللي الصف بيفضل فيهم ومعاه بادج «🔁 مرفوع».
+const S2_UPLOAD_STATUS_BY_JOB = { [JOB_RETURN]: 'In-Return', [JOB_EXCHANGE]: null };
 const COURIER_VALUE     = 'Bosta';
 
 // 🔴 التاج بيتقسم بالنوع. تاج واحد للاتنين معناه إن حارس الرفع المكرر بتاع s1
@@ -403,6 +440,10 @@ function getJob(raw, { allow = ALL_JOBS } = {}) {
     writeFailType:  WRITE_FAILED_BY_JOB[jt],
     expectedStatus: isRE ? S2_STATUS_BY_JOB[jt] : null,
     nextStatus:     isRE ? S2_NEXT_BY_JOB[jt]   : null,
+    // 🔴 الحالة اللي بتتكتب **وقت الرفع** — استرجاع بس، والباقي `null`.
+    //    مصدر واحد: الكتابة والسجل وصف `metafields_change` كلهم بيقروا منه،
+    //    فمستحيل تتكتب الحالة من غير ما السجل يشوفها (أو العكس).
+    uploadStatus:   isRE ? (S2_UPLOAD_STATUS_BY_JOB[jt] || null) : null,
     exportType:     jt === JOB_EXCHANGE ? 'export_exchange' : jt === JOB_RETURN ? 'export_return' : null,
     confirmType:    jt === JOB_EXCHANGE ? 'confirm_exchange' : jt === JOB_RETURN ? 'confirm_return' : null,
     label:          jt === JOB_RETURN ? 'استرجاع' : jt === JOB_EXCHANGE ? 'استبدال' : 'شحن',
@@ -917,7 +958,13 @@ async function filterGuard(env, token) {
 //           **بيتتحقق منه** في حارس الدورات قبل الشحنة، ومابيتكتبش: شحنة استرجاع
 //           بتسحب من عند العميل، فكتابة الكوريَر هنا معناها إننا بنعيّن مندوب
 //           على أوردر مش بتاعنا بدل ما نتأكد إنه بتاعنا أصلًا.
-//    (حالة S2 نفسها `custom.status_2_r_e` بتتكتب مجمّعة بعد الدفعة — §SHOPIFY-RE.)
+// 🔴 **والاسترجاع بيكتب كمان `custom.status_2_r_e = In-Return`** (v2.3.0 · طلب
+//    أحمد). بيتحط في **نفس** النداء بتاع رقم التتبع عن قصد: `metafieldsSet`
+//    نداء واحد بيعدّي كله أو يقع كله، فمستحيل يطلع أوردر حالته اتحركت ورقم
+//    تتبعه مش مكتوب — أو العكس، وهو اللي بيخلي الموظف يدوّر على شحنة مش
+//    موجودة أو يعيد رفع شحنة موجودة بفلوس.
+//    ⚠️ الاستبدال **مستثنى** (`job.uploadStatus === null`) — نقلته `Ready`
+//    بتحصل عند الطباعة، وتقديمها من هنا بيكسر بوابة الطباعة.
 async function writeBackToShopify(env, token, order, trackingNumber, actions, job) {
   const warnings = [];
   const tn = String(trackingNumber ?? '').trim();
@@ -938,6 +985,15 @@ async function writeBackToShopify(env, token, order, trackingNumber, actions, jo
     });
   } else {
     warnings.push(`رقم التتبع "${tn}" مش أرقام بس — الميتافيلد نوعه ${trackMf.type} فما اتكتبش`);
+  }
+  // 🔴 حالة S2 — استرجاع بس. `single_line_text_field` بقيمة من **قايمة
+  //    الاختيارات** بتاعة التعريف الحي (`In-Return` حرفيًا) — حرف زيادة =
+  //    رفض من شوبيفاي بيسقّط النداء كله بما فيه رقم التتبع.
+  if (job.uploadStatus) {
+    metafields.push({
+      ownerId: order.id, namespace: 'custom', key: MF_S2_STATUS.key,
+      type: MF_S2_STATUS.type, value: job.uploadStatus,
+    });
   }
 
   if (metafields.length) {
@@ -970,6 +1026,15 @@ async function writeBackToShopify(env, token, order, trackingNumber, actions, jo
         throw new Error(`metafieldsSet: شوبيفاي ما أكدتش كتابة custom.${trackMf.key}`);
       }
       actions.push(`كتابة custom.${trackMf.key} = ${tn}`);
+    }
+
+    // ⚠️ نفس قاعدة ③: `userErrors:[]` معناها «مفيش اعتراض» مش «اتنفّذت». ومن
+    //    غير التأكيد ده السجل بيكتب `valueAfter = In-Return` على نقلة ما حصلتش.
+    if (job.uploadStatus) {
+      if (byKey.get(MF_S2_STATUS.key)?.value !== job.uploadStatus) {
+        throw new Error(`metafieldsSet: شوبيفاي ما أكدتش كتابة custom.${MF_S2_STATUS.key}`);
+      }
+      actions.push(`تحديث الحالة custom.${MF_S2_STATUS.key} = ${job.uploadStatus}`);
     }
   }
 
@@ -1416,16 +1481,18 @@ async function logCycleBlocks(db, blocked, job, employee, { action = 'الرفع
       // الكتابة اللي **ما حصلتش** — before و after نفس القيمة عن قصد: مفيش حاجة اتحركت.
       valueBefore: row.s2Status || job.expectedStatus,
       valueAfter:  row.s2Status || job.expectedStatus,
-      // ⚠️ الرفع مابيحركش الحالة من v2.0.1، فرسالة «اتمنع التحديث إلى Ready»
-      //    بقت غلط عليه — بتخلي اللي بيقرا السجل يفتكر إن فيه نقلة اتمنعت
-      //    وهي أصلًا مابتحصلش. `confirm_upload` (مسار الإكسيل) لوحده هو اللي
-      //    بيمنع نقلة حقيقية، فهو اللي بيمرّر الحالة التالية.
+      // ⚠️ الحالة التالية بتتكتب **بس لو فيه نقلة اتمنعت فعلًا**: مسار
+      //    الإكسيل (`job.nextStatus`) دايمًا، والرفع **بس لما الوضع بيحرّك
+      //    حالة أصلًا** (الاسترجاع من v2.3.0 → `In-Return`). في الشحن العادي
+      //    والاستبدال بتفضل `null`: كتابة «اتمنع التحديث إلى Ready» على وقفة
+      //    رفع بتخلي اللي بيقرا السجل يفتكر إن فيه نقلة اتمنعت وهي أصلًا
+      //    مابتحصلش في الرفع.
       notes: `اتمنع ${action} — ${row.code}: ${row.value}`,
       extra: {
         jobType: job.jobType,
         expectedStatus: job.expectedStatus,
         blockedAction: action,
-        blockedNextStatus: action === 'الرفع' ? null : job.nextStatus,
+        blockedNextStatus: action === 'الرفع' ? (job.uploadStatus || null) : job.nextStatus,
         code: row.code, value: row.value, action: row.action,
       },
     })));
@@ -2950,6 +3017,11 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     codSent: null,
     codClipped: false,
     codRemainder: 0,
+    // 🔴 اتكتبت حالة S2 فعلًا؟ (استرجاع بس). السجل بيقرا منه: `valueAfter`
+    //    وصف `metafields_change` الاتنين بيتبنوا عليه، فصف بيقول «اتحركت»
+    //    وهي ما اتحركتش **مستحيل** — ده بالظبط الصف اللي بيدّي KPIs زمن
+    //    الدورة تاريخ اتحرك فيه حاجة على الورق بس.
+    s2Written: false,
     warnings: [],
     error: null,
     logged: true,
@@ -3110,9 +3182,12 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   try {
     const w = await writeBackToShopify(env, token, order, res.trackingNumber, actions, job);
     row.warnings.push(...w);
+    // الدالة بترمي على أي كتابة ما اتأكدتش، فالوصول هنا معناه إن الحالة
+    // (لو الوضع بيكتبها أصلًا) **اتكتبت واتأكدت** من شوبيفاي.
+    row.s2Written = !!job.uploadStatus;
   } catch (e) {
     row.warnings.push(
-      `الشحنة اترفعت (${res.trackingNumber}) لكن كتابة رقم التتبع/التاج على شوبيفاي فشلت: ${e.message} — `
+      `الشحنة اترفعت (${res.trackingNumber}) لكن كتابة رقم التتبع/التاج${job.uploadStatus ? '/الحالة' : ''} على شوبيفاي فشلت: ${e.message} — `
       + '**متعيدش الرفع**، ده بيعمل شحنة تانية بفلوس.',
     );
     row.shopifyWriteFailed = true;
@@ -3861,21 +3936,20 @@ export default {
         const ordered = orders.map((o) => byId.get(o.id));
         const results = await runUploadBatchRE(env, token, ordered, catalog, job, overrides);
 
-        // ④ 🔴 **الرفع مابيحركش حالة الأوردر — ولا بيكتب وقت طباعة.**
-        //    قرار أحمد 13-09-2026 بعد أول شحنة استبدال حية، وهو **نفس قاعدة
-        //    الشحن العادي بالحرف**: `upload` عمرها ما لمست `custom.manual_status`،
-        //    لأن الانتقال `Confirmed → Ready` بيحصل عند **الطباعة** مش عند الرفع،
-        //    وتقديم الحالة من هنا بيكسر بوابة الطباعة.
-        //    لحد v2.0.0 كان الاسترجاع/الاستبدال بيكسر القاعدة دي: بيكتب
-        //    `status_2_r_e → In-Return`/`Ready` **و**`printing_time_s2` وقت الرفع.
-        //    الاتنين اتشالوا. اللي بيتكتب بعد الشحنة بقى هو اللي بيتكتب في S1
-        //    بالظبط: رقم التتبع والتاج، وخلاص.
-        //    ⚠️ `setS2Status`/`verifyS2Status` **لسه موجودين** — مسار الإكسيل
-        //    (`confirm_upload`) بيستخدمهم، وهو خطوة يدوية منفصلة بمودال وchecklist،
-        //    مش جزء من الرفع.
-        //    ⚠️ ومفيش صف `metafields_change` بيتكتب من هنا كمان: الصف ده بيوثّق
-        //    **نقلة حالة**، ومفيش نقلة حصلت. كتابته وهي ما حصلتش بتدّي KPIs زمن
-        //    الدورة تاريخ اتحرك فيه حاجة على الورق بس.
+        // ④ 🔴 **الحالة بتتحرّك في الاسترجاع لوحده** (v2.3.0 · طلب أحمد
+        //    15-09-2026): `status_2_r_e → In-Return`. الاستبدال والشحن العادي
+        //    **لسه** مابيحركوش الحالة — نقلة `Ready` بتحصل عند **الطباعة**،
+        //    وتقديمها من هنا بيكسر بوابة الطباعة.
+        //    🔴 والكتابة نفسها **مش هنا** — عايشة في `writeBackToShopify` جوّه
+        //    نفس نداء رقم التتبع، صف بصف. كتابة مجمّعة بعد الدفعة كانت هتحرّك
+        //    حالة أوردر **شحنته فشلت** في نفس الدفعة، أو تسيب أوردر ناجح بحالة
+        //    قديمة لو الكتابة المجمّعة وقعت. `r.s2Written` هو الأثر الوحيد
+        //    المعتمد إن النقلة حصلت فعلًا.
+        //    ⚠️ `printing_time_s2` **لسه مابيتكتبش** — ده وقت طباعة، وكتابته
+        //    وقت الرفع بتخلي أي تقرير مبني عليه يقول إن البوليصة اتطبعت وهي لأ.
+        //    ⚠️ `setS2Status`/`verifyS2Status` **لسه موجودين لمسار الإكسيل**
+        //    (`confirm_upload`) — هناك الشحنة بتتعمل من الداشبورد بالإيد،
+        //    فالتحديث خطوة يدوية منفصلة بمودال وchecklist.
         // ⏱️ ختم زمني واحد لكل صفوف الدفعة — عشان يبانوا عملية واحدة في السجل.
         const now = nowToSecond();
 
@@ -3894,17 +3968,23 @@ export default {
             employee,
             orderId: order.id,
             orderName: order.name,
-            // 🔴 before == after عن قصد: **مفيش نقلة حالة بتحصل في الرفع**.
-            //    الصف بيوثّق الشحنة، مش حركة حالة. القيمتين مختلفتين كانوا
-            //    هيدّوا أي قارئ للسجل انطباع إن الأوردر اتحرك وهو مكانه.
+            // 🔴 `valueAfter` بيتقرا من **`r.s2Written`** مش من `job.uploadStatus`:
+            //    الأول حقيقة مؤكَّدة من شوبيفاي، والتاني نيّة. الصف اللي شحنته
+            //    نجحت وكتابته فشلت بيفضل `before == after` — وده الصح، الحالة
+            //    فعلًا مكانها. وفي الاستبدال (`uploadStatus = null`) القيمتين
+            //    بيفضلوا متساويين دايمًا: مفيش نقلة بتحصل في الرفع أصلًا.
             valueBefore: order.s2Status || job.expectedStatus,
-            valueAfter:  order.s2Status || job.expectedStatus,
+            valueAfter:  r.s2Written ? job.uploadStatus : (order.s2Status || job.expectedStatus),
             notes: r.status === 'error'
               ? `فشل رفع ${job.label} على بوسطة — ${r.error}`
               : `رفع ${job.label} على بوسطة · تتبع ${r.trackingNumber || '—'}${r.warnings.length ? ` · ${r.warnings.join(' · ')}` : ''}`,
             extra: {
               jobType: job.jobType,
               result: r.status,
+              // نقلة الحالة كأثر خارجي منفصل عن الشحنة — القياس بيفرّق بين
+              // «الشحنة اتعملت» و«الأوردر اتحرك».
+              s2_status_written: !!r.s2Written,
+              s2_status_after: r.s2Written ? job.uploadStatus : null,
               tracking_number: r.trackingNumber,
               bosta_id: r.bostaId,
               uniqueBusinessReference: r.uref,
@@ -3930,9 +4010,35 @@ export default {
           };
         });
 
+        // ⑥ تاريخ الحالة عبر الأدوات. KPIs زمن الدورة بتتقرا من
+        //    `tool = 'metafields_change'` **بس**، فنقلة مش مكتوبة هناك = نقلة
+        //    مش موجودة في أي تقرير. الصف بيتكتب للصفوف اللي `s2Written` فيها
+        //    بس — اللي اتأكدت من شوبيفاي فعلًا.
+        //    ⚠️ لحد v2.2.0 كان مسار الإكسيل (`confirm_upload`) هو **المصدر
+        //    الوحيد** للصفوف دي، لأن الرفع ماكانش بيحرّك حالة أصلًا. بقى
+        //    مصدرين من v2.3.0 — والاتنين بيكتبوا نفس الشكل بالظبط.
+        const mfChangeRows = results.flatMap((r, i) => {
+          if (!r.s2Written) return [];
+          const order = orders[i];
+          const before = order.s2Status || job.expectedStatus;
+          return [{
+            timestamp: now, tool: 'metafields_change', type: 'update', employee,
+            orderId: order.id, orderName: order.name,
+            valueBefore: before,
+            valueAfter: job.uploadStatus,
+            notes: `status_2_r_e: ${before} → ${job.uploadStatus} (via ${job.tool} · ${job.uploadedType})`,
+            extra: {
+              metafieldKey: 'custom.status_2_r_e', sourceTool: job.tool,
+              jobType: job.jobType, source: 'upload_re',
+              tracking_number: r.trackingNumber,
+            },
+          }];
+        });
+
         let logged = true, logError = null;
         try {
           await writeLogsBatch(env.DB, logRows);
+          await writeLogsBatch(env.DB, mfChangeRows);
         } catch (e) {
           // Step 5A ⑦ — فشل D1 مابيلغيش الشحنات، بس ممنوع يبقى صامت.
           logged = false; logError = e.message;

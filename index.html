@@ -421,6 +421,14 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
    ⚠️ والصفر بيفضل **رمادي** — التلوين للقيمة اللي فيها شغل فعلًا، وتلوين
    «فشل 0» بالأحمر بيخلي الشاشة تبان فيها فشل وهي كلها نجاح. */
 .res-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px;margin-bottom:12px;}
+/* سطر نقلة الحالة في نافذة تأكيد الرفع — متغيّرات اللوحة بتاعة الصفحة دي
+   نفسها (`--amber…`)، مش متغيّرات متنقّلة من أداة تانية: الـ CSS مابيشتكيش
+   من متغيّر مش معرّف، بيعرض اللون الافتراضي وخلاص. */
+.bulk-note{background:var(--amber-light);border:1px solid var(--amber-border);
+  color:var(--amber-dark);border-radius:var(--radius-sm);padding:10px 12px;
+  font-size:13px;line-height:1.7;}
+.bulk-note code{background:#fff;border:1px solid var(--amber-border);
+  border-radius:6px;padding:1px 6px;}
 .res-stat{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
   padding:14px 8px;border:2px solid var(--border);border-radius:var(--radius);
   background:var(--surface-2);text-align:center;}
@@ -892,6 +900,21 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <span class="cl-ver-date">15-09-2026</span>
         </div>
         <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>رفع الاسترجاع بقى بيحدّث حالة الأوردر إلى <code>In-Return</code> على طول</b> (طلب أحمد). الشحنة الناجحة بتكتب <code>custom.status_2_r_e = In-Return</code> جوّه <b>نفس</b> نداء رقم التتبع — نداء واحد بيعدّي كله أو يقع كله، فمستحيل تتحرك الحالة والشحنة مالهاش رقم تتبع مكتوب، أو العكس. ولو الكتابة فشلت الصف بياخد <b>«تم جزئيًا»</b> (الشحنة موجودة بفلوس — <b>متعيدش الرفع</b>).</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>والسبب: أوردر الاسترجاع مالوش بوليصة بتتطبع</b> — بوسطة بتروح تجيب المرتجع من عند العميل على طول. يعني مفيش خطوة <b>طباعة</b> بعد الرفع تنقل الحالة زي الشحن العادي والاستبدال، والرفع هو <b>آخر خطوة عندنا</b> في المسار ده. من غير التغيير ده كانت حالة الاسترجاع <b>ماتتحركش أبدًا</b> إلا بتدخّل يدوي.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>⚠️ <b>وعشان كده أوردر الاسترجاع بقى بيخرج من القايمة بعد الرفع</b> — الفلتر بيقرا <code>Confirmed + RETURN</code> والحالة اتغيّرت. ده <b>مختلف</b> عن الشحن العادي والاستبدال (الصف بيفضل فيهم ومعاه بادج «🔁 مرفوع»). اللي بيحمي من الرفع المكرر زي ما هو: التاج · رقم التتبع · وبوسطة نفسها بترفض المرجع المكرر.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>الاستبدال زي ما هو — الحالة مابتتحركش.</b> نقلة <code>Ready</code> بتحصل عند <b>الطباعة</b>، وتقديمها من الرفع بيكسر بوابة الطباعة. و<code>custom.printing_time_s2</code> <b>مابيتكتبش في أي وضع</b> — ده وقت طباعة.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>نافذة تأكيد الرفع بقت بتقول السطر ده <b>قبل</b> الضغط في وضع الاسترجاع: «الحالة هتتحدّث إلى In-Return والأوردر هيخرج من القايمة» — بدل ما الموظف يستنتجه من اختفاء الصفوف.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>كل نقلة حالة حصلت فعلًا بتسجّل صف <code>metafields_change</code> في السجل — KPIs زمن الدورة بتتقرا من هناك بس. الصف بيتكتب <b>للنقلة المؤكَّدة من شوبيفاي</b> لوحدها، مش لكل شحنة.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.10.1</span>
+          <span class="cl-ver-date">15-09-2026</span>
+        </div>
+        <ul class="cl-items">
           <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>الأوردر المرفوع فعلًا بقى بيقول «🔁 مرفوع» ومعاه رقم التتبع — مش «⛔ موقوف».</b> الرفع <b>مابيحركش حالة الأوردر</b> (النقلة بتحصل عند <b>الطباعة</b>)، فالصف بيرجع في القايمة بعد التحديث — <b>وده مقصود</b>. المشكلة إن الصف اللي عنوانه <b>كمان</b> موقوف (خارج التغطية مثلًا) كان بياخد بادج «موقوف» و<b>رقم التتبع يختفي من الشاشة خالص</b>: الصف يقرا «لسه ما اترفعش ومحتاج تصليح» وهو مرفوع فعلًا بشحنة بفلوس، والموظف يروح داشبورد بوسطة يتأكد بنفسه. دلوقتي <b>«مرفوع» بتكسب</b> — حقيقة عن شحنة موجودة تغلب توقّع عن رفع جاي. ⚠️ <b>والمنع ما ضعفش</b>: الصف لسه وردي والشيك بوكس مقفول ومستبعد من «رفع الكل»، والوقف متقال جنب رقم التتبع (⛔) والسبب في التلميح.</span></li>
         </ul>
       </div>
@@ -1161,16 +1184,18 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
                 <td><code>custom.courier = Bosta</code> · <code>custom.bosta_tracking_number_s1</code> · تاج <code>Bosta_Uploaded_S1</code></td></tr>
             <tr><td>↩️ <strong>استرجاع</strong></td><td>25 (CRP)</td>
                 <td><code>custom.status_2_r_e = Confirmed + RETURN</code> <strong>و</strong> <code>custom.courier = Bosta</code></td>
-                <td><code>custom.bosta_tracking_number_s2</code> · تاج <code>Bosta_Uploaded_S2</code></td></tr>
+                <td><code>custom.bosta_tracking_number_s2</code> · تاج <code>Bosta_Uploaded_S2</code> · 🔴 <code>custom.status_2_r_e = In-Return</code></td></tr>
             <tr><td>🔄 <strong>استبدال</strong></td><td>30</td>
                 <td><code>custom.status_2_r_e = Confirmed + EXCHANGE</code> <strong>و</strong> <code>custom.courier = Bosta</code></td>
-                <td>نفس الاسترجاع بالظبط</td></tr>
+                <td>رقم التتبع والتاج بس — <strong>الحالة مابتتحركش</strong></td></tr>
           </table>
-          <p>🔴 <strong>الرفع مابيحركش حالة الأوردر — في التلات أوضاع.</strong> الانتقال بيحصل عند <strong>الطباعة</strong> مش عند الرفع، وتقديم الحالة من هنا بيكسر بوابة الطباعة. الشحن العادي كان كده من أول يوم، والاسترجاع/الاستبدال اتظبطوا عليه في v2.0.1 (كانوا بيكتبوا <code>status_2_r_e</code> و<code>printing_time_s2</code> وقت الرفع). ⚠️ الاستثناء الوحيد هو <strong>مسار الإكسيل</strong>: هناك الشحنة بتتعمل من داشبورد بوسطة بالإيد، فنافذة «تحديث الحالة» خطوة منفصلة الموظف بيضغطها بنفسه.</p>
+          <p>🔴 <strong>الرفع بيحرّك الحالة في الاسترجاع لوحده</strong> (Worker v2.3.0 · طلب أحمد): شحنة استرجاع ناجحة بتكتب <code>custom.status_2_r_e = In-Return</code> على طول، جوّه <strong>نفس</strong> نداء رقم التتبع — نداء واحد بيعدّي كله أو يقع كله، فمستحيل تتحرك الحالة والشحنة مالهاش رقم تتبع مكتوب أو العكس.</p>
+          <p>🔴 <strong>والسبب إن أوردر الاسترجاع مالوش بوليصة بتتطبع</strong> — بوسطة بتروح تجيب المرتجع من عند العميل على طول. يعني <strong>مفيش خطوة طباعة</strong> بعد الرفع تنقل الحالة زي باقي الأوضاع، والرفع هو <strong>آخر خطوة عندنا</strong>. ⚠️ <strong>والنتيجة المتوقعة:</strong> أوردر الاسترجاع <strong>بيخرج من القايمة</strong> بعد الرفع والتحديث (الفلتر بيقرا <code>Confirmed + RETURN</code>)، واللي بيحمي من الرفع المكرر لسه هو التاج ورقم التتبع وحارس بوسطة نفسها.</p>
+          <p>🔴 <strong>والشحن العادي والاستبدال لسه مابيحركوش الحالة.</strong> الاتنين فيهم <strong>طرد خارج للعميل والبوليصة بتتطبع</strong>، فالانتقال بيحصل عند <strong>الطباعة</strong> مش عند الرفع، وتقديم الحالة من هنا بيكسر بوابة الطباعة. و<code>custom.printing_time_s2</code> <strong>مابيتكتبش في أي وضع</strong> — ده وقت طباعة، وكتابته وقت الرفع بتخلي أي تقرير مبني عليه يقول إن البوليصة اتطبعت وهي ما اتطبعتش (وفي الاسترجاع مفيش طباعة من أصله). ⚠️ ومسار <strong>الإكسيل</strong> زي ما هو: الشحنة بتتعمل من داشبورد بوسطة بالإيد، فنافذة «تحديث الحالة» خطوة منفصلة الموظف بيضغطها بنفسه.</p>
           <p>🔴 <strong>في الاسترجاع والاستبدال الأداة مابتكتبش <code>custom.courier</code>.</strong> بتتأكد إنه <strong>Bosta</strong> بالفعل قبل الشحنة، والأوردر اللي كوريَره حاجة تانية بيتوقف برسالة. شحنة الاسترجاع بتسحب من عند العميل — فالسؤال «هو ده مندوبنا أصلاً؟» مش «خليه مندوبنا».</p>
           <p>🔴 <strong>المبلغ في الاسترجاع/الاستبدال ليه اتجاه.</strong> السالب معناه <strong>بوسطة بتدفع للعميل عند الباب</strong>، وبيتعرض «↩ استرداد» بالأحمر. حد بوسطة للاسترداد <strong>٢٠٠٠ جنيه</strong> — واللي فوقه بيتقص، <strong>والقص بيتعلّم بعلامة ✂ والباقي مكتوب</strong> (بيتسوّى مكتبيًا).</p>
           <p>🔴 <strong>كل رقم في صف الاسترجاع/الاستبدال متحسب من الدورة المفتوحة الواحدة.</strong> الأوردر ممكن يكون عدّى بأكتر من دورة، والحساب من كلهم كان بيشحن قطع رجعت المخزن خلاص. الأوردر اللي دورته مش واضحة (أكتر من دورة مفتوحة · مفيش دورة · استبدال بلا قطع خارجة) <strong>بيتوقف ومعاه السبب</strong> — مش بيترفع بتخمين.</p>
-          <p>📄 <strong>تصدير ملف بوسطة (Excel)</strong> لسه موجود في وضعي الاسترجاع والاستبدال كـ<strong>خطة بديلة</strong> — لو عقد بوسطة اتغيّر أو المفتاح مش متاح أو الـ API رفض أوردر، المخزن مايقفش. المسار ده <strong>مالوش رقم تتبع</strong> (الشحنة بتتعمل من داشبورد بوسطة بالإيد)، وهو <strong>الوحيد اللي بيحدّث الحالة</strong> — عبر نافذة تأكيد منفصلة بـchecklist.</p>
+          <p>📄 <strong>تصدير ملف بوسطة (Excel)</strong> لسه موجود في وضعي الاسترجاع والاستبدال كـ<strong>خطة بديلة</strong> — لو عقد بوسطة اتغيّر أو المفتاح مش متاح أو الـ API رفض أوردر، المخزن مايقفش. المسار ده <strong>مالوش رقم تتبع</strong> (الشحنة بتتعمل من داشبورد بوسطة بالإيد)، وهو <strong>الوحيد اللي بيحدّث حالة الاستبدال</strong> (<code>Ready</code>) — عبر نافذة تأكيد منفصلة بـchecklist. ⚠️ حالة <strong>الاسترجاع</strong> بقى ليها مصدرين: الرفع المباشر (تلقائي) والمسار ده.</p>
 
           <h4>كيف تعمل — Workflow</h4>
           <ol>
@@ -1356,6 +1381,9 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
            والعمود، فالاسم واحد في التلات شاشات. الإجمالي جوّه نفس القايمة عشان
            يستحيل يبقى أكبر من مجموع المربعات. -->
       <div class="res-stats" id="bulkAllStats"></div>
+      <!-- 🔴 نقلة حالة على شوبيفاي مش أثر جانبي صامت للرفع — بتتقال قبل
+           الضغط. بتبان في وضع الاسترجاع بس (`job().uploadStatus`). -->
+      <div id="bulkAllNote" class="bulk-note" hidden></div>
     </div>
     <div class="eco-modal-ftr">
       <button class="btn-modal-save" id="bulkAllOkBtn" onclick="confirmBulkUpload()">تأكيد الرفع</button>
@@ -1958,7 +1986,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.10.1';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.11.0';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -1966,7 +1994,7 @@ const TOOL_VERSION       = 'v2.10.1';  // مصدر واحد لرقم نسخة ا
 // 🔴 v2.2.0 — Worker أقدم مابيرجّعش `coverageOnly`، فالصف اللي خارج التغطية
 //    بيفضل ⛔ موقوف حتى بعد ما الموظف يختار منطقة. مش خطر (بيفشل مقفول، مش
 //    مفتوح) بس بيرجّع الطريق المسدود اللي v2.10.0 اتعملت عشانه.
-const MIN_WORKER_VERSION = '2.2.0';
+const MIN_WORKER_VERSION = '2.3.0';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -1994,9 +2022,11 @@ const JOBS = {
     statusLabel: 'الحالة (S2)', statusField: 's2',
     statusItems: [{ value: 'Confirmed + RETURN', label: 'Confirmed + RETURN' }],
     tag: 'Bosta_Uploaded_S2', trackingKey: 'bosta_tracking_number_s2',
-    // ⚠️ الحالة التالية دي بتخص **مسار الإكسيل لوحده** (`confirm_upload`).
-    // الرفع المباشر مابيحركش الحالة خالص — زيه زي الشحن العادي بالظبط.
     nextStatus: 'In-Return',
+    // 🔴 الرفع المباشر **بيكتب الحالة دي** (v2.11.0 · Worker v2.3.0 · طلب أحمد) —
+    //    الاسترجاع لوحده. مصدر العرض بس: اللي بيكتب فعلًا هو الـ Worker،
+    //    والقيمة هنا للتأكيد والشرح قدام الموظف. الاستبدال `null` عن قصد.
+    uploadStatus: 'In-Return',
     excel: true, cancel: true,
   },
   exchange: {
@@ -2006,8 +2036,10 @@ const JOBS = {
     statusLabel: 'الحالة (S2)', statusField: 's2',
     statusItems: [{ value: 'Confirmed + EXCHANGE', label: 'Confirmed + EXCHANGE' }],
     tag: 'Bosta_Uploaded_S2', trackingKey: 'bosta_tracking_number_s2',
-    // ⚠️ زي الاسترجاع — بتخص مسار الإكسيل لوحده.
+    // ⚠️ دي بتخص **مسار الإكسيل لوحده** (`confirm_upload`). الرفع المباشر
+    //    مابيحركش الحالة في الاستبدال — النقلة لـ`Ready` بتحصل عند الطباعة.
     nextStatus: 'Ready',
+    uploadStatus: null,
     excel: true, cancel: true,
   },
 };
@@ -3580,6 +3612,19 @@ function openBulkConfirm(source) {
   document.getElementById('bulkAllTitle').textContent =
     `⬆ تأكيد الرفع — ${job().label} (type ${job().bostaType})`;
   renderBulkConfirmStats(rows);
+  // 🔴 الوضع الوحيد اللي الرفع بيحرّك فيه حالة الأوردر — والصف بيخرج من
+  //    القايمة بعد التحديث، فالموظف لازم يعرف ده **قبل** ما يضغط، مش يستنتجه
+  //    من اختفاء الصفوف.
+  const note = document.getElementById('bulkAllNote');
+  if (note) {
+    const up = job().uploadStatus;
+    note.hidden = !up;
+    note.innerHTML = up
+      ? `🔁 بعد كل شحنة ناجحة: <b>حالة (S2)</b> هتتحدّث إلى <code>${esc(up)}</code> — `
+        + 'والأوردر هيخرج من القايمة دي بعد التحديث. '
+        + '<b>مفيش بوليصة بتتطبع للاسترجاع</b>، فالرفع هو آخر خطوة.'
+      : '';
+  }
   document.getElementById('bulkAllOverlay').classList.add('open');
 }
 function closeBulkAllConfirm() {
