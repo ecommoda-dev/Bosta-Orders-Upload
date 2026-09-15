@@ -23,6 +23,8 @@ const api=new Function('document','window','localStorage','Chart','ExcelJS', src
     dpPickOptions, dpPickCurrent, dpPickZone, dpPickToggle, dpPickFilter, renderDistrictList,
     chooseDistrict, setSearch(q){ document.getElementById('dpSearch').value = q; },
     pinDistrictToZone, pinDistrictToProvince, dpEffectiveZone, dpChosenDistrictId,
+    renderDpControls, confirmDistrictPick, el(id){ return document.getElementById(id); },
+    orderId(){ return dpOrderId; },
     rowAddrMode, addrModeInfo, ADDR_MODE_LABEL,
     zf(){ return dpZoneFilter; }, ov(){ return districtOverride; },
     setZf(z){ dpZoneFilter = z; }, open(){ return dpPickOpen; } };`
@@ -454,6 +456,74 @@ console.log('\n── ⑮ الدرجة الأقل بترفض على صف خار�
   api.pinDistrictToProvince();
   chk('والصف العادي لسه بيتثبّت على المحافظة', api.ov()['B']?.forceProvince === true);
   delete api.ov()['B'];
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⑯ «تأكيد العنوان مظبوط» — شغّال فقط على عنوان كامل (v2.15.0)
+//
+// 🔴 البند اللي بيحميه: الزرار ده هو **المخرج الإيجابي** من النافذة، والشرط
+//    إن العنوان كامل بالتلات خانات — يعني فيه `districtId` هيتبعت لبوسطة
+//    فعلًا. لو اتفتح على صف لسه محتاج قرار (❓ أكتر من مطابقة · 🏙️ المحافظة
+//    فقط · 🟠 محافظة مشكوك فيها)، الموظف بيقفل النافذة وهو فاكر إنه أكّد
+//    عنوان — والصف بيفضل موقوف من غير سبب ظاهر، وهي نفس الحيرة اللي حارس
+//    التأكيد اليدوي اتعمل عشانها.
+// ⚠️ والتثبيت على المدينة/المحافظة **مش** عنوان كامل: دول بيبعتوا درجة أقل
+//    (`zoneId` أو المحافظة لوحدها) ومفيش `districtId` خالص.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑯ تأكيد العنوان مظبوط ──');
+{
+  const zc = cairo.map(d => ({ ...d, zoneId: `z-${d.zone}` }));
+
+  // ① صف «المحافظة فقط» من غير أي اختيار — العنوان ناقص
+  api.setup([row],zc,cities,'B','q');
+  delete api.ov()['B'];
+  api.setZf(null);
+  api.renderDpControls();
+  chk('مقفول على صف من غير منطقة', api.el('dpConfirm').disabled === true);
+  api.confirmDistrictPick();
+  chk('والضغط عليه مابيقفلش النافذة', api.orderId() === 'B', String(api.orderId()));
+
+  // ② الموظف اختار منطقة → التلات خانات مليانة
+  api.chooseDistrict('o3','District 01 (Obour)');
+  api.renderDpControls();
+  chk('بيفتح بعد اختيار المنطقة', api.el('dpConfirm').disabled === false);
+  // والتلات خانات فعلًا مليانة — ده تعريف «كامل»
+  chk('وخانة المنطقة فيها الاختيار', /District 01/.test(api.dpPickCurrent('district').text));
+  chk('وخانة المدينة محسومة من المنطقة', /Obour/.test(api.dpPickCurrent('zone').text));
+  chk('وخانة المحافظة فيها قيمة', !!api.dpPickCurrent('city').text.trim());
+  api.confirmDistrictPick();
+  chk('والضغط بيقفل النافذة', api.orderId() === null, String(api.orderId()));
+
+  // ③ المطابقة التلقائية كمان عنوان كامل — مش لازم الموظف يضغط منطقة
+  const auto = { ...row, mode:'district', districtId:'c1', districtName:'Nasr City',
+                 cityDoubt:false, crossCity:[] };
+  api.setup([auto],zc,cities,'B','q');
+  delete api.ov()['B'];
+  api.renderDpControls();
+  chk('مفتوح على المطابقة التلقائية', api.el('dpConfirm').disabled === false);
+
+  // ④ 🔴 التثبيت على المدينة أو المحافظة **مش** عنوان كامل — درجة أقل بتتبعت
+  api.setup([row],zc,cities,'B','q');
+  api.setZf('Obour');
+  delete api.ov()['B'];
+  api.pinDistrictToZone();
+  api.setup([row],zc,cities,'B','q');       // التثبيت قفل النافذة — نفتحها للفحص
+  api.renderDpControls();
+  chk('مقفول بعد التثبيت على المدينة', api.el('dpConfirm').disabled === true,
+      JSON.stringify(api.ov()['B']));
+  api.pinDistrictToProvince();
+  api.setup([row],zc,cities,'B','q');
+  api.renderDpControls();
+  chk('ومقفول بعد التثبيت على المحافظة', api.el('dpConfirm').disabled === true,
+      JSON.stringify(api.ov()['B']));
+  delete api.ov()['B'];
+
+  // ⑤ وحالة «مقفول» لازم تبان — من غير CSS الزرار بيبان شغّال والضغط
+  //    مابيعملش حاجة في صمت (نفس فخ «ارفع على المدينة فقط»).
+  const page = fs.readFileSync('/home/user/Bosta-Orders-Upload/index.html','utf8');
+  chk('وفيه CSS بيوضّح حالة المقفول',
+      /\.btn-green:disabled[^{]*\{[^}]*opacity/.test(page)
+      && /btn-ghost:disabled/.test(page));
 }
 
 console.log(`\n${p}/${n} نجحت`);

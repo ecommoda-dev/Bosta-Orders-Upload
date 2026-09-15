@@ -31,6 +31,20 @@ const catalog={cities:[
    D('k2','Sidi Salem','سيدي سالم','Sidi Salem','سيدي سالم'),
    D('k3','Qalin','قلين','Qalin','قلين'),
  ]},
+ // 🔴 «السادات» — **اسم مدينة حقيقي في محافظتين**: المنوفية والبحيرة (مدينتين
+ //    مختلفتين فعلًا، مش تكرار في الكتالوج). وشكل الكتالوج هنا منسوخ من الحالة
+ //    الحقيقية: **اسم المنطقة** في المنوفية تسمية مركّبة محدش بيكتبها
+ //    («السادات (المنوفيه)») فمطابقة المنطقة بتفشل، لكن **اسم المدينة (الزون)**
+ //    هو «السادات» بالظبط اللي العميل كاتبه.
+ {cityId:'ruBSjGBDX9wpRa3cc',cityName:'Monufia',cityAr:'المنوفيه',districts:[
+   { ...D('m1','Ashmoun','اشمون','Ashmoun','اشمون'), zoneId:'z-ashmoun' },
+   { ...D('m2','ElSadat (Monufia)','السادات (المنوفيه)','ElSadat','السادات'), zoneId:'z-sadat-mnf' },
+   { ...D('m3','Elsadat & Elkhatatba','السادات والخطاطبه','ElSadat','السادات'), zoneId:'z-sadat-mnf' },
+ ]},
+ {cityId:'g3GchTSmCgR2JynsJ',cityName:'Behira',cityAr:'البحيره',districts:[
+   { ...D('b1','ElSadat','السادات','ElSadat','السادات'), zoneId:'z-sadat-bh' },
+   { ...D('b2','Damanhour','دمنهور','Damanhour','دمنهور'), zoneId:'z-damanhour' },
+ ]},
 ]};
 api.ensureNormalized(catalog);
 
@@ -59,3 +73,35 @@ t('الاقتراح مالوش districtId', !obour.crossCity[0]?.districtId);
 t('طابق من خانة city',         obour.crossCity[0]?.fieldLabel === 'مدينة شوبيفاي');
 const ok=P({city:'سيدي سالم',address1:'كفر الشيخ سيدي سالم بجوار بنك مصر',province:'Kafr el-Sheikh',provinceCode:'KFS'});
 t('مطابقة المنطقة ما اتأثرتش', ok.mode === 'district' && ok.districtName === 'Sidi Salem');
+
+// ══════════════════════════════════════════════════════════════
+// 🔴 المطابقة المحلية أسبق من أي مطابقة برّه المحافظة (Worker v2.4.0)
+//
+// الحالة الحقيقية: `#54863` — المنوفية · «مدينه السادات المنطقه الرابعه». كان
+// بياخد 🟠 «المحافظة مشكوك فيها» على اقتراح **البحيرة** (فيها مدينة اسمها
+// السادات كمان)، فالرفع يتوقف — و«ضغطة واحدة تظبّط المدينة» كانت **بتنقل
+// الشحنة للمحافظة الغلط**. والمطابقة المحلية كانت موجودة طول الوقت: مدينة
+// `ElSadat` جوّه المنوفية، والشك كان بيلغي درجتها كمان فينزل للمحافظة.
+// ⚠️ والضابط تحته: أول ما المطابقة المحلية تغيب، الكاشف يرجع زي ما هو.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── المطابقة المحلية أسبق ──');
+const sadat=P({city:'السادات',address1:'مدينه السادات المنطقه الرابعه بجوار مسجد النور',
+               province:'Monufia',provinceCode:'MNF'});
+console.log(`  الوضع: ${sadat.mode}${sadat.cityDoubt?' · 🟠 cityDoubt':''} · ${sadat.zoneName||sadat.districtName||'—'}`);
+t('مفيش مطابقة منطقة جوّه المنوفية (التسمية مركّبة)', (sadat.candidates||[]).length === 0);
+t('🟠 الشك اتشال',                     sadat.cityDoubt === false);
+t('ومفيش اقتراح محافظة تانية معروض',   (sadat.crossCity||[]).length === 0);
+t('والمطابقة المحلية اتلقطت',          (sadat.localZones||[]).length === 1);
+// 🔴 والنتيجة مش «المحافظة بس»: المدينة محسومة، فالشحنة بتترفع بالـ zoneId
+t('والشحنة بترفع على مدينة السادات',   sadat.mode === 'zone' && sadat.zoneName === 'ElSadat');
+t('بالـ zoneId بتاع المنوفية مش البحيرة', sadat.zoneId === 'z-sadat-mnf');
+t('والمحافظة فضلت المنوفية',           sadat.cityId === 'ruBSjGBDX9wpRa3cc');
+
+// ⚠️ الضابط — نفس العنوان بمحافظة **مالهاش** أي مطابقة محلية (كفر الشيخ):
+//    الكاشف لسه شغّال بالظبط زي ما هو، والاقتراح بيسمّي المحافظة الصح.
+const sadatKfs=P({city:'السادات',address1:'مدينه السادات المنطقه الرابعه بجوار مسجد النور',
+                  province:'Kafr el-Sheikh',provinceCode:'KFS'});
+console.log(`  الضابط (كفر الشيخ): ${sadatKfs.mode}${sadatKfs.cityDoubt?' · 🟠 cityDoubt':''}`);
+t('محافظة بلا مطابقة محلية لسه بتدّي 🟠', sadatKfs.cityDoubt === true);
+t('والاقتراح بيسمّي محافظة فيها السادات',
+  (sadatKfs.crossCity||[]).some(c => c.cityName === 'Monufia' || c.cityName === 'Behira'));
