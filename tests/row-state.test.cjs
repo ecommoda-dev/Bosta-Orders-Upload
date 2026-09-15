@@ -6,6 +6,9 @@
 //   · 🟠 صف «المدينة مشكوك فيها» مستثنى من «تحديد الكل» — والاستثناء بيروح
 //     بمجرد ما الموظف يراجع المدينة
 //   · نص الحالة بيقول المدينة المعدّلة صراحةً
+//   · 🔴 (قرار أحمد 15-09-2026) ❓ أكتر من مطابقة · 🟠 المحافظة مشكوك فيها ·
+//     و🏙️ المحافظة فقط (من غير تثبيت) بيفضلوا موقوفين تمامًا — مش بس مستثنيين
+//     من «تحديد الكل» — لحد ما الموظف ياخد قرار صريح
 // ══════════════════════════════════════════════════════════════
 // اختبار منطق الواجهة: حالة الصف · استثناء تحديد الكل · نص الحالة
 const fs = require('fs');
@@ -21,7 +24,8 @@ const win = { addEventListener(){}, matchMedia:()=>({matches:false,addEventListe
   scrollY:0, innerWidth:1400, devicePixelRatio:1 };
 const ls  = { getItem:()=>null, setItem(){}, removeItem(){} };
 
-const tail = '\nreturn { rowAddrMode, rowNeedsCityDecision, isAutoSelectable, addrModeInfo, effCity,' +
+const tail = '\nreturn { rowAddrMode, rowNeedsCityDecision, rowNeedsManualAddressConfirm,' +
+             ' isAutoSelectable, addrModeInfo, effCity,' +
              ' rowUploadable, rowUpState, rowUpLabel, rowCoverageOverridden,' +
              ' ov: districtOverride, setRows(r){ allRows = r; } };';
 const api = new Function('document','window','localStorage','Chart','ExcelJS', src + tail)(doc, win, ls, undefined, undefined);
@@ -33,6 +37,8 @@ const rows = [
  {orderId:'C',uploadable:true,addressOk:true,mode:'province',cityName:'Dakahlia',cityId:'d',ambiguous:true,cityDoubt:false,
   candidates:[{id:'1',name:'Mansoura'},{id:'2',name:'Aga'}],crossCity:[]},
  {orderId:'D',uploadable:false,addressOk:true,mode:'province',cityName:'Cairo',cityId:'c',ambiguous:false,cityDoubt:false,crossCity:[],problems:['تليفون ناقص']},
+ // 🔴 مطابقة تلقائية خالص — مفيش منطقة ولا غموض ولا شك مدينة، بس مفيش تثبيت
+ {orderId:'H',uploadable:true,addressOk:true,mode:'province',cityName:'Giza',cityId:'g',ambiguous:false,cityDoubt:false,crossCity:[]},
 ];
 api.setRows(rows);
 
@@ -47,8 +53,34 @@ chk('B المدينة مشكوك فيها',       api.rowAddrMode(rows[1]),     
 chk('C غامضة',                   api.rowAddrMode(rows[2]),      'ambiguous');
 chk('B مستثنى من تحديد الكل',     api.isAutoSelectable(rows[1]), false);
 chk('A داخل تحديد الكل',          api.isAutoSelectable(rows[0]), true);
-chk('C (غامضة) داخل تحديد الكل',  api.isAutoSelectable(rows[2]), true);
 chk('D موقوف مستثنى',            api.isAutoSelectable(rows[3]), false);
+
+// ─── 🔴 حارس التأكيد اليدوي الإضافي (قرار أحمد 15-09-2026) ─────
+// ❓ أكتر من مطابقة · 🟠 المحافظة مشكوك فيها · و🏙️ المحافظة فقط (من غير
+// تثبيت) بيفضلوا موقوفين — الشيك بوكس مقفول ومستحيلين في «تحديد الكل»/
+// «رفع الكل»/«رفع المحدد» — لحد ما الموظف ياخد قرار صريح.
+console.log('\n— حارس التأكيد اليدوي: أكتر من مطابقة · محافظة مشكوك فيها · محافظة فقط —');
+chk('C (غامضة) موقوفة تمامًا لحد ما تتحل',  api.rowUploadable(rows[2]), false);
+chk('C (غامضة) بره تحديد الكل',            api.isAutoSelectable(rows[2]), false);
+chk('H (المحافظة فقط من غير تثبيت) موقوفة', api.rowUploadable(rows[4]), false);
+chk('H محتاجة تأكيد يدوي',                  api.rowNeedsManualAddressConfirm(rows[4]), true);
+
+// اختيار منطقة بيحل الغموض فعلًا
+api.ov['C'] = { districtId:'1', districtName:'Mansoura', cityId:'d', cityName:'Dakahlia' };
+chk('C بعد اختيار منطقة بقت district',      api.rowAddrMode(rows[2]), 'district');
+chk('وبقت تترفع',                           api.rowUploadable(rows[2]), true);
+delete api.ov['C'];
+
+// «ارفع على المحافظة فقط» (forceProvince) بيحل الغموض والمحافظة فقط الاتنين
+api.ov['C'] = { forceProvince: true };
+chk('C بعد التثبيت على المحافظة بقت تترفع', api.rowUploadable(rows[2]), true);
+delete api.ov['C'];
+
+chk('H قبل التثبيت لسه موقوفة',             api.rowUploadable(rows[4]), false);
+api.ov['H'] = { forceProvince: true };
+chk('H بعد التثبيت على المحافظة بقت تترفع', api.rowUploadable(rows[4]), true);
+chk('ومابقتش محتاجة تأكيد يدوي',            api.rowNeedsManualAddressConfirm(rows[4]), false);
+delete api.ov['H'];
 
 api.ov['B'] = { cityId:'c', cityName:'Cairo' };
 chk('B بعد تعديل المدينة',        api.rowAddrMode(rows[1]),      'cityFixed');
