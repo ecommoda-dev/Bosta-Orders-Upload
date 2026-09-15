@@ -532,9 +532,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
    فالعرض هنا `width` حقيقي + `overflow-wrap` مع قصّ على سطرين. */
 .data-table tbody td.cell-wrap{white-space:normal;text-align:right;overflow-wrap:anywhere;word-break:break-word;}
 .data-table tbody td.cell-name{width:170px;}
-.data-table tbody td.cell-addr{width:360px;font-size:12px;color:var(--text-secondary);}
-/* النص الكامل مش بيضيع: `title` على الخلية + النافذة + تصدير XLSX */
-.cell-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.6;}
+.data-table tbody td.cell-addr{width:360px;font-size:13.5px;font-weight:600;color:var(--text-primary);line-height:1.5;}
 .empty-row td{padding:40px;text-align:center;color:var(--text-muted);font-size:13px;}
 .row-cb{width:16px;height:16px;cursor:pointer;accent-color:var(--accent);}
 
@@ -906,6 +904,17 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">15-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>جملة «محتاج تأكيد يدوي على العنوان — افتح عمود المنطقة» اتشالت من تحت اسم العميل</b> (طلب أحمد). كانت بتتكرر مع بادج «حالة العنوان» اللي جنبها أصلًا بيقول نفس الحاجة («❓ أكتر من مطابقة — محتاج اختيار» · «🟠 المحافظة مشكوك فيها — محتاج مراجعة»).</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>عمود «العنوان كامل» بقى بيعرض النص كله من غير قص</b> (طلب أحمد) — كان مقصوص على سطرين (<code>-webkit-line-clamp</code>) والباقي مش ظاهر إلا بتمرير الماوس. الـ <code>tooltip</code> بتاع الـ hover اتشال كمان، والخط بقى أكبر (13.5px بدل 12px) وأغمق (<code>--text-primary</code> بدل <code>--text-secondary</code> الباهت) وسمك أوضح.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.13.0</span>
           <span class="cl-ver-date">15-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -2020,7 +2029,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.13.0';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.14.0';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -3424,17 +3433,17 @@ function tableColumns() {
     { key: 'orderNumber', label: 'رقم الأوردر', sort: 'orderNumber', cell: r => orderLink(r.orderNumber, r.orderId) },
     { key: 'date',        label: 'التاريخ', sort: 'date', cls: 'col-num', cell: r => formatDate(r.createdAt) },
     { key: 'customer',    label: 'العميل', sort: 'customer', cls: 'cell-wrap cell-name',
-      // 🔴 حارس التأكيد اليدوي (`rowNeedsManualAddressConfirm`) بيوقف الصف من غير
-      //    أي `problems` من السيرفر — من غير السطر ده الصف كان بيبان موقوف
-      //    والسبب فاضي، والموظف يروح يدوّر ليه.
+      // 🔴 الصف اللي محتاج تأكيد يدوي (`rowNeedsManualAddressConfirm`) بيوقف من
+      //    غير أي `problems` من السيرفر — بس السبب بقى مقروء من بادج «حالة
+      //    العنوان» نفسه («❓ أكتر من مطابقة — محتاج اختيار» ·
+      //    «🟠 المحافظة مشكوك فيها — محتاج مراجعة»)، فمفيش داعي لتكرار نفس
+      //    الجملة تحت اسم العميل (طلب أحمد v2.13.0).
       cell: r => {
         const reasons = rowUploadable(r) ? [] : (r.problems || []).slice();
-        if (rowNeedsManualAddressConfirm(r)) reasons.push('محتاج تأكيد يدوي على العنوان — افتح عمود المنطقة');
         return `${esc(r.customer || '—')}${reasons.length ? `<span class="problem-text">${esc(reasons.join(' · '))}</span>` : ''}`;
       } },
     { key: 'address',     label: 'العنوان كامل', sort: 'address', cls: 'cell-wrap cell-addr',
-      cell: r => `<span class="cell-clamp">${esc(fullAddressText(r) || '—')}</span>`,
-      attrs: r => `title="${esc(fullAddressText(r) || '—')}"` },
+      cell: r => esc(fullAddressText(r) || '—') },
     { key: 'province',    label: 'المحافظة (شوبيفاي)', sort: 'province', cell: r => esc(r.province || '—') },
     { key: 'cityName',    label: 'محافظة بوسطة', sort: 'cityName', cell: cityCell },
     { key: 'district',    label: 'المنطقة', cell: districtCell },
