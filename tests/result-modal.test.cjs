@@ -35,7 +35,7 @@ const win = { addEventListener(){}, matchMedia:()=>({matches:false,addEventListe
 const api = new Function('document','window','localStorage','Chart','ExcelJS', src + `
 return { ADDR_MODE_ITEMS, ADDR_MODE_LABEL, filterLabels, tableColumns, RESULT_BADGE,
          resultsNeedDetails, dpContextHTML, renderDpTitle, rowAddrMode,
-         RESULT_STATS, renderResultStats, summarize,
+         RESULT_STATS, renderResultStats, summarize, trackingLink,
          setRows(r){ allRows = r; }, setPicked(id){ dpOrderId = id; } };`
 )(doc, win, { getItem:()=>null, setItem(){}, removeItem(){} }, undefined, undefined);
 
@@ -165,6 +165,32 @@ ok('الاسم تحت الرقم في نفس المربع', /res-stat-num">2<\/s
 ok('زرار التفاصيل ليه تصميم خاص', html.includes('class="res-ftr-btn details"'));
 ok('وزرار التصدير كمان',          html.includes('class="res-ftr-btn export"'));
 ok('البادجات القديمة اتشالت من النافذة', !html.includes('id="resSummary"'));
+
+// ─── ⑦ رقم التتبع = لينك لداشبورد بوسطة (واجهة v2.15.0) ──────
+// 🔴 الصيغة نفسها هي العقد: `https://business.bosta.co/orders/{trackingNumber}`.
+//    أي تغيير فيها بيدّي **404 على داشبورد بوسطة** — لينك بيفتح ومش بيوصل،
+//    وده أسوأ من نص عادي الموظف بينسخه.
+// ⚠️ والتلات أماكن لازم يقروا من نفس الدالة: السجل · تفاصيل نافذة النتيجة ·
+//    بادج «🔁 مرفوع» في جدول الرفع. أي مكان يرجع لـ`esc(...)` على طول بيرجع
+//    نص ميت من غير أي خطأ.
+console.log('\n⑦ رقم التتبع لينك لبوسطة');
+const tl = api.trackingLink('9473166262');
+ok('بيطلّع لينك business.bosta.co/orders/{tn}',
+   /href="https:\/\/business\.bosta\.co\/orders\/9473166262"/.test(tl), tl);
+ok('والرقم نفسه هو نص اللينك', />9473166262<\/a>/.test(tl), tl);
+ok('وبيفتح في تاب جديد بأمان', /target="_blank"/.test(tl) && /rel="noopener"/.test(tl));
+ok('ومن غير رقم بيرجّع شرطة مش لينك فاضي', api.trackingLink('') === '—'
+   && api.trackingLink(null) === '—');
+// ⚠️ الصفوف القديمة في D1 جايه من كتابة حرة — قيمة غريبة في `tracking`
+//    مالهاش أي وسيلة تخرج من حدود المسار ولا من حدود النص
+const evil = api.trackingLink('12"><script>alert(1)</script>');
+ok('والقيمة الغريبة محبوسة في المسار', !/["<>]/.test((evil.match(/href="([^"]*)"/) || [])[1] || '"'), evil);
+ok('ومفيش أي تاج بيتولد منها', (evil.match(/</g) || []).length === 2, evil);
+ok('السجل بيقرا من الدالة', html.includes('${trackingLink(r.tracking)}'));
+ok('وتفاصيل النتيجة كمان', html.includes('${trackingLink(r.trackingNumber)}'));
+ok('وبادج «مرفوع» في جدول الرفع', html.includes('${trackingLink(r.previousTracking)}'));
+// واللينك جوّه البادج بياخد لون البادج — الأزرق جوّه بادج صفرا بيقرا كأنه حالة تانية
+ok('واللينك جوّه البادج بلون البادج', /\.badge \.order-link\{color:inherit/.test(html));
 
 console.log(`\n${fail === 0 ? '✅' : '❌'} ${pass} نجحت · ${fail} فشلت`);
 process.exit(fail === 0 ? 0 : 1);

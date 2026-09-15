@@ -106,6 +106,14 @@ const req=(action,body)=>({method:body?'POST':'GET',url:`https://w/?action=${act
   ok('خطة العنوان لقت المنطقة', row.mode==='district' && row.districtName==='Nasr City', {m:row.mode,d:row.districtName});
   ok('الصف قابل للرفع', row.uploadable===true, row.problems);
   ok('مابيرجعش returns الخام للواجهة', row.returns===undefined && row.lineItems===undefined);
+  // 🔴 v2.4.0 (طلب أحمد) — **الفحص مابيتسجّلش**. كان بيكتب صف `type: 'scan'` مع
+  //    كل نداء، والنداء بيحصل على كل فتحة شاشة وكل تبديل وضع وكل «تحديث» —
+  //    يعني عشرات الصفوف اليومية لقراءة **مالهاش أي أثر**، وصفوف الرفع
+  //    الحقيقية (اللي السجل موجود عشانها) بتغرق وسطها.
+  //    ⚠️ والحارس على **الكتابة كلها** مش على القيمة: أي صف سجل جديد بيتولد من
+  //    قراءة بيرجّع نفس المشكلة باسم تاني.
+  ok('🔴 مفيش صف فحص اتكتب في D1', !bound.some(x=>x.b[2]==='scan'), bound.map(x=>x.b[2]));
+  ok('ومفيش أي صف سجل بيتكتب من القراءة', bound.length===0, bound.length);
 
   console.log('\n② upload_re (استرجاع)');
   lastPrinting=null;

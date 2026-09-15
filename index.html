@@ -141,7 +141,15 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .btn-red:hover{background:var(--red-dark);}
 .btn-ghost{padding:9px 18px;border-radius:var(--radius-sm);border:1px solid var(--border-strong);background:var(--surface);
   color:var(--text-secondary);font-family:var(--font-body);font-size:13px;font-weight:700;cursor:pointer;}
-.btn-ghost:hover{color:var(--text-primary);border-color:var(--accent);}
+.btn-ghost:hover:not(:disabled){color:var(--text-primary);border-color:var(--accent);}
+.btn-green{padding:9px 18px;border-radius:var(--radius-sm);border:none;background:var(--green);color:var(--on-accent);
+  font-family:var(--font-body);font-size:13px;font-weight:700;cursor:pointer;transition:background .15s;}
+.btn-green:hover:not(:disabled){background:var(--green-dark);}
+/* 🔴 حالة «مقفول» لازم تبان — الزرار المقفول هو اللي بيقول للموظف إن القرار
+   لسه ناقص (زرار «تأكيد العنوان مظبوط» قبل ما المنطقة تتحدد · «ارفع على
+   المدينة فقط» على مدينة بلا zoneId). من غير القاعدة دي الزرارين كانوا
+   بيبانوا شغّالين بالظبط زي المفتوح، والضغط عليهم مابيعملش حاجة **في صمت**. */
+.btn-green:disabled,.btn-ghost:disabled{opacity:.45;cursor:not-allowed;}
 
 /* ── Modal shell (About / Changelog / أي نافذة طويلة) ────────── */
 .eco-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;display:none;
@@ -538,6 +546,10 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 
 .order-link{font-family:var(--font-mono);font-weight:600;color:var(--accent);text-decoration:none;}
 .order-link:hover{text-decoration:underline;}
+/* 🔴 اللينك جوّه بادج بياخد **لون البادج** — أزرق الأكسنت جوّه بادج «🔁 مرفوع»
+   الأصفر بيقرا كأنه حالة تانية جنبها. والتسطير دايم هنا مش على الـ hover:
+   جوّه بادج ملوّنة مفيش أي إشارة تانية إن الرقم قابل للضغط. */
+.badge .order-link{color:inherit;text-decoration:underline;}
 .order-num{font-family:var(--font-mono);font-weight:600;}
 
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;}
@@ -627,7 +639,9 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 /* النافذة نفسها Compact — الحشو الكبير كان بينزّل القايمة تحت طيّة الشاشة */
 .eco-modal.dp .eco-modal-hdr{padding:10px 14px;}
 .eco-modal.dp .eco-modal-body{padding:12px 14px;}
-.eco-modal.dp .eco-modal-ftr{padding:9px 14px;}
+/* الفوتر بقى أربع زراير (v2.15.0) — `wrap` عشان على شاشة ضيّقة ينزلوا سطرين
+   بدل ما النص يتلف جوّه كل زرار على تلات سطور */
+.eco-modal.dp .eco-modal-ftr{padding:9px 14px;flex-wrap:wrap;}
 /* القايمة عمودين: المنطقة · الزون — الترويسة ملزوقة فوق.
    🔴 «سبب المطابقة» كان عمود تالت بيعرض «—» في كل الصفوف ماعدا واحد، فالعمود
    كله كان ضوضاء بتاكل عرض الاسم. بقى سطر تحت اسم المنطقة، بيبان فقط لما يبقى
@@ -904,6 +918,20 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">15-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>«🟠 المحافظة مشكوك فيها» ماعادت تظهر لما العنوان يطابق جوّه محافظته الصح</b> (Worker v2.4.0). «السادات» اسم مدينة حقيقي في <b>المنوفية وفي البحيرة</b> — مدينتين مختلفتين فعلًا — فأوردر المنوفية (<code>#54863</code> · «مدينه السادات المنطقه الرابعه») كان بياخد 🟠 على اقتراح <b>البحيرة</b> والرفع يتوقف، و«ضغطة واحدة تظبّط المدينة» كانت <b>هتنقل الشحنة للمحافظة الغلط</b>. القاعدة بقت: <b>المطابقة جوّه المحافظة أسبق</b>، وأول ما تتوفّر مابنبصّش برّه المحافظة خالص. ⚠️ والكاشف <b>زي ما هو</b> لما مفيش أي مطابقة محلية — دي الحالة اللي اتعمل عشانها (العبور تحت القاهرة · شبين الكوم على الغربية).</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>وكمان: الأوردر ده بقى بيترفع على <b>مدينة السادات</b> بالـ <code>zoneId</code> بدل «المحافظة فقط» — الشك كان بيلغي درجة المدينة معاه، فالشحنة كانت بتنزل على الهب الافتراضي للمحافظة.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>🔗 <b>رقم التتبع بقى لينك لداشبورد بوسطة</b> (طلب أحمد) — في <b>سجل العمليات</b> وفي <b>تفاصيل نافذة النتيجة</b> وفي بادج <b>«🔁 مرفوع»</b> في جدول الرفع. الضغط بيفتح الشحنة على طول (<code>business.bosta.co/orders/{رقم التتبع}</code>) في تاب جديد، بدل نسخ الرقم ولزقه في البحث.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>✅ <b>زرار «تأكيد العنوان مظبوط»</b> في نافذة اختيار المنطقة (طلب أحمد). <b>شغّال فقط لما العنوان كامل بالتلات خانات</b> (المحافظة · المدينة · المنطقة) — وبيقفل النافذة بالاختيار قايم. قبل كده اللي بيظبّط العنوان ماكانش قدامه غير <b>«إلغاء»</b> الأحمر عشان يقفل بيه، وهو زرار بيقرا كأنه بيلغي اللي اختاره. ⚠️ والتثبيت على المدينة/المحافظة فقط <b>مش</b> عنوان كامل — الزرار بيفضل مقفول عليهم.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🧹 <b>عمليات «🔍 فحص» ماعادت تتسجّل في السجل</b> (طلب أحمد). كان بيتكتب صف مع <b>كل</b> فتحة شاشة وكل تبديل وضع وكل «تحديث» في الاسترجاع/الاستبدال — قراءة مالهاش أي أثر (لا شحنة ولا كتابة) بتغرّق صفوف الرفع الحقيقية. ⚠️ <b>الصفوف القديمة ما اتمسحتش</b> والفلتر لسه فيه «🔍 فحص» عشان تفضل قابلة للقراءة.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.14.0</span>
           <span class="cl-ver-date">15-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -1250,7 +1278,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li>🗺️ <strong>المدينة</strong> عمود قايم بذاته في قايمة النافذة (القايمة جدول: <strong>المنطقة · المدينة · سبب المطابقة</strong>). هرم بوسطة <strong>محافظة ← مدينة ← منطقة</strong> (أسماء الحقول عندهم <code>city</code> ← <code>zone</code> ← <code>district</code>، والتسمية العربية من واجهتهم). البحث بيشمل المدينة (كتابة «العبور» بتجيب كل مناطقها)، والمنطقة اللي مالهاش مدينة بتتكتب <strong>«بلا مدينة»</strong> صراحةً. 🔴 اسم المدينة بيتعرض <strong>كامل من غير قص</strong> — الجزء المقصوص هو بالظبط اللي بيفرّق بين مدينتين، والمدينة هي اللي بتحسم المحافظة.</li>
             <li>سياق نافذة المنطقة <strong>جدول واحد بأعمدة متطابقة</strong>: فوق <strong>العنوان بالكامل</strong> (أخضر) — هو المصدر الوحيد اللي المطابقة بتقرا منه — وتحته صف <strong>🛍️ شوبيفاي</strong> (المحافظة · المدينة) وصف <strong>🚚 بوسطة</strong> (المدينة · المنطقة) من غير أي فاصل بينهم، فالخانة الزرقا بتقع فوق الخانة الحمرا بالظبط. خانات شوبيفاي بتفضل <strong>منفصلة</strong>: الترجيح بيفرّق بين خانة <code>city</code> وخانة <code>address1</code>، فدمجهم في العرض بيخفي الخانة اللي المطابقة اتبنت عليها. و<strong>حالة العنوان</strong> بقت في <strong>عنوان النافذة</strong> نفسه (<code>📍 اختر المنطقة — #12345 — حالة العنوان: …</code>) والشرح الكامل على الـ hover عليها.</li>
             <li><strong>منتقي المحافظة جوّه صف بوسطة نفسه</strong> — نفس الخانة اللي بتعرض المحافظة هي اللي بتغيّرها، مش صف تاني تحت. لو غيّرتها، الرفع بيتبعت عليها هي — وعمود «محافظة بوسطة» في الجدول بيوريها بعلامة ✎. اقتراحات المحافظات التانية بتتحط فوق القايمة، والضغط عليها بيغيّر المحافظة والمنطقة مع بعض.</li>
-            <li>أي صف ينفع يتفتح بزرار <em>اختر المنطقة</em> — والنافذة فيها <strong>🗺️ ارفع على المدينة فقط</strong> و<strong>🏙️ ارفع على المحافظة فقط</strong> (بتثبّت الصف على الدرجة دي حتى لو المطابقة نجحت وقت الرفع). الضغط على أي منهم بيقفل النافذة على طول بالاختيار المطبَّق. زرار <strong>إلغاء</strong> الأحمر بيقفل النافذة من غير أي فعل إضافي.</li>
+            <li>أي صف ينفع يتفتح بزرار <em>اختر المنطقة</em> — والنافذة فيها <strong>✅ تأكيد العنوان مظبوط</strong> و<strong>🗺️ ارفع على المدينة فقط</strong> و<strong>🏙️ ارفع على المحافظة فقط</strong> (الاتنين دول بيثبّتوا الصف على الدرجة دي حتى لو المطابقة نجحت وقت الرفع). الضغط على أي منهم بيقفل النافذة على طول بالاختيار المطبَّق. زرار <strong>إلغاء</strong> الأحمر بيقفل النافذة من غير أي فعل إضافي.</li>
+            <li>✅ <strong>«تأكيد العنوان مظبوط» شغّال فقط لما العنوان كامل بالتلات خانات</strong> (المحافظة · المدينة · المنطقة) — يعني فيه <strong>منطقة سارية</strong> هتتبعت لبوسطة، سواء المطابقة التلقائية لقتها أو الموظف اختارها. مقفول على الصف اللي لسه محتاج قرار (❓ أكتر من مطابقة · 🏙️ المحافظة فقط · 🟠 المحافظة مشكوك فيها)، ومقفول كمان بعد التثبيت على المدينة أو المحافظة — دول <strong>درجة أقل</strong> ومفيش منطقة بتتبعت معاهم. والسبب في كل الحالات مكتوب في <strong>عنوان النافذة</strong> («حالة العنوان: …»).</li>
             <li>الموظف يحدد الأوردرات ويضغط <strong>رفع المحدد</strong>، أو يضغط <strong>⬆ رفع الكل</strong> اللي بيحدد <strong>كل المعروض حسب الفلتر الحالي</strong> (والعدد مكتوب جوّه الزرار). <strong>الزرارين بيوقفوا على نفس نافذة التأكيد</strong> — فيها مربعات بتقول هيترفع كام أوردر من كل <strong>حالة عنوان</strong>، ونوع الشحنة في ترويسة النافذة. صفوف 🟠 <strong>المحافظة مشكوك فيها مستثناة من «رفع الكل»</strong> — تتحدد بالإيد بعد المراجعة. والأوردر المرفوع قبل كده بيطلب تأكيد صريح تاني.</li>
             <li>الرفع بيحصل على دفعات، وكل صف بيجيب نتيجته الخاصة ومعاه رقم تتبعه.</li>
             <li>بعد كل نجاح: اللي في عمود «بيكتب إيه» في جدول الأوضاع فوق — بيختلف بالوضع.</li>
@@ -1285,7 +1314,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
         <div class="about-sec-body">
           <h4>FEATURE MAP</h4>
           <ul>
-            <li><code>§CONFIG</code> — <code>WORKER_URL</code> · <code>LS_SECRET</code> · <code>apiGet</code>/<code>apiPost</code>/<code>apiRequest</code> · <code>orderLink()</code></li>
+            <li><code>§CONFIG</code> — <code>WORKER_URL</code> · <code>LS_SECRET</code> · <code>apiGet</code>/<code>apiPost</code>/<code>apiRequest</code> · <code>orderLink()</code> · <code>trackingLink()</code> (رقم التتبع → داشبورد بوسطة، مصدر واحد للتلات شاشات)</li>
             <li><code>§SHELL-JS</code> — الإعدادات · النسخة · التوست · الوقت · حارس نسخة الـ Worker · الفحص الذاتي · Freeze on Scroll</li>
             <li><code>§AUTH-JS</code> — Universal D1 Auth (check_employee / register_pin / verify_employee / log_logout)</li>
             <li><code>§TOOL-JS::filters</code> — سجل الـ multi-select الموحّد للجدولين (<code>owner</code> بيوجّه التغيير للجدول الصح)</li>
@@ -1320,6 +1349,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li><strong>اختيار زون بيمسح أي منطقة كانت متختارة قبله.</strong> اختيار زون = إعادة تحديد نطاق، ومنطقة من مدينة قديمة مع اسم مدينة جديد = شحنة في المكان الغلط.</li>
             <li>🗺️ <strong>الزون كان بيتعرض ومش بيتطابق (v1.2.x) — بقى بيتطابق في v1.3.0.</strong> المطابقة بتسأل «هل نص العنوان فيه اسم المنطقة؟» — فبتنجح لما اسم المنطقة اسم مكان بسيط (<code>مدينة السادات</code> · <code>قلين</code>) وبتفشل لما يكون تسمية مركّبة محدش بيكتبها (<code>العبور - المنطقة 05</code>). عشان كده أوردرات العبور بتقع على «المحافظة فقط». الزون معروض دلوقتي عشان نقرر إزاي نعالجها.</li>
             <li><strong>اقتراح المدينة التانية اقتراح — مش قرار.</strong> أسماء المناطق بتتكرر بين المحافظات، فالتطبيق التلقائي هيكون نفس الفخ اللي جدول المحافظات المقفول اتكتب عشان يمنعه. الاقتراح بيتعرض، والموظف بيضغط.</li>
+            <li>🔴 <strong>والمطابقة جوّه المحافظة أسبق من أي اقتراح برّاها</strong> (Worker v2.4.0). أول ما العنوان يطابق مدينة أو منطقة <strong>جوّه المحافظة المحسومة من الجدول</strong>، الأداة <strong>مابتبصّش برّه المحافظة خالص</strong> — لا شك ولا اقتراحات. السبب: نفس الاسم موجود فعلًا في أكتر من محافظة («<strong>السادات</strong>» مدينة حقيقية في المنوفية <strong>وفي البحيرة</strong>)، فالاقتراح كان بيوقف صف سليم و«ضغطة واحدة تظبّط المدينة» كانت <strong>بتوديه للمحافظة الغلط</strong>. الكاشف <strong>زي ما هو</strong> لما مفيش مطابقة محلية — دي حالة العبور وشبين الكوم.</li>
+            <li>🧹 <strong>عمليات القراءة مابتتسجّلش في السجل</strong> (Worker v2.4.0). ترشيح أوردرات الاسترجاع/الاستبدال كان بيكتب صف <code>scan</code> مع كل نداء (كل فتحة شاشة · كل تبديل وضع · كل «تحديث») — السجل موجود عشان <strong>الأفعال</strong> (شحنة اتعملت · حالة اتغيّرت)، والقراءة مالهاش أي أثر يستاهل صف. الصفوف القديمة ما اتمسحتش والفلتر لسه بيقراها.</li>
             <li><strong>لو الموظف اختار منطقة والـ Worker مالقهاش في المدينة المختارة، الصف بيوقف بخطأ</strong> — مش بيرجع للمطابقة التلقائية بصمت. الرفع على حاجة تانية غير اللي الموظف وافق عليه = شحنة بفلوس على عنوان مش المقصود.</li>
             <li>الرفع بيتقسّم دفعات من <code>UPLOAD_CHUNK</code> صف. لو دفعة كاملة ما وصلتش للـ Worker، صفوفها بتتعرض بحالة «فشل» مع رسالة صريحة إن حالتها <strong>مش معروفة</strong> ولازم تتراجع على بوسطة قبل إعادة المحاولة.</li>
             <li>🔴 <strong>حارس تأكيد يدوي إضافي فوق <code>r.uploadable</code></strong> — <code>rowNeedsManualAddressConfirm</code> بتوقف ❓ أكتر من مطابقة · 🟠 المحافظة مشكوك فيها · و🏙️ المحافظة فقط (من غير تثبيت) حتى لو السيرفر رجّعها <code>uploadable: true</code>. القرار قرار الموظف، وبياخد أي فعل يغيّر <code>rowAddrMode</code> عن الحالة دي (اختيار منطقة · تثبيت على المحافظة/المدينة فقط).</li>
@@ -1351,6 +1382,11 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="dp-list" id="dpList"></div>
     </div>
     <div class="eco-modal-ftr">
+      <!-- 🔴 «تأكيد العنوان مظبوط» (v2.15.0 · طلب أحمد) — شغّال **فقط** لما
+           التلات خانات مليانة (محافظة · مدينة · منطقة)، يعني فيه `districtId`
+           حقيقي هيتبعت. قبل كده الموظف كان يختار المنطقة ويلاقي قدامه «إلغاء»
+           الأحمر لوحده عشان يقفل بيه — زرار بيقرا كأنه بيلغي اللي اختاره. -->
+      <button class="btn-green" id="dpConfirm" onclick="confirmDistrictPick()">✅ تأكيد العنوان مظبوط</button>
       <button class="btn-ghost" id="dpPinZone" onclick="pinDistrictToZone()">🗺️ ارفع على المدينة فقط</button>
       <button class="btn-ghost" onclick="pinDistrictToProvince()">🏙️ ارفع على المحافظة فقط</button>
       <button class="btn-red" onclick="closeDistrictPicker()">إلغاء</button>
@@ -2029,7 +2065,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.14.0';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.15.0';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2037,7 +2073,11 @@ const TOOL_VERSION       = 'v2.14.0';  // مصدر واحد لرقم نسخة ا
 // 🔴 v2.2.0 — Worker أقدم مابيرجّعش `coverageOnly`، فالصف اللي خارج التغطية
 //    بيفضل ⛔ موقوف حتى بعد ما الموظف يختار منطقة. مش خطر (بيفشل مقفول، مش
 //    مفتوح) لكن بيرجّع الطريق المسدود اللي v2.10.0 اتعملت عشانه.
-const MIN_WORKER_VERSION = '2.3.0';
+// 🔴 v2.4.0 — Worker أقدم لسه بيرجّع 🟠 «المحافظة مشكوك فيها» على الصف اللي
+//    عنده مطابقة محلية سليمة (اسم متكرر بين محافظتين زي «السادات»)، فالصف
+//    بيتوقف عن الرفع والاقتراح بيودّي للمحافظة الغلط. والواجهة **مش** بتقدر
+//    تصلّحها: الشك محسوب في `resolveAddress` جوّه الـ Worker.
+const MIN_WORKER_VERSION = '2.4.0';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -2182,6 +2222,20 @@ function orderLink(orderNumber, orderId) {
   const label = String(orderNumber).startsWith('#') ? orderNumber : `#${orderNumber}`;
   if (!orderId) return `<span class="order-num">${esc(label)}</span>`;
   return `<a href="${shopifyOrderUrl(orderId)}" target="_blank" rel="noopener" class="order-link">${esc(label)}</a>`;
+}
+// 🔴 رقم التتبع = هايبر لينك لداشبورد بوسطة (طلب أحمد 15-09-2026) — نفس الدالة
+//    في **سجل العمليات** و**تفاصيل نافذة النتيجة** وبادج **«🔁 مرفوع»** في
+//    جدول الرفع ونافذة تأكيد المكرر. الرقم لوحده كان بيتنسخ
+//    بالإيد ويتلزق في بحث الداشبورد، وده بيحصل بعد كل صف أصفر («تم جزئيًا» =
+//    شحنة موجودة بفلوس محتاجة مراجعة) وبعد كل إلغاء.
+//    ⚠️ المسار بيتغلّف بـ `encodeURIComponent` — أي قيمة غريبة جاية من صف سجل
+//    قديم تفضل جوّه حدود المسار بدل ما تخرج منه.
+const BOSTA_ORDER_URL = 'https://business.bosta.co/orders';
+function trackingLink(tracking) {
+  const t = String(tracking ?? '').trim();
+  if (!t) return '—';
+  return `<a href="${esc(`${BOSTA_ORDER_URL}/${encodeURIComponent(t)}`)}"`
+       + ` target="_blank" rel="noopener" class="order-link">${esc(t)}</a>`;
 }
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -3557,8 +3611,11 @@ function upCell(r) {
     const hint = `عليه ${job().tag} أو رقم تتبع في custom.${job().trackingKey}`
       + (stopped ? ` — والرفع من هنا موقوف كمان${why ? ` (${why})` : ''}. `
                  + 'ده مش معناه إن الشحنة ما اتعملتش: الرقم اللي فوق شحنة موجودة عند بوسطة فعلًا.' : '');
+    // ⚠️ الرقم نفسه **لينك لداشبورد بوسطة** — ده المكان اللي الموظف بيروحه
+    //    أول ما يشوف «مرفوع» على صف هو جاي يرفعه: يشوف الشحنة الموجودة قبل
+    //    ما يقرر. الباقي في البادج (الأيقونة · ⛔) نص عادي مش لينك.
     return `<span class="badge badge-warn" title="${esc(hint)}">`
-         + `🔁 مرفوع${r.previousTracking ? ` · ${esc(r.previousTracking)}` : ''}${stopped ? ' · ⛔' : ''}</span>`;
+         + `🔁 مرفوع${r.previousTracking ? ` · ${trackingLink(r.previousTracking)}` : ''}${stopped ? ' · ⛔' : ''}</span>`;
   }
   if (!rowUploadable(r)) return `<span class="badge badge-danger">⛔ موقوف</span>`;
   return `<span class="badge badge-success">🟢 جاهز</span>`;
@@ -4325,6 +4382,16 @@ function renderDpControls() {
     //    الشرح على الـ hover اتشال مع باقي تلميحات النافذة (v2.8.0).
     pinZ.disabled = !z?.zoneId;
   }
+  // 🔴 «تأكيد العنوان مظبوط» — الشرط **مطابقة منطقة سارية** (v2.15.0):
+  //    `dpChosenDistrictId` بترجّع قيمة بس لما فيه `districtId` هيتبعت فعلًا
+  //    (مطابقة تلقائية أو اختيار يدوي)، وبترجّع `null` مع التثبيت على المدينة
+  //    أو المحافظة — ودي بالظبط تعريف «العنوان كامل بالتلات خانات»، لأن
+  //    المنطقة الواحدة جوّه مدينة واحدة جوّه محافظة واحدة.
+  //    ⚠️ ومفيش تلميح على الزرار المقفول عن قصد: **السبب مكتوب في عنوان
+  //    النافذة نفسها** («حالة العنوان: ❓ أكتر من مطابقة — محتاج اختيار» …)،
+  //    وتلميحات النافذة اتشالت في v2.8.0 ما عدا شرح الخانات التلاتة.
+  const conf = document.getElementById('dpConfirm');
+  if (conf) conf.disabled = !dpChosenDistrictId(r);
   for (const key of Object.keys(DP_PICKS)) {
     const wrap = document.getElementById(`dpPick-${key}`);
     const btn  = document.getElementById(`dpPickBtn-${key}`);
@@ -4655,6 +4722,23 @@ function pinDistrictToZone() {
   closeDistrictPicker();
 }
 
+// 🔴 تأكيد العنوان الكامل وإغلاق النافذة (v2.15.0 · طلب أحمد 15-09-2026).
+//    مابيكتبش أي حالة جديدة: المنطقة **متسجّلة خلاص** وقت الضغط عليها في
+//    `chooseDistrict` (أو جاية من المطابقة التلقائية)، فده زرار **إنهاء** مش
+//    زرار حفظ. قيمته إن الموظف اللي ظبّط العنوان بقى قدامه مخرج **بيقول
+//    مظبوط** بدل «إلغاء» الأحمر — وهو المخرج الوحيد اللي كان موجود، فكان
+//    بيقرا كأنه بيلغي الاختيار.
+//    ⚠️ ومفيش توست — زي زراير التثبيت بالظبط (v2.9.0): البادج الأخضر على
+//    الصف هو التأكيد، والتوست بيختفي ويتنسى.
+//    🔴 والحارس هنا مش زيادة: `disabled` على الزرار بيمنع الضغطة، لكن أي نداء
+//    من مكان تاني (أو زرار اتفعّل ورسمه اتأخّر) كان هيقفل النافذة على عنوان
+//    ناقص وشكله متأكَّد.
+function confirmDistrictPick() {
+  const r = allRows.find(x => x.orderId === dpOrderId);
+  if (!r || !dpChosenDistrictId(r)) return;
+  closeDistrictPicker();
+}
+
 function pinDistrictToProvince() {
   const r = allRows.find(x => x.orderId === dpOrderId);
   if (!r) return;
@@ -4699,7 +4783,9 @@ function startUpload() {
     pendingUpload = { ready: ok.filter(r => !r.alreadyUploaded), dups };
     document.getElementById('dupList').innerHTML = dups.map(r =>
       `<div>• ${orderLink(r.orderNumber, r.orderId)} — ` +
-      `${r.previousTracking ? `رقم تتبع حالي <b>${esc(r.previousTracking)}</b>` : 'عليه تاج رفع'}</div>`
+      // الرقم لينك لداشبورد بوسطة — النافذة دي بالظبط هي لحظة «راجع الشحنة
+      // الموجودة قبل ما تعمل واحدة تانية بفلوس»
+      `${r.previousTracking ? `رقم تتبع حالي <b>${trackingLink(r.previousTracking)}</b>` : 'عليه تاج رفع'}</div>`
     ).join('');
     document.getElementById('dupOverlay').classList.add('open');
     playBeep('warn');
@@ -5006,7 +5092,7 @@ function renderResults() {
     <tr>
       <td>${orderLink(r.orderNumber, r.orderId)}</td>
       <td>${RESULT_BADGE[r.status] || esc(r.status)}</td>
-      <td class="col-num">${r.trackingNumber ? esc(r.trackingNumber) : '—'}</td>
+      <td class="col-num">${trackingLink(r.trackingNumber)}</td>
       <td>${r.contractUsed === 'documented' ? '<span class="badge badge-info">موثّق</span>'
             : r.contractUsed === 'undocumented' ? '<span class="badge badge-purple">غير موثّق</span>' : '—'}</td>
       <td>${esc(r.citySent || '—')}</td>
@@ -5539,7 +5625,7 @@ function renderLogTable() {
       <td><span class="badge ${r.type === 'uploaded' ? 'badge-success' : r.type === 'skipped' ? 'badge-muted' : 'badge-danger'}">${esc(LOG_TYPE_LABEL[r.type] || r.type)}</span></td>
       <td>${orderLink(r.orderName, r.orderId)}</td>
       <td>${r.result ? (RESULT_BADGE[r.result] || esc(r.result)) : '—'}</td>
-      <td class="col-num">${r.tracking ? esc(r.tracking) : '—'}</td>
+      <td class="col-num">${trackingLink(r.tracking)}</td>
       <td>${r.contract === 'documented' ? '<span class="badge badge-info">موثّق</span>'
             : r.contract === 'undocumented' ? '<span class="badge badge-purple">غير موثّق</span>' : '—'}</td>
       <td>${esc(r.district || '—')}</td>
