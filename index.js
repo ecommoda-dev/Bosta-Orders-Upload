@@ -4,7 +4,7 @@
 //         bosta-api-helper v2.0.0 · shopify-graphql-helper v2.2.0 ·
 //         order-lifecycle v1.6.0 — 13-09-2026
 //
-// v2.0.0 — **الدمج**: الأداة بقت بترفع كل شحنات بوسطة، مش الشحن العادي بس.
+// v2.0.0 — **الدمج**: الأداة بقت بترفع كل شحنات بوسطة، مش الشحن العادي فقط.
 // `Bosta-Return-Exchange-Exporter` v6.0.0 اتنقلت هنا بالكامل (MERGE-BRIEF.md).
 //
 // تلات أوضاع في Worker واحد:
@@ -30,7 +30,7 @@
 //   المتجر: `custom.bosta_tracking_number_s1` (الشحنة العادية) و
 //   `custom.bosta_tracking_number_s2` (الاسترجاع/الاستبدال). الاتنين
 //   `number_integer` وعليهم **Unique values only**. القديم لسه **بيتقرا** في
-//   حارس الرفع المكرر عشان الـ ٣٥٦ شحنة اللي اترفعت قبل كده — بس مابيتكتبش.
+//   حارس الرفع المكرر عشان الـ ٣٥٦ شحنة اللي اترفعت قبل كده — لكن مابيتكتبش.
 //   ✅ وده بيقفل ق-٥ المؤجَّل: رقم تتبع الـ S2 بقى له ميتافيلد فعلًا.
 // - التاج بقى حسب النوع: `Bosta_Uploaded_S1` · `Bosta_Uploaded_S2`.
 // - 🔴 في R/E **مابنكتبش** `custom.courier = Bosta` — بنتحقق إنه **بالفعل**
@@ -57,7 +57,7 @@
 // الانتقال بيحصل عند **الطباعة** مش عند الرفع، وتقديم الحالة من هنا بيكسر
 // بوابة الطباعة. و`printing_time_s2` **وقت طباعة** — كتابته وقت الرفع بتخلي
 // أي تقرير مبني عليه يقول إن البوليصة اتطبعت وهي ما اتطبعتش.
-// اللي بيتكتب بعد الشحنة بقى: رقم التتبع والتاج. بس. زي S1 بالحرف.
+// اللي بيتكتب بعد الشحنة بقى: رقم التتبع والتاج. فقط. زي S1 بالحرف.
 // ⚠️ مسار الإكسيل (`confirm_upload`) **ما اتغيّرش** — هناك الشحنة بتتعمل من
 //    داشبورد بوسطة بالإيد، فتحديث الحالة خطوة يدوية منفصلة بمودال وchecklist،
 //    مش أثر جانبي للرفع.
@@ -78,7 +78,7 @@
 // الكتابة جوّه **نفس** نداء `metafieldsSet` بتاع رقم التتبع (نداء واحد بيعدّي
 // كله أو يقع كله)، والسجل بيقرا من `r.s2Written` — حقيقة مؤكَّدة من شوبيفاي،
 // مش نيّة. ومعاها رجع صف `metafields_change` لكل نقلة حصلت فعلًا (KPIs زمن
-// الدورة بتتقرا من هناك بس).
+// الدورة بتتقرا من هناك فقط).
 // ⚠️ **النتيجة اللي لازم تتوقعها:** أوردر الاسترجاع **بيخرج من القايمة** بعد
 //    الرفع والتحديث — فلتر الترشيح بيقرا `Confirmed + RETURN`. ده عكس الشحن
 //    العادي والاستبدال، واللي بيحمي من الرفع المكرر فيهم (التاج · رقم التتبع ·
@@ -120,7 +120,7 @@ const BOSTA_LOCATION_ID = 'GeZMkbD7o';                          // كلية ال
 const BOSTA_COUNTRY_ID  = '60e4482c7cb7d4bc4849c4d5';           // مصر
 // `ecommoda-constants` §3.2 — من SDK بوسطة نفسها. الفلترة على الكود مش النص.
 const BOSTA_TYPE_BY_JOB = { [JOB_S1]: 10, [JOB_RETURN]: 25, [JOB_EXCHANGE]: 30 };
-const FLEX_AMOUNT       = 100;                                  // SPEC §٤.٢ — على أوردرات s1 بس
+const FLEX_AMOUNT       = 100;                                  // SPEC §٤.٢ — على أوردرات s1 فقط
 const ALLOW_OPEN_PKG    = true;                                 // قرار تشغيلي — EGP 7/شحنة، متتشالش
 // 🔴 حدّين **في اتجاهين متعاكسين**. `COD_MAX` موثّق في api.yaml؛
 //    `COD_REFUND_MIN` **مقيس حيًا**: ‎-2700 رجّع 400 · errorCode "3008" ·
@@ -132,8 +132,8 @@ const COD_REFUND_MIN    = -2000;
 //    spec خالص** (`bosta-api-helper` 8.4 · مقيس حيًا 14-09-2026: `amount: 1`
 //    بيرجّع 400 · `errorCode 41591`). ورسالة بوسطة بتتكلم عن «قيمة الطرد» مش
 //    عن حد أدنى، فمن غير حارس عندنا الموظف بيقرا رفض مبهم على أوردر سليم.
-//    ⚠️ الحد بيتطبّق **وقت الإنشاء بس** — `PUT` بيقبل `1` (8d ④). الأداة دي
-//    مابتعملش `PUT`، بس لو اتضاف مسار تعديل يومًا الحارس **يتكرر** هناك، مش يتورّث.
+//    ⚠️ الحد بيتطبّق **وقت الإنشاء فقط** — `PUT` بيقبل `1` (8d ④). الأداة دي
+//    مابتعملش `PUT`، لكن لو اتضاف مسار تعديل يومًا الحارس **يتكرر** هناك، مش يتورّث.
 const GOODS_MIN         = 100;
 const GOODS_MAX         = 50000;
 
@@ -224,7 +224,7 @@ const DISCOVERY_PAGE_SIZE       = 100;
 const DISCOVERY_MAX_PAGES       = 10;
 const DETAILS_BATCH_SIZE        = 25;
 // ⚠️ اتنزّل من 50 في v5.5.0: `EXCHANGE_WITHOUT_ITEMS` بقى كود حاجب، فالحارس
-//    مابقاش استعلام scalars بس — بقى بيقرا نفس مصدري القطع الخارجة.
+//    مابقاش استعلام scalars فقط — بقى بيقرا نفس مصدري القطع الخارجة.
 const CYCLE_GUARD_BATCH_SIZE    = 20;
 
 // ─── §CONSTANTS::batch ───
@@ -384,7 +384,7 @@ async function secretFingerprint(secret) {
 }
 
 // ─── §HELPERS::normPhone ───
-// مفتاح **مقارنة** بس — مش القيمة اللي بتتبعت. بيرجّع الأرقام المجرّدة عشان
+// مفتاح **مقارنة** فقط — مش القيمة اللي بتتبعت. بيرجّع الأرقام المجرّدة عشان
 // "01009619555" و"+201033337575" مايتحسبوش رقمين مختلفين فنبعت نفس الرقم في
 // `phone` و`secondPhone`.
 const normPhone = p => String(p || '').replace(/\D/g, '').replace(/^20/, '').replace(/^0/, '');
@@ -440,7 +440,7 @@ function getJob(raw, { allow = ALL_JOBS } = {}) {
     writeFailType:  WRITE_FAILED_BY_JOB[jt],
     expectedStatus: isRE ? S2_STATUS_BY_JOB[jt] : null,
     nextStatus:     isRE ? S2_NEXT_BY_JOB[jt]   : null,
-    // 🔴 الحالة اللي بتتكتب **وقت الرفع** — استرجاع بس، والباقي `null`.
+    // 🔴 الحالة اللي بتتكتب **وقت الرفع** — استرجاع فقط، والباقي `null`.
     //    مصدر واحد: الكتابة والسجل وصف `metafields_change` كلهم بيقروا منه،
     //    فمستحيل تتكتب الحالة من غير ما السجل يشوفها (أو العكس).
     uploadStatus:   isRE ? (S2_UPLOAD_STATUS_BY_JOB[jt] || null) : null,
@@ -585,7 +585,7 @@ function buildLogFilterSQL(select, {
 
   // 🔴 الأداة بتكتب تحت **قيمتين** `tool` (الدمج — اختيار «أ» في MERGE-BRIEF §٥)،
   //    فتاب السجل لازم يقرا الاتنين. فلتر على قيمة واحدة هنا كان معناه إن
-  //    الموظف يشوف نص تاريخه بس، والنص التاني يبان كأنه ما حصلش.
+  //    الموظف يشوف نص تاريخه فقط، والنص التاني يبان كأنه ما حصلش.
   const tls  = Array.isArray(tools) && tools.length ? tools : (tool ? [tool] : []);
   const emps = Array.isArray(employees) && employees.length ? employees : (employee ? [employee] : []);
   const typs = Array.isArray(types)     && types.length     ? types     : (type     ? [type]     : []);
@@ -681,7 +681,7 @@ function logParamsFrom(url, tools) {
 // بقى بيتستخدم روتيني والحماية فقدت معناها.
 //
 // ⚠️ الصفوف القديمة (قبل v5.3.0، مالهاش `cycleName` في `extra`) لا بتتلغي ولا
-// بتتحسب على عماها: بتتطابق مع الدورة الحالية **بس** لو `timestamp >=
+// بتتحسب على عماها: بتتطابق مع الدورة الحالية **فقط** لو `timestamp >=
 // cycle.createdAt` — تصدير حصل قبل ما الدورة توجد مستحيل يكون تصدير ليها.
 // مفيش migration.
 async function findExportDuplicateStats(db, orders) {
@@ -783,7 +783,7 @@ async function getAccessToken(env) {
 // أي فشل بيترمي. مفيش رد بيعدّي وهو فاشل:
 //   ① فشل شبكة  ② HTTP status  ③ رد مش JSON  ④ data.errors  ⑤ data فاضية
 // ④ هو الخطير: ميوتيشن مترفوضة على مستوى الحقل بترجّع {"errors":[…],"data":null}
-// والـ userErrors بتبقى [] لأن مفيش payload أصلاً — كود بيفحص userErrors بس بيقرا ده نجاح.
+// والـ userErrors بتبقى [] لأن مفيش payload أصلاً — كود بيفحص userErrors فقط بيقرا ده نجاح.
 async function shopifyGQL(env, token, query, variables = {}, opName = 'shopify') {
   const MAX_ATTEMPTS = 3;
   let lastErr = null;
@@ -850,7 +850,7 @@ const ORDER_FIELDS = `
   mfZone:     metafield(namespace: "custom", key: "zone")                  { value }
   mfCourier:  metafield(namespace: "custom", key: "courier")                  { value }
   mfTrackS1:  metafield(namespace: "custom", key: "bosta_tracking_number_s1") { value }
-  # ⚠️ الميتافيلد القديم — مابيتكتبش من v2.0.0، بس لسه بيتقرا: الـ ٣٥٦ شحنة اللي
+  # ⚠️ الميتافيلد القديم — مابيتكتبش من v2.0.0، لكن لسه بيتقرا: الـ ٣٥٦ شحنة اللي
   #    اترفعت قبل الدمج رقمها عايش هنا، وبدون قراءته كلها هتبان «مش مرفوعة».
   mfTrackOld: metafield(namespace: "custom", key: "bosta_tracking_number")    { value }
   lineItems(first: ${LINE_ITEMS}) {
@@ -921,7 +921,7 @@ async function fetchOrdersByGid(env, token, gids) {
 
 // ─── §SHOPIFY::filterGuard ───
 // حارس وقت التشغيل بدل اختبار يدوي مرة واحدة (SPEC §٣.٤).
-// 'Confirmed + Edit' فيه مسافة و + مع بعض، والاتنين اتأكدوا منفصلين بس.
+// 'Confirmed + Edit' فيه مسافة و + مع بعض، والاتنين اتأكدوا منفصلين فقط.
 // لو a + b !== combined فالفلتر مش متسق — الواجهة بتعرض بانر أحمر وبتفضل شغالة.
 async function filterGuard(env, token) {
   const Q = `query CountOrders($q: String!) { ordersCount(query: $q, limit: 10000) { count precision } }`;
@@ -939,7 +939,7 @@ async function filterGuard(env, token) {
     }
     return { checked: true, consistent: (only + edit) === combined, combined, confirmed: only, confirmedEdit: edit };
   } catch (e) {
-    // الحارس استشاري — فشله مايوقفش الأداة، بس بيتعرض
+    // الحارس استشاري — فشله مايوقفش الأداة، لكن بيتعرض
     return { checked: false, reason: e.message };
   }
 }
@@ -954,7 +954,7 @@ async function filterGuard(env, token) {
 //
 // 🔴 الفرق بين النوعين (طلب أحمد، v2.0.0):
 //    s1   → `custom.courier = Bosta` + `custom.bosta_tracking_number_s1` + تاج S1
-//    R/E  → `custom.bosta_tracking_number_s2` + تاج S2 **بس**. الكوريَر
+//    R/E  → `custom.bosta_tracking_number_s2` + تاج S2 **فقط**. الكوريَر
 //           **بيتتحقق منه** في حارس الدورات قبل الشحنة، ومابيتكتبش: شحنة استرجاع
 //           بتسحب من عند العميل، فكتابة الكوريَر هنا معناها إننا بنعيّن مندوب
 //           على أوردر مش بتاعنا بدل ما نتأكد إنه بتاعنا أصلًا.
@@ -984,9 +984,9 @@ async function writeBackToShopify(env, token, order, trackingNumber, actions, jo
       type: trackMf.type, value: tn,     // metafieldsSet بياخد value نص دايمًا
     });
   } else {
-    warnings.push(`رقم التتبع "${tn}" مش أرقام بس — الميتافيلد نوعه ${trackMf.type} فما اتكتبش`);
+    warnings.push(`رقم التتبع "${tn}" مش أرقام فقط — الميتافيلد نوعه ${trackMf.type} فما اتكتبش`);
   }
-  // 🔴 حالة S2 — استرجاع بس. `single_line_text_field` بقيمة من **قايمة
+  // 🔴 حالة S2 — استرجاع فقط. `single_line_text_field` بقيمة من **قايمة
   //    الاختيارات** بتاعة التعريف الحي (`In-Return` حرفيًا) — حرف زيادة =
   //    رفض من شوبيفاي بيسقّط النداء كله بما فيه رقم التتبع.
   if (job.uploadStatus) {
@@ -1089,7 +1089,7 @@ function hasHistoricalOverlap(cycles) {
 // ─── §SHOPIFY-RE::outgoingItems ───
 // اللي بيخرج فعليًا من المخزن على الاستبدال.
 //
-// ⚠️ `return.exchangeLineItems` هو المصدر الصح بس **مش الكامل**. مقيس حيًا على
+// ⚠️ `return.exchangeLineItems` هو المصدر الصح فقط **مش الكامل**. مقيس حيًا على
 // `#53531` و`#53701` (09-09-2026): لما قطعة الاستبدال اللي شوبيفاي عملتها
 // تتشال بتعديل أوردر وتتحط واحدة بالإيد — وده روتين لما المقاس/اللون يتغيّر بعد
 // حجز الاستبدال — الـ connection بتفضى **نهائيًا**. وشوبيفاي في الـ Admin لسه
@@ -1103,7 +1103,7 @@ function hasHistoricalOverlap(cycles) {
 // استبدال سليم، وهو المكان الوحيد اللي القطعة المضافة بالإيد بتبان فيه.
 //
 // 🔴 الدورة تفضل **الأساس** والاسترداد **fallback مش merge** — الدمج بيعدّ
-// القطعة مرتين على استبدال سليم. والاسترداد بيشتغل على الاستبدال بس: على
+// القطعة مرتين على استبدال سليم. والاسترداد بيشتغل على الاستبدال فقط: على
 // الاسترجاع السطر غير المشحون غالبًا قطعة من الأوردر الأصلي ما اتشحنتش، و
 // `TYPE_MISMATCH` بتاع Rule 8 لازم يفضل بيقرا الدورة لوحدها.
 function itemsFromCycle(cycle) {
@@ -1125,7 +1125,7 @@ function itemsFromUnfulfilledLines(order) {
     .filter(Boolean)
     // `currentQuantity > 0` بتشيل السطر اللي التعديل شاله، و`unfulfilledQuantity
     // > 0` بتشيل اللي اتسلّم خلاص. الاتنين مطلوبين: السطر المشال بيحتفظ بـ
-    // `quantity` الأصلية، والاتنين دول بس هما اللي بينزلوا صفر.
+    // `quantity` الأصلية، والاتنين دول فقط هما اللي بينزلوا صفر.
     .filter((node) => (node.currentQuantity || 0) > 0 && (node.unfulfilledQuantity || 0) > 0)
     .map((node) => ({
       label: cleanText(node.sku) || cleanText(node.name) || null,
@@ -1173,7 +1173,7 @@ function analyzeReturnCycles(order, jobType) {
     blockReason = {
       code: 'CYCLE_OVERLAP_OPEN',
       value: openCycles.map((cycle) => cycle.name).join(' · '),
-      action: 'أكتر من دورة مفتوحة في نفس الوقت — مش قادرين نعرف أنهي دورة اللي هتتشحن. خدمة العملاء تقفل الزيادة في شوبيفاي (قاعدة: دورة مفتوحة واحدة بس).',
+      action: 'أكتر من دورة مفتوحة في نفس الوقت — مش قادرين نعرف أنهي دورة اللي هتتشحن. خدمة العملاء تقفل الزيادة في شوبيفاي (قاعدة: دورة مفتوحة واحدة فقط).',
     };
   }
 
@@ -1181,7 +1181,7 @@ function analyzeReturnCycles(order, jobType) {
     warnings.push({
       code: 'CYCLE_OVERLAP',
       value: cycles.map((cycle) => cycle.name).join(' · '),
-      action: 'دورة اتفتحت قبل ما اللي قبلها تقفل — اتحلّت دلوقتي، بس تستاهل مراجعة من خدمة العملاء.',
+      action: 'دورة اتفتحت قبل ما اللي قبلها تقفل — اتحلّت دلوقتي، لكن تستاهل مراجعة من خدمة العملاء.',
     });
   }
 
@@ -1189,7 +1189,7 @@ function analyzeReturnCycles(order, jobType) {
     warnings.push({
       code: 'MULTI_CYCLE',
       value: `${cycles.length} دورات`,
-      action: 'دورات متتابعة — قانونية. الرفع بيتم من الدورة المفتوحة بس، والدورات المقفولة مش داخلة.',
+      action: 'دورات متتابعة — قانونية. الرفع بيتم من الدورة المفتوحة فقط، والدورات المقفولة مش داخلة.',
     });
   }
 
@@ -1466,7 +1466,7 @@ async function findBlockedCycleOrders(env, token, orders, jobType) {
 }
 
 // Rule 15 ① / Rule 10 — «reject + log». صف لكل أوردر مرفوض، بيتكتب **قبل** ما
-// الـ 409 يرجع. فشل D1 مابيلغيش الرفض، بس لازم يبان: `logged: false` مش صمت.
+// الـ 409 يرجع. فشل D1 مابيلغيش الرفض، لكن لازم يبان: `logged: false` مش صمت.
 async function logCycleBlocks(db, blocked, job, employee, { action = 'الرفع' } = {}) {
   if (!blocked.length) return { logged: true, logError: null };
   const now = new Date().toISOString();
@@ -1481,8 +1481,8 @@ async function logCycleBlocks(db, blocked, job, employee, { action = 'الرفع
       // الكتابة اللي **ما حصلتش** — before و after نفس القيمة عن قصد: مفيش حاجة اتحركت.
       valueBefore: row.s2Status || job.expectedStatus,
       valueAfter:  row.s2Status || job.expectedStatus,
-      // ⚠️ الحالة التالية بتتكتب **بس لو فيه نقلة اتمنعت فعلًا**: مسار
-      //    الإكسيل (`job.nextStatus`) دايمًا، والرفع **بس لما الوضع بيحرّك
+      // ⚠️ الحالة التالية بتتكتب **فقط لو فيه نقلة اتمنعت فعلًا**: مسار
+      //    الإكسيل (`job.nextStatus`) دايمًا، والرفع **فقط لما الوضع بيحرّك
       //    حالة أصلًا** (الاسترجاع من v2.3.0 → `In-Return`). في الشحن العادي
       //    والاستبدال بتفضل `null`: كتابة «اتمنع التحديث إلى Ready» على وقفة
       //    رفع بتخلي اللي بيقرا السجل يفتكر إن فيه نقلة اتمنعت وهي أصلًا
@@ -1593,7 +1593,7 @@ async function readCatalogCache(env) {
       const hit = await caches.default.match(CATALOG_CACHE_URL);
       if (hit) { const v = await hit.json(); catalogMemo = { at: Date.now(), value: v }; return v; }
     }
-  } catch { /* الكاش مش مصدر حقيقة — الفشل هنا بيعيد الجلب بس */ }
+  } catch { /* الكاش مش مصدر حقيقة — الفشل هنا بيعيد الجلب فقط */ }
   return null;
 }
 
@@ -1633,7 +1633,7 @@ function normalizeCatalog(raw) {
         name:   d?.districtName || d?.name || '',
         nameAr: d?.districtOtherName || d?.otherName || d?.nameAr || '',
         // 🔴 `zoneId` هو **مفتاح درجة الزون** في الرفع (`bosta-api-helper` 8.10.4).
-        //    قبل v2.1.0 كان الاسم بس بيتخزّن، فدرجة الزون كانت مستحيلة أصلًا —
+        //    قبل v2.1.0 كان الاسم فقط بيتخزّن، فدرجة الزون كانت مستحيلة أصلًا —
         //    والأوردر اللي مالوش مطابقة منطقة كان بينزل للمحافظة على طول وياخد
         //    **هب افتراضي** بدل هب الزون (مقيس بمقارنة بوليصتين — 8.10.2).
         zoneId: d?.zoneId || d?.zone?._id || null,
@@ -1646,7 +1646,7 @@ function normalizeCatalog(raw) {
         bulkyBlocked: d?.notAllowedBulkyOrders === true,
       });
     }
-    // 🟡 `dropOffAvailability` موجود على مستوى **المدينة** كمان مش المنطقة بس
+    // 🟡 `dropOffAvailability` موجود على مستوى **المدينة** كمان مش المنطقة فقط
     //    (`bosta-api-helper` 8.6) — فحص أرخص بيقفل حالات كاملة قبل اللفّ على
     //    مناطق المدينة (الجيزة لوحدها ٣٣١ منطقة).
     if (cityId) out.push({ cityId, cityName, cityAr, cityDropOff: c?.dropOffAvailability, districts });
@@ -1686,7 +1686,7 @@ async function getCatalog(env, { force = false } = {}) {
 //      واجهة الموظف      → **تتعرض ومعلّمة إنها مقفولة**       → `blocked`
 //    `dropOffAvailability === false` معناها بوسطة **مش بتسلّم هناك أصلًا** — دي
 //    خارج التغطية، مش «مش متاحة دلوقتي». الإخفاء الصامت (اللي كان هنا لحد
-//    v2.0.1) بيخلّي الموظف يشوف ٧ مناطق بدل ٩ ويضغط «ارفع على المحافظة بس» وهو
+//    v2.0.1) بيخلّي الموظف يشوف ٧ مناطق بدل ٩ ويضغط «ارفع على المحافظة فقط» وهو
 //    فاكرها مسار احتياطي سليم — والشحنة بتتشحن بفلوس وترجع بعد أيام بـ
 //    *outside Bosta's delivery coverage area*. المسار الصح إن الأوردر
 //    **مايترفعش** ويتحوّل لخدمة العملاء (عنوان بديل · كوريَر تاني · إلغاء).
@@ -1740,7 +1740,7 @@ function buildZoneIndex(city) {
     const key = normText(en) + '|' + normText(ar);
     let z = byKey.get(key);
     if (!z) {
-      // 🔴 `zoneId` هو اللي بيترفع فعلًا (8.10.4) — الاسم للعرض بس. زون من غير
+      // 🔴 `zoneId` هو اللي بيترفع فعلًا (8.10.4) — الاسم للعرض فقط. زون من غير
       //    `id` **مايترفعش** عليه (بيفضل اقتراح واجهة)، عشان مانخمّنش مفتاح.
       z = { zone: en, zoneAr: ar, zoneId: d.zoneId || null,
             nameN: normText(en), nameArN: normText(ar), count: 0 };
@@ -1802,7 +1802,7 @@ function addressFields(sa) {
 //   ① غير عامّة تغلب العامّة  — "مصر الجديدة" تغلب "القاهرة"
 //   ② الخانة الأخصّ تغلب      — `city` تغلب `address1` تغلب `address2`
 //   ③ التطابق الكامل يغلب الجزئي داخل نفس الخانة
-//   ④ الأطول يغلب **بس لو الأقصر جوّه الأطول** — "مدينة نصر" تغلب "نصر"
+//   ④ الأطول يغلب **فقط لو الأقصر جوّه الأطول** — "مدينة نصر" تغلب "نصر"
 // ⚠️ الطول لوحده **مش** فاصل: "المنصورة" و"اجا" في نفس العنوان مطابقتين
 //    منفصلتين، والأطول فيهم مش الأصح. الحالة دي بترجع **غامضة** عمدًا —
 //    ضغطة زيادة من الموظف أرخص من شحنة في فرع غلط.
@@ -1874,7 +1874,7 @@ function matchDistrict(city, fields, zoneOnly, sourceList) {
 }
 
 // ─── §BOSTA::findCrossCity ───
-// 🟠 كاشف «المدينة مشكوك فيها» — بيشتغل **بس** لما مفيش مطابقة جوّه المدينة
+// 🟠 كاشف «المدينة مشكوك فيها» — بيشتغل **فقط** لما مفيش مطابقة جوّه المدينة
 //    المحسوبة من الجدول. بيدوّر على اسم المنطقة في كتالوج بوسطة كله.
 //
 // ليه أصلًا: تصنيف بوسطة مش التقسيم الإداري (العبور إداريًا القليوبية وعند
@@ -1882,7 +1882,7 @@ function matchDistrict(city, fields, zoneOnly, sourceList) {
 // الغربية · دمياط الجديدة على القاهرة). الحالتين بيدّوا نفس العرض، والنتيجة
 // **مش** «منطقة ناقصة» — دي **مدينة غلط**، يعني فرع وتسعيرة غلط.
 //
-// 🔴 اقتراح بس — **ممنوع** التطبيق التلقائي. أسماء المناطق بتتكرر بين
+// 🔴 اقتراح فقط — **ممنوع** التطبيق التلقائي. أسماء المناطق بتتكرر بين
 //    المحافظات، وتحويل مدينة الشحنة تلقائيًا على مطابقة نصية = نفس الفخ اللي
 //    جدول المحافظات المقفول اتكتب عشان يمنعه.
 const CROSS_MIN_LEN      = 4;   // أقصر من كده بيلقّط ضوضاء
@@ -1909,7 +1909,7 @@ function findCrossCity(catalog, fields, skipCityId) {
       });
     }
 
-    // ② مطابقة زون — بتحسم **المدينة بس**. دي اللي بتلقط العبور: اسم المنطقة
+    // ② مطابقة زون — بتحسم **المدينة فقط**. دي اللي بتلقط العبور: اسم المنطقة
     //    عند بوسطة "المنطقة 01 (العبور)" ومحدش بيكتبها، لكن الزون "العبور"
     //    هو نفسه اللي العميل كاتبه.
     let takenZ = 0;
@@ -1937,7 +1937,7 @@ function findCrossCity(catalog, fields, skipCityId) {
 }
 
 // ─── §BOSTA::findLocalZones ───
-// نفس الفكرة بس **جوّه المدينة الصح**: العنوان مطابقش أي منطقة، بس مطابق زون.
+// نفس الفكرة فقط **جوّه المدينة الصح**: العنوان مطابقش أي منطقة، لكن مطابق زون.
 // المدينة هنا مش غلط — الفايدة إن الموظف يفتح النافذة ويلاقي القايمة مقصورة
 // على مناطق الزون ده (٧ مناطق بدل ٥٩٠) بدل ما يدوّر.
 function findLocalZones(city, fields) {
@@ -2054,14 +2054,14 @@ function resolveAddress(order, catalog) {
     //   ② منطقة أو زون في **مدينة تانية** — دي حالة «المدينة مشكوك فيها»
     const localZones = findLocalZones(city, fields);
     const crossCity  = findCrossCity(catalog, fields, row.cityId);
-    // 🟠 الشك في المدينة بيتعلن **بس** لما فيه اقتراح في مدينة تانية.
+    // 🟠 الشك في المدينة بيتعلن **فقط** لما فيه اقتراح في مدينة تانية.
     //    زون جوّه نفس المدينة مش شك — دي مساعدة في اختيار المنطقة.
     const cityDoubt = crossCity.length > 0;
 
     // 🔴 درجة الزون — السلّم **منطقة ← زون ← محافظة** (`bosta-api-helper` 8.5
     //    درجة ٤ · 8.10). مثبتة بالقياس مش نظرية: شحنتان نفس المحافظة ونفس
     //    اليوم ونفس الراسل، الفرق الوحيد الزون → `G-02 · OCTOBER HUB` مقابل
-    //    `G-08 · NEW OCTOBER HUB`. «المحافظة بس» **مش** بلا فرز — بتاخد **هب
+    //    `G-08 · NEW OCTOBER HUB`. «المحافظة فقط» **مش** بلا فرز — بتاخد **هب
     //    افتراضي**، فالفرق هو «هب محدد ضد هب افتراضي»، وتحويلة زيادة على
     //    العنوان اللي زونه بعيد عن الافتراضي.
     // ⚠️ شرطين إلزاميين قبل ما نرفع بالزون:
@@ -2100,7 +2100,7 @@ function resolveAddress(order, catalog) {
 //   district    | ② موثّق          | city + districtId
 //   zoneName    | ② موثّق          | city + cityId + districtName (اسم زون — 8.10.3)
 //   zone        | ① غير موثّق      | zoneId **لوحده**
-//   province    | ① غير موثّق      | city بالاسم بس
+//   province    | ① غير موثّق      | city بالاسم فقط
 //
 // 🔴 ممنوع الخلط: `zoneId` على ② بيرجّع 400
 //    (`must contain at least one of [districtId, districtName]`)، و`districtName`
@@ -2150,7 +2150,7 @@ function addressDegree(mode) {
 }
 
 // ─── §BOSTA::nextAddressDegree ───
-// 🔴 النزول درجة بيحصل **لما اللي فوقه يفشل بس** (8.5 خطوة ٦) — ومصدره
+// 🔴 النزول درجة بيحصل **لما اللي فوقه يفشل فقط** (8.5 خطوة ٦) — ومصدره
 //    `errorCode` بوسطة، مش تخمين. النزول بيرجّع الدرجة الجاية أو `null`:
 //      district/zoneName + `3003` (District Not Found) → زون لو فيه، وإلا محافظة
 //      zone + `3002`/`3000` (Zone Not Found / عنوان ناقص) → محافظة
@@ -2291,7 +2291,7 @@ function goodsProblems(goods) {
 //    مش تشدّد: النزول لمسار المحافظة بيشتري شحنة بفلوس ترجع بعد أيام بـ
 //    *outside Bosta's delivery coverage area*. المسار الصح تحويل لخدمة العملاء.
 //
-// 🔴 **استثناء واحد بس: منطقة اختارها الموظف بإيده** (`override.districtId`).
+// 🔴 **استثناء واحد فقط: منطقة اختارها الموظف بإيده** (`override.districtId`).
 //    الوقف قايم على إن **المطابقة التلقائية** وصلت لمنطقة مقفولة؛ الموظف اللي
 //    فتح النافذة وحدد منطقة تانية بدّل نتيجة المطابقة دي بالكامل، والـ payload
 //    بيبعت `districtId` بتاعه هو. والمنطقة المختارة بتتحقق بعد كده من
@@ -2510,7 +2510,7 @@ function buildRow(order, catalog) {
     problems,
     // 🔴 بيتحسب من القايمة **الكاملة** — شيل الرسالة من العرض مايشيلش المنع
     uploadable:  all.length === 0,
-    // 🔴 الصف موقوف **بسبب التغطية وبس** — يعني اختيار منطقة يدويًا بيحرّره.
+    // 🔴 الصف موقوف **بسبب التغطية وفقط** — يعني اختيار منطقة يدويًا بيحرّره.
     //    بيتحسب هنا مش في الواجهة عن قصد: الواجهة ماتعرفش أنهي رسالة من `all`
     //    بتاعة التغطية وأنهي بتاعة التليفون أو قيمة البضاعة، وأي محاولة تخمّن
     //    ده من `problems` معناها نسخة تانية من `validateOrder` عايشة في
@@ -2523,7 +2523,7 @@ function buildRow(order, catalog) {
 
 // ─── §UPLOAD::uploadOne ───
 // النتيجة تلات حالات مش اتنين: success · warning · error.
-// warning = الشحنة اترفعت فعلًا على بوسطة بس فيه حاجة بعدها ما تمّتش —
+// warning = الشحنة اترفعت فعلًا على بوسطة فقط فيه حاجة بعدها ما تمّتش —
 // لازم يبان بحالته الحقيقية عشان محدش يعيد الرفع ويعمل شحنة مكررة.
 async function uploadOne(env, token, order, catalog, override) {
   const actions = [];
@@ -2559,7 +2559,7 @@ async function uploadOne(env, token, order, catalog, override) {
   }
 
   // ─── تعديل الموظف اليدوي — بيغلب المطابقة التلقائية ───
-  // 🔴 التعديل ممكن يشمل **المدينة** كمان مش المنطقة بس. تصنيف بوسطة مش
+  // 🔴 التعديل ممكن يشمل **المدينة** كمان مش المنطقة فقط. تصنيف بوسطة مش
   //    التقسيم الإداري (العبور إداريًا القليوبية وعند بوسطة تحت القاهرة)،
   //    وكمان العميل بيغلط في اختيار المحافظة. من غير ده الحالة دي مالهاش حل
   //    يدوي أصلًا — الشحنة بتروح فرع غلط، وده مش fallback محايد زي المنطقة
@@ -2602,10 +2602,10 @@ async function uploadOne(env, token, order, catalog, override) {
     planUsed.districtId = d.id;
     planUsed.districtName = d.name;
   } else if (override?.forceZone) {
-    // 🔴 «ارفع على الزون بس» — درجة وسيطة **يختارها الموظف**، مش تلقائية بس.
+    // 🔴 «ارفع على الزون فقط» — درجة وسيطة **يختارها الموظف**، مش تلقائية فقط.
     //    الفايدة مقيسة: هب وكود فرز محددين بدل الهب الافتراضي للمحافظة
     //    (`bosta-api-helper` 8.10.2). الحالة دي بتحصل لما المطابقة التلقائية
-    //    مش واثقة من المنطقة، بس الموظف عارف الزون.
+    //    مش واثقة من المنطقة، لكن الموظف عارف الزون.
     const z = resolveZoneOverride(catalog, planUsed.cityId, override.zoneId);
     if (!z) {
       row.status = 'error';
@@ -2646,7 +2646,7 @@ async function uploadOne(env, token, order, catalog, override) {
 
   // 🔴 سلّم النزول **منطقة ← زون ← محافظة** (`bosta-api-helper` 8.5) — خطوة
   //    واحدة لكل رفض، ومصدرها `errorCode` بوسطة مش تخمين. الحلقة محدودة
-  //    بطبيعتها (كل درجة بتنزل للي تحتها وبس) فمفيش دوران.
+  //    بطبيعتها (كل درجة بتنزل للي تحتها وفقط) فمفيش دوران.
   while (!res.ok) {
     const next = nextAddressDegree(mode, res.errorCode, fallbackZoneId);
     if (!next) break;
@@ -2675,7 +2675,7 @@ async function uploadOne(env, token, order, catalog, override) {
 
   if (!res.trackingNumber) {
     row.status = 'warning';
-    row.warnings.push('بوسطة قبلت الشحنة بس ما رجّعتش رقم تتبع — الكتابة على شوبيفاي اتوقفت');
+    row.warnings.push('بوسطة قبلت الشحنة فقط ما رجّعتش رقم تتبع — الكتابة على شوبيفاي اتوقفت');
     return row;
   }
 
@@ -2732,7 +2732,7 @@ async function logRow(env, row, employee, job = S1_JOB) {
       },
     });
   } catch (e) {
-    row.logged = false;   // العملية حصلت — بس مفيش سجل. الواجهة بتحذّر.
+    row.logged = false;   // العملية حصلت — لكن مفيش سجل. الواجهة بتحذّر.
   }
 }
 
@@ -2842,7 +2842,7 @@ function resolveCod(order) {
     cod,
     raw,
     // بوسطة بترفض أي حاجة تحت -2000 (400 · errorCode "3008")، فالقص إلزامي —
-    // بس **معلَن**، مش صامت. الباقي بيتسوّى مكتبيًا، والموظف لازم يشوف الرقم.
+    // فقط **معلَن**، مش صامت. الباقي بيتسوّى مكتبيًا، والموظف لازم يشوف الرقم.
     // (`#53517`: مستحق 2700 · الملف كان بيكتب 2000 والفرق مايبانش لحد.)
     clipped: raw < COD_REFUND_MIN,
     remainder: raw < COD_REFUND_MIN ? Math.abs(raw - COD_REFUND_MIN) : 0,
@@ -2895,7 +2895,7 @@ function buildRePayload(order, plan, mode, jobType, parts) {
   const firstName = cleanText(sa.firstName) || nameParts[0] || '';
   const lastName  = cleanText(sa.lastName)  || nameParts.slice(1).join(' ');
 
-  // 🔴 `wirePhone` مش `normPhone` — الأخيرة مفتاح **مقارنة** بس. المتجر فيه
+  // 🔴 `wirePhone` مش `normPhone` — الأخيرة مفتاح **مقارنة** فقط. المتجر فيه
   //    تلات أشكال مقيسة، منها `+20 12 71043044` **بمسافات** (`#53849`).
   const phone  = wirePhone(sa.phone);
   const second = wirePhone(order?.customer?.phone || order?.phone);
@@ -3017,10 +3017,10 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     codSent: null,
     codClipped: false,
     codRemainder: 0,
-    // 🔴 اتكتبت حالة S2 فعلًا؟ (استرجاع بس). السجل بيقرا منه: `valueAfter`
+    // 🔴 اتكتبت حالة S2 فعلًا؟ (استرجاع فقط). السجل بيقرا منه: `valueAfter`
     //    وصف `metafields_change` الاتنين بيتبنوا عليه، فصف بيقول «اتحركت»
     //    وهي ما اتحركتش **مستحيل** — ده بالظبط الصف اللي بيدّي KPIs زمن
-    //    الدورة تاريخ اتحرك فيه حاجة على الورق بس.
+    //    الدورة تاريخ اتحرك فيه حاجة على الورق فقط.
     s2Written: false,
     warnings: [],
     error: null,
@@ -3040,7 +3040,7 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   row.uref = ref.uref;
 
   // ─── تعديل الموظف اليدوي — بيغلب المطابقة التلقائية ───
-  // 🔴 ممكن يغيّر **المدينة** مش المنطقة بس: تصنيف بوسطة مش التقسيم الإداري،
+  // 🔴 ممكن يغيّر **المدينة** مش المنطقة فقط: تصنيف بوسطة مش التقسيم الإداري،
   //    والعميل بيغلط في اختيار المحافظة. من غيره الصفوف دي مالهاش حل يدوي —
   //    والمدينة الغلط مش fallback محايد زي المنطقة الناقصة، هي بتحدد الفرع
   //    والتسعيرة.
@@ -3160,7 +3160,7 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   if (parts.clipped) {
     row.warnings.push(
       `العميل ليه ${Math.abs(parts.raw).toLocaleString('en-US')} — بوسطة هترجّع `
-      + `${Math.abs(COD_REFUND_MIN).toLocaleString('en-US')} بس (حد بوسطة)، والباقي `
+      + `${Math.abs(COD_REFUND_MIN).toLocaleString('en-US')} فقط (حد بوسطة)، والباقي `
       + `${parts.remainder.toLocaleString('en-US')} يتسوّى مكتبيًا`,
     );
   }
@@ -3172,7 +3172,7 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   //    عمرها ما تبقى error (`worker-builder` ⑩②).
   if (!res.trackingNumber) {
     row.status = 'warning';
-    row.warnings.push('بوسطة قبلت الشحنة بس ما رجّعتش رقم تتبع — دوّر عليها على الداشبورد برقم الأوردر قبل أي إعادة رفع');
+    row.warnings.push('بوسطة قبلت الشحنة فقط ما رجّعتش رقم تتبع — دوّر عليها على الداشبورد برقم الأوردر قبل أي إعادة رفع');
     return row;
   }
 
@@ -3327,7 +3327,7 @@ function buildReRow(order, catalog, job, cycleAnalysis) {
     problems,
     // 🔴 من القايمة **الكاملة** — شيل الرسالة من العرض مايشيلش المنع
     uploadable:  all.length === 0,
-    // 🔴 نفس `§UPLOAD::buildRow` بالحرف — موقوف بسبب التغطية وبس، يعني اختيار
+    // 🔴 نفس `§UPLOAD::buildRow` بالحرف — موقوف بسبب التغطية وفقط، يعني اختيار
     //    منطقة يدويًا بيحرّره. ⚠️ وحارس الدورات **مش** بيتحرّر بالتعديل اليدوي:
     //    صف `info.blocked` بيدخل في `problems` فبيطفّي العلم ده تلقائيًا.
     coverageOnly: !problems.length && plan.ok && plan.mode === 'coverageBlocked',
@@ -3376,7 +3376,7 @@ async function fetchReRows(env, token, job, catalog) {
 }
 
 // ─── §RE-UPLOAD::normalizeOrderPayload ───
-// الواجهة بتبعت IDs وأسماء بس؛ العنوان والفلوس ومحتوى الدورة كلهم بيتقروا من
+// الواجهة بتبعت IDs وأسماء فقط؛ العنوان والفلوس ومحتوى الدورة كلهم بيتقروا من
 // شوبيفاي **وقت الرفع**، مش من شاشة ممكن تكون بقالها دقايق.
 function normalizeOrderPayload(orders) {
   if (!Array.isArray(orders)) return [];
@@ -3579,7 +3579,7 @@ export default {
                     (missing ? ` · ⚠️ ${missing} مدينة من غير dropOffAvailability` : ''),
           });
           // 🔴 العدد ده هو إجابة السؤال ٤ في «تجارب حية مفتوحة» بتاعة
-          //    `bosta-api-helper` Step 9 — والمقيس لحد دلوقتي جنوب سيناء بس
+          //    `bosta-api-helper` Step 9 — والمقيس لحد دلوقتي جنوب سيناء فقط
           //    (٢ من ٩). القراءة نضيفة ومفيهاش أي أثر، فمكانها الفحص الذاتي.
           //    المناطق دي **بتتعرض للموظف معلّمة** ومابتتبعتش لبوسطة (8.11).
           checks.push({
@@ -3702,14 +3702,14 @@ export default {
           ok: true, cityId, cityName: city?.cityName || '', cityAr: city?.cityAr || '',
           fieldMissing,
           // 🔴 المدينة نفسها ممكن تكون مقفولة للتسليم — الحقل موجود على مستوى
-          //    المدينة كمان مش المنطقة بس (`bosta-api-helper` 8.6).
+          //    المدينة كمان مش المنطقة فقط (`bosta-api-helper` 8.6).
           cityDropOff: city?.cityDropOff,
           // الزون بيترجع بالاسمين **ومعاه `zoneId`** — الاسم للعرض، والـ id هو
           // اللي بيترفع فعلًا في درجة الزون (8.10.4).
           districts: list.map(shape),
           // 🔴 المقفولة بتترجع **معلّمة، مش متشالة** (8.11). الإخفاء الصامت
           //    بيخلّي الموظف يشوف قايمة ناقصة ويفتكر إن العنوان محتاج «محافظة
-          //    بس»، وهو أصلًا **برّه تغطية بوسطة** والشحنة هترجع بعد أيام.
+          //    فقط»، وهو أصلًا **برّه تغطية بوسطة** والشحنة هترجع بعد أيام.
           blockedDistricts: blocked.map(shape),
         }, 200, request);
       }
@@ -4011,9 +4011,9 @@ export default {
         });
 
         // ⑥ تاريخ الحالة عبر الأدوات. KPIs زمن الدورة بتتقرا من
-        //    `tool = 'metafields_change'` **بس**، فنقلة مش مكتوبة هناك = نقلة
+        //    `tool = 'metafields_change'` **فقط**، فنقلة مش مكتوبة هناك = نقلة
         //    مش موجودة في أي تقرير. الصف بيتكتب للصفوف اللي `s2Written` فيها
-        //    بس — اللي اتأكدت من شوبيفاي فعلًا.
+        //    فقط — اللي اتأكدت من شوبيفاي فعلًا.
         //    ⚠️ لحد v2.2.0 كان مسار الإكسيل (`confirm_upload`) هو **المصدر
         //    الوحيد** للصفوف دي، لأن الرفع ماكانش بيحرّك حالة أصلًا. بقى
         //    مصدرين من v2.3.0 — والاتنين بيكتبوا نفس الشكل بالظبط.
@@ -4040,7 +4040,7 @@ export default {
           await writeLogsBatch(env.DB, logRows);
           await writeLogsBatch(env.DB, mfChangeRows);
         } catch (e) {
-          // Step 5A ⑦ — فشل D1 مابيلغيش الشحنات، بس ممنوع يبقى صامت.
+          // Step 5A ⑦ — فشل D1 مابيلغيش الشحنات، لكن ممنوع يبقى صامت.
           logged = false; logError = e.message;
         }
 
@@ -4087,7 +4087,7 @@ export default {
               : `فشل إلغاء شحنة بوسطة ${trackingNumber} — ${res.message}`,
             extra: {
               jobType: job.jobType, trackingNumber,
-              // `already` = العملية المطلوبة محصّلها تمّ، بس مش دلوقتي
+              // `already` = العملية المطلوبة محصّلها تمّ، لكن مش دلوقتي
               // (`ecommoda-constants` §12) — مش نجاح جديد ومش فشل.
               result: res.ok ? (res.alreadyGone ? 'already' : 'success') : 'error',
               status: res.status,
@@ -4182,7 +4182,7 @@ export default {
         const job = getJob(body.jobType, { allow: RE_JOBS });
         const employee = cleanText(body.employee);
         const orders = normalizeOrderPayload(body.orders);
-        // checklist من مودال التأكيد — **للتوثيق بس**، البوابة الحقيقية هي زرار
+        // checklist من مودال التأكيد — **للتوثيق فقط**، البوابة الحقيقية هي زرار
         // الواجهة. (⚠️ ده مابينطبقش على حارس الدورات تحت — ده سيرفر-سايد فعلًا.)
         const checklist = body.checklist && typeof body.checklist === 'object' ? body.checklist : null;
         const checklistNote = checklist
@@ -4231,7 +4231,7 @@ export default {
         })));
 
         // تاريخ الحالة عبر الأدوات — مطلوب عشان KPIs زمن الدورة (بتتقرا من
-        // `metafields_change` بس) تشوف النقلة دي.
+        // `metafields_change` فقط) تشوف النقلة دي.
         await writeLogsBatch(env.DB, orders.map((order) => ({
           timestamp: now, tool: 'metafields_change', type: 'update', employee,
           orderId: order.id, orderName: order.name,

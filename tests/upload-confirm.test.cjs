@@ -113,9 +113,11 @@ api.setState(pool, [pool[0], pool[1], pool[2]], ['A','B','C','D']);
 ok('«الكل» = المعروض بس، من غير الموقوف ومن غير 🟠',
    api.bulkConfirmRows('all').map(r => r.orderId).join() === 'A', api.bulkConfirmRows('all').map(r=>r.orderId));
 ok('«المحدد» = المحدد الصالح — حتى لو مش معروض',
-   api.bulkConfirmRows('sel').map(r => r.orderId).join() === 'A,C,D', api.bulkConfirmRows('sel').map(r=>r.orderId));
-ok('🟠 المحدد بالإيد بيعدّي في «المحدد»',
-   api.bulkConfirmRows('sel').some(r => r.orderId === 'C'));
+   api.bulkConfirmRows('sel').map(r => r.orderId).join() === 'A,D', api.bulkConfirmRows('sel').map(r=>r.orderId));
+// 🔴 (قرار أحمد 15-09-2026) 🟠 المحافظة مشكوك فيها بقت موقوفة تمامًا — التحديد
+//    بالإيد ماعادش كافي، لازم مراجعة المدينة الأول (rowNeedsManualAddressConfirm)
+ok('🟠 المحدد بالإيد بره «المحدد» — محتاج مراجعة المدينة الأول',
+   !api.bulkConfirmRows('sel').some(r => r.orderId === 'C'));
 ok('الموقوف مابيتعدّش في الاتنين',
    !api.bulkConfirmRows('all').concat(api.bulkConfirmRows('sel')).some(r => r.orderId === 'B'));
 

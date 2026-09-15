@@ -349,6 +349,9 @@ console.log('\n── ⑬ ارفع على الزون بس ──');
   chk('ومفيش منطقة اتبعتت معاه', !ov?.districtId);
   chk('وحالة العنوان بقت «بالزون»', api.rowAddrMode(row) === 'zone', api.rowAddrMode(row));
   chk('والبادج بيقول إنه مثبّت', /مثبّت/.test(api.addrModeInfo(row).label), api.addrModeInfo(row).label);
+  // 🔴 (قرار أحمد 15-09-2026) التثبيت الناجح بيقفل النافذة على طول —
+  //    فحص الخانات محتاج يفتحها تاني (زي ما الموظف هيعمل فعليًا).
+  api.setup([row],zc,cities,'B','q');
   // 🔴 الخانة لازم تعكس التثبيت — 🟢 لأنه اللي هيتبعت فعلًا
   const zbox = api.dpPickCurrent('zone');
   chk('وخانة الزون 🟢 ومعاها اسمه', zbox.cls === 'set' && /Obour/.test(zbox.text), JSON.stringify(zbox));
@@ -360,6 +363,7 @@ console.log('\n── ⑬ ارفع على الزون بس ──');
 
   // ⚠️ التثبيت على المحافظة بيلغي المنطقة برضه — نفس القاعدة
   api.pinDistrictToProvince();
+  api.setup([row],zc,cities,'B','q');   // النافذة اتقفلت تاني — نفتحها للفحص
   chk('وتثبيت المحافظة بيلغي المنطقة كمان', api.dpChosenDistrictId(row) === null);
 }
 {
