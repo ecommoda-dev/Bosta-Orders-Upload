@@ -20,8 +20,9 @@
 | نوع بوسطة | `10` | `25` (CRP) | `30` |
 | الأوردرات اللي بتظهر | `custom.zone = Other_Regions`<br>`AND created_at >= 2026-08-01`<br>`AND custom.manual_status ∈ { Confirmed, Confirmed + Edit }` | `custom.status_2_r_e = Confirmed + RETURN`<br>`AND custom.courier = Bosta` | `custom.status_2_r_e = Confirmed + EXCHANGE`<br>`AND custom.courier = Bosta` |
 | عنوان العميل بيروح | `dropOffAddress` | **`pickupAddress`** | `dropOffAddress` |
-| بعد النجاح بتكتب | `custom.courier = Bosta`<br>`custom.bosta_tracking_number_s1`<br>تاج `Bosta_Uploaded_S1` | `custom.bosta_tracking_number_s2`<br>تاج `Bosta_Uploaded_S2` | نفس الاسترجاع بالظبط |
-| بتحرّك حالة الأوردر؟ | ❌ لأ | ❌ لأ | ❌ لأ |
+| بعد النجاح بتكتب | `custom.courier = Bosta`<br>`custom.bosta_tracking_number_s1`<br>تاج `Bosta_Uploaded_S1` | `custom.bosta_tracking_number_s2`<br>تاج `Bosta_Uploaded_S2`<br>**`custom.status_2_r_e = In-Return`** | `custom.bosta_tracking_number_s2`<br>تاج `Bosta_Uploaded_S2` |
+| بتحرّك حالة الأوردر؟ | ❌ لأ | ✅ **`In-Return`** | ❌ لأ |
+| الصف بيفضل في القايمة بعد الرفع؟ | ✅ | ❌ **بيخرج** | ✅ |
 
 القيم حرفية — `Other_Regions` بـ `_` و`Confirmed + Edit` بمسافات حوالين الـ `+`.
 فرق حرف واحد = صفر صف **من غير أي خطأ**.
@@ -35,10 +36,15 @@
   وبيتاخد بقيمته المطلقة.
 - **اتجاه العنوان بيتقلب.** الاسترجاع بيسحب من العميل فعنوانه بيروح
   `pickupAddress`؛ بوسطة بتملا ناحية المخزن لوحدها.
-- **الرفع مابيحركش حالة الأوردر — في التلات أوضاع.** الانتقال بيحصل عند
-  **الطباعة** مش عند الرفع. يعني الأوردر **بيفضل في القايمة بعد الرفع** ومعاه
-  بادج «🔁 مرفوع» — ده صح مش باج، واللي بيحمي من الرفع المكرر هو التاج ورقم
-  التتبع وبوسطة نفسها.
+- **الاسترجاع لوحده بيحرّك حالة الأوردر وقت الرفع** (Worker v2.3.0):
+  `custom.status_2_r_e = In-Return`، في **نفس** نداء رقم التتبع — نداء واحد
+  بيعدّي كله أو يقع كله. ⚠️ **ولذلك أوردر الاسترجاع بيخرج من القايمة بعد
+  الرفع** (الفلتر بيقرا `Confirmed + RETURN`).
+- **والشحن العادي والاستبدال مابيحركوش الحالة.** الانتقال فيهم بيحصل عند
+  **الطباعة** مش عند الرفع، والأوردر **بيفضل في القايمة بعد الرفع** ومعاه بادج
+  «🔁 مرفوع» — ده صح مش باج. واللي بيحمي من الرفع المكرر في التلات أوضاع هو
+  التاج ورقم التتبع وبوسطة نفسها، مش اختفاء الصف. و`custom.printing_time_s2`
+  **مابيتكتبش في أي وضع** — ده وقت طباعة.
 - **الأداة مابتكتبش `custom.courier` في الاسترجاع/الاستبدال** — بتتأكد إنه
   **Bosta** بالفعل قبل الشحنة. شحنة الاسترجاع بتسحب من عند العميل، فالسؤال
   «هو ده مندوبنا أصلاً؟» مش «خليه مندوبنا».

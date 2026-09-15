@@ -68,8 +68,13 @@ async function fakeFetch(url,opts){
 let lastPrinting=null;
 const jr=(status,body)=>({ok:status>=200&&status<300,status,text:async()=>JSON.stringify(body),json:async()=>body});
 
-const stmt=(sql)=>({bind:(...b)=>({run:async()=>{dbRows.push({sql,b});return{}},
-  first:async()=>sql.includes('COUNT')?{n:1,total:0}:null, all:async()=>({results:[]})}),
+// أعمدة INSERT بالترتيب: 0 timestamp · 1 tool · 2 type · 3 employee · 4 order_id
+// · 5 order_name · 6 sku · 7 product_title · 8 delta · 9 value_before
+// · 10 value_after · 11 notes · 12 extra
+const bound=[];
+const stmt=(sql)=>({bind:(...b)=>{ if(/INSERT INTO logs/.test(sql)) bound.push({sql,b});
+  return {run:async()=>{dbRows.push({sql,b});return{}},
+  first:async()=>sql.includes('COUNT')?{n:1,total:0}:null, all:async()=>({results:[]})}; },
   run:async()=>({}), first:async()=>null, all:async()=>({results:[]})});
 const env={ WORKER_SECRET:'s', SHOP_DOMAIN:'shop', CLIENT_ID:'c', CLIENT_SECRET:'x', BOSTA_API_KEY:'k',
   DB:{prepare:stmt, batch:async(list)=>{ for(const _ of list){} dbRows.push({batch:list.length}); return []; }} };
@@ -121,15 +126,23 @@ const req=(action,body)=>({method:body?'POST':'GET',url:`https://w/?action=${act
   ok('التليفون اتظبّط قبل الإرسال', p.receiver.phone==='01271043044', p.receiver.phone);
   ok('الملاحظة بقت سطر واحد', !/\n/.test(p.notes||''), p.notes);
   ok('returnSpecs موجودة و specs لأ (CRP)', !!p.returnSpecs && p.specs===undefined);
-  // 🔴 v2.0.1 — الرفع **مابيحركش** الحالة. التأكيد ده اتقلب عن قصد: كان بيتأكد
-  //    إن الحالة اتحدّثت، وبقى بيتأكد إنها **ما اتحدّثتش**. نفس قاعدة الشحن
-  //    العادي: الانتقال بيحصل عند الطباعة.
-  ok('🔴 الرد مافيهوش أي ادعاء بتحديث حالة', d.s2Written===undefined && d.s2Error===undefined, d);
-  // ⚠️ الفحص على **نقلة الحالة** بالذات، مش على أي ذكر لـ"S2": اسم التاج
-  //    `Bosta_Uploaded_S2` واسم الميتافيلد `..._s2` الاتنين فيهم S2 وهما سليمين.
-  ok('ومفيش أي فعل بيقول إن الحالة اتحركت',
-     !(res.actions||[]).some(a=>/تحديث الحالة|تحديث S2|In-Return|→\s*Ready/.test(a)), res.actions);
+  // 🔴 v2.3.0 — الاسترجاع **بيحرّك** الحالة وقت الرفع (طلب أحمد 15-09-2026).
+  //    التأكيد ده اتقلب مرتين: كان بيتأكد إنها اتحدّثت (لحد v2.0.0)، وبقى
+  //    بيتأكد إنها **ما اتحدّثتش** (v2.0.1)، ورجع دلوقتي — بس **للاسترجاع
+  //    لوحده**. الاستبدال لسه على القاعدة (⑤ تحت).
+  ok('🔴 الصف بيعلن إن الحالة اتكتبت', res.s2Written===true, res.s2Written);
+  ok('🔴 وفيه فعل صريح بالنقلة',
+     (res.actions||[]).some(a=>/status_2_r_e\s*=\s*In-Return/.test(a)), res.actions);
   ok('واتسجّل في D1', dbRows.some(x=>x.batch), dbRows.length);
+  // 🔴 السجل: صف الرفع `value_after = In-Return`، ومعاه صف `metafields_change`
+  //    — KPIs زمن الدورة بتتقرا من هناك **بس**، فنقلة مش مكتوبة فيه = نقلة
+  //    مش موجودة في أي تقرير.
+  ok('صف الرفع بيسجّل النقلة',
+     bound.some(x=>x.b[2]==='upload_re_return' && x.b[9]==='Confirmed + RETURN' && x.b[10]==='In-Return'),
+     bound.filter(x=>x.b[2]==='upload_re_return').map(x=>[x.b[2],x.b[9],x.b[10]]));
+  ok('🔴 وصف metafields_change اتكتب',
+     bound.some(x=>x.b[1]==='metafields_change' && x.b[2]==='update' && x.b[10]==='In-Return'),
+     bound.map(x=>x.b[1]));
 
   console.log('\n③ حارس الكوريَر — طلب أحمد');
   detailOrder.courier={value:'Aramex'};
@@ -163,10 +176,18 @@ const req=(action,body)=>({method:body?'POST':'GET',url:`https://w/?action=${act
        !keys.includes('bosta_tracking_number') && !keys.includes('bosta_tracking_number_s1'), keys);
     // 🔴 طلب أحمد: في R/E بنتحقق من الكوريَر مش بنكتبه
     ok('🔴 و custom.courier مااتكتبش', !keys.includes('courier'), keys);
-    // 🔴 v2.0.1 — الاتنين دول كانوا بيتكتبوا وقت الرفع واتشالوا بطلب أحمد.
-    //    `printing_time_s2` **وقت طباعة**، وكتابته وقت الرفع بتخلي أي تقرير
-    //    مبني عليه يقول إن البوليصة اتطبعت وهي ما اتطبعتش.
-    ok('🔴 حالة S2 مااتكتبتش', !keys.includes('status_2_r_e'), keys);
+    // 🔴 v2.3.0 — حالة S2 بتتكتب في الاسترجاع، و`printing_time_s2` **لأ**.
+    //    ده **وقت طباعة**: كتابته وقت الرفع بتخلي أي تقرير مبني عليه يقول إن
+    //    البوليصة اتطبعت وهي ما اتطبعتش.
+    ok('🔴 حالة S2 اتكتبت In-Return',
+       mfCalls.flat().some(m=>m.key==='status_2_r_e' && m.value==='In-Return'
+                           && m.type==='single_line_text_field'),
+       mfCalls.flat());
+    // 🔴 في **نفس** النداء بتاع رقم التتبع: نداء واحد بيعدّي كله أو يقع كله،
+    //    فمستحيل تتحرك الحالة ورقم التتبع مايتكتبش — أو العكس.
+    ok('🔴 وفي نفس نداء رقم التتبع',
+       mfCalls.some(c=>c.some(m=>m.key==='status_2_r_e') && c.some(m=>m.key==='bosta_tracking_number_s2')),
+       mfCalls.map(c=>c.map(m=>m.key)));
     ok('🔴 و printing_time_s2 مااتكتبش', !keys.includes('printing_time_s2'), keys);
     ok('التاج Bosta_Uploaded_S2 مش S1',
        tagCalls.flat().includes('Bosta_Uploaded_S2') && !tagCalls.flat().includes('Bosta_Uploaded_S1'), tagCalls);
@@ -180,9 +201,19 @@ const req=(action,body)=>({method:body?'POST':'GET',url:`https://w/?action=${act
     detailOrder.returns.edges[0].node.exchangeLineItems={edges:[{node:{quantity:1,
       lineItems:[{sku:'SKU-B',name:'SKU-B',originalUnitPriceSet:{shopMoney:{amount:'2400'}}}]}}]};
     detailOrder.totalOutstandingSet={shopMoney:{amount:'750'}};
-    bostaCalls.length=0;
+    bostaCalls.length=0; bound.length=0;
+    const mfKeys5=[];
+    const origFetch5=ctx.fetch;
+    ctx.fetch=async(url,opts)=>{
+      if(String(url).includes('/admin/api/')){
+        const {query,variables}=JSON.parse(opts.body);
+        if(/metafieldsSet/.test(query)) mfKeys5.push(...(variables.metafields||[]).map(m=>m.key));
+      }
+      return origFetch5(url,opts);
+    };
     const r5 = await ctx.__w.fetch(req('upload_re',{jobType:'exchange',employee:'ahmed',
       orders:[{id:ORDER_GID,name:'#53517',s2Status:'Confirmed + EXCHANGE',courier:'Bosta'}]}), env);
+    ctx.fetch=origFetch5;
     const d5=JSON.parse(r5.body);
     ok('رد ناجح', d5.ok===true, d5.error);
     const pe=(bostaCalls[0]||{}).body||{};
@@ -194,7 +225,15 @@ const req=(action,body)=>({method:body?'POST':'GET',url:`https://w/?action=${act
     // 🔴 قيمة البضاعة = اللي بيسافر (الخارج) مش الراجع — #53701: 2400 مش 2600
     ok('قيمة البضاعة = الخارج مش الراجع', pe.goodsInfo?.amount===2400, pe.goodsInfo);
     ok('المرجع الفريد بـ -EX', pe.uniqueBusinessReference==='#53517-EX1', pe.uniqueBusinessReference);
-    ok('🔴 والحالة ما اتحركتش هنا كمان', d5.nextStatus===undefined && d5.s2Written===undefined, d5);
+    // 🔴 الاستبدال **لسه** على قاعدة v2.0.1: نقلة `Ready` بتحصل عند الطباعة،
+    //    وتقديمها من هنا بيكسر بوابة الطباعة. استثناء v2.3.0 للاسترجاع بس.
+    ok('🔴 والحالة ما اتحركتش في الاستبدال', !mfKeys5.includes('status_2_r_e'), mfKeys5);
+    ok('🔴 والصف بيقول كده', ((d5.results||[])[0]||{}).s2Written===false, (d5.results||[])[0]);
+    ok('🔴 ومفيش صف metafields_change اتكتب',
+       !bound.some(x=>x.b[1]==='metafields_change'), bound.map(x=>x.b[1]));
+    ok('🔴 وصف السجل before == after',
+       bound.some(x=>x.b[2]==='upload_re_exchange' && x.b[9]===x.b[10] && x.b[10]==='Confirmed + EXCHANGE'),
+       bound.filter(x=>x.b[2]==='upload_re_exchange').map(x=>[x.b[9],x.b[10]]));
   }
 
   console.log('\n⑥ الاستبدال بلا قطع خارجة — حاجب');

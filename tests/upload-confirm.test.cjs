@@ -20,6 +20,10 @@
 //   ⑥ 🔴 **التثبيت على المحافظة بياخد نفس أخضر التثبيت على المدينة** —
 //      رمادي معناه إن الموظف يقرا الصف كأن محدش لمسه فيعيد التثبيت.
 //   ⑦ تسميات «حالة العنوان» الجديدة — والقيم القديمة مالهاش أثر حي.
+//   ⑧ 🔴 **سطر نقلة الحالة — استرجاع بس.** الرفع هناك بيكتب
+//      `status_2_r_e = In-Return`، فالصف **بيخرج من القايمة** بعد التحديث —
+//      وده عكس الوضعين التانيين. من غير السطر ده الموظف بيشوف صفوف بتختفي
+//      بلا تفسير فيقراها باج، أو يفتكر إن الرفع بيحرّك الحالة في كل الأوضاع.
 // ══════════════════════════════════════════════════════════════
 const fs = require('fs');
 const path = require('path');
@@ -200,6 +204,33 @@ ok('التسميات القديمة مالهاش أثر حي',
    !api.ADDR_MODE_ITEMS.some(it => ['🗺️ بالمدينة','🏙️ بالمحافظة بس','⛔ محافظة مش في الجدول'].includes(it.label)));
 ok('ADDR_MODE_LABEL لسه مبنية من ADDR_MODE_ITEMS',
    api.ADDR_MODE_ITEMS.every(it => api.ADDR_MODE_LABEL[it.value] === it.label));
+
+// ─── ⑧ سطر نقلة الحالة (استرجاع بس) ──────────────────────────
+// 🔴 الرفع في وضع الاسترجاع بيحرّك حالة الأوردر على شوبيفاي (Worker v2.3.0)،
+//    والصف بيخرج من القايمة بعد التحديث. لو السطر ده اتشال، الموظف بيشوف
+//    صفوف بتختفي بعد الرفع من غير أي تفسير — والاختفاء ده **مش** سلوك
+//    الأوضاع التانية، فهو بيقرا كأنه باج.
+console.log('\n⑧ سطر نقلة الحالة في نافذة التأكيد — استرجاع بس');
+api.setState(pool, [pool[0]], []);
+api.setJob('return');
+api.openBulkConfirm('all');
+ok('🔴 السطر بيبان في الاسترجاع', els.bulkAllNote.hidden === false, els.bulkAllNote.hidden);
+ok('وبيسمّي الحالة الجديدة', /In-Return/.test(written.bulkAllNote || ''), written.bulkAllNote);
+ok('وبيقول إن الأوردر هيخرج من القايمة',
+   /هيخرج من القايمة/.test(written.bulkAllNote || ''), written.bulkAllNote);
+api.setJob('exchange');
+api.openBulkConfirm('all');
+ok('🔴 ومابيبانش في الاستبدال — الحالة مابتتحركش فيه',
+   els.bulkAllNote.hidden === true, els.bulkAllNote.hidden);
+api.setJob('s1');
+api.openBulkConfirm('all');
+ok('ولا في الشحن العادي', els.bulkAllNote.hidden === true, els.bulkAllNote.hidden);
+// ⚠️ المصدر واحد: السطر بيقرا من `JOBS[…].uploadStatus` — نفس المفتاح اللي
+//    الـ Worker بيكتب منه. نص مكتوب بالإيد كان هيفضل يقول In-Return لو
+//    القرار اتغيّر.
+ok('🔴 والسطر بيقرا من JOBS مش من نص مكتوب بالإيد',
+   /note\.innerHTML\s*=\s*up/.test(html) && /const up = job\(\)\.uploadStatus/.test(html));
+api.setJob('s1');
 
 console.log(`\n══════════════════════════════════════════════════`);
 console.log(`نجح ${pass} · فشل ${fail}`);
