@@ -22,6 +22,7 @@ const win = { addEventListener(){}, matchMedia:()=>({matches:false,addEventListe
 const ls  = { getItem:()=>null, setItem(){}, removeItem(){} };
 
 const tail = '\nreturn { rowAddrMode, rowNeedsCityDecision, isAutoSelectable, addrModeInfo, effCity,' +
+             ' rowUploadable, rowUpState, rowUpLabel, rowCoverageOverridden,' +
              ' ov: districtOverride, setRows(r){ allRows = r; } };';
 const api = new Function('document','window','localStorage','Chart','ExcelJS', src + tail)(doc, win, ls, undefined, undefined);
 
@@ -60,6 +61,43 @@ chk('B نص الحالة',               api.addrModeInfo(rows[1]).label, '📍 
 
 delete api.ov['B'];
 chk('B رجع للتلقائي',            api.rowAddrMode(rows[1]),      'cityDoubt');
+
+// ─── الصف الموقوف على التغطية — التعديل اليدوي بيحرّره ────────
+// 🔴 `r.uploadable` قيمة السيرفر وقت التحميل، محسوبة على المطابقة **التلقائية**.
+//    التدخّل اليدوي بيحصل بعد كده في الصفحة ومفيش حاجة بترجع تحسبها، فأي مكان
+//    بيقرا `r.uploadable` خام كان بيقرا رقم بايت: البادج بيخضرّ («عنوان مظبوط»)
+//    والصف يفضل ⛔ موقوف والشيك بوكس متقفول — من غير أي رسالة تقول ليه.
+console.log('\n— الصف خارج التغطية —');
+const cov = { orderId:'E', uploadable:false, coverageOnly:true, addressOk:true,
+  mode:'coverageBlocked', cityName:'South Sinai', cityId:'s', ambiguous:false, cityDoubt:false,
+  crossCity:[], problems:[], blockedDistricts:[{ id:'d-taba', name:'Taba' }] };
+api.setRows([...rows, cov]);
+
+chk('E موقوف قبل أي تعديل',       api.rowUploadable(cov),        false);
+chk('وحالة الرفع «موقوف»',        api.rowUpLabel(cov),           'موقوف');
+chk('ومستثنى من تحديد الكل',      api.isAutoSelectable(cov),     false);
+
+api.ov['E'] = { cityId:'s', cityName:'South Sinai', districtId:'d-dahab', districtName:'Dahab' };
+chk('بعد اختيار منطقة: بقى يترفع', api.rowUploadable(cov),        true);
+chk('وحالة الرفع بقت «جاهز»',      api.rowUpLabel(cov),           'جاهز');
+chk('ودخل تحديد الكل',            api.isAutoSelectable(cov),     true);
+// ⚠️ القرار ده لازم يفضل **باين**: البادج بقى 📍 زي أي اختيار يدوي، فالتلميح
+//    هو الأثر الوحيد الباقي على إن العنوان ده كان خارج التغطية.
+chk('والقرار لسه متعلّم',          api.rowCoverageOverridden(cov), true);
+chk('والتلميح بيقول إنه كان خارج التغطية',
+    /كان خارج التغطية/.test(api.addrModeInfo(cov).hint), true);
+
+// 🔴 الضابط — الدرجة الأقل مابتحرّرش: بتغيّر درجة العنوان مش العنوان نفسه
+api.ov['E'] = { forceProvince: true };
+chk('«ارفع على المحافظة بس» مابيحرّرش', api.rowUploadable(cov),   false);
+api.ov['E'] = { forceZone: true, zoneId:'z-dahab', zoneName:'Dahab' };
+chk('و«ارفع على الزون بس» مابيحرّرش',   api.rowUploadable(cov),   false);
+
+// ⚠️ وصف موقوف لسبب تاني (مش التغطية) مابيتحرّرش بالتعديل — `coverageOnly`
+//    بتيجي `false` من الـ Worker لما يكون فيه مانع تاني، فالتعديل مالوش أثر.
+api.ov['D'] = { cityId:'c', cityName:'Cairo', districtId:'d9', districtName:'X' };
+chk('D (تليفون ناقص) بيفضل موقوف', api.rowUploadable(rows[3]),    false);
+delete api.ov['D']; delete api.ov['E'];
 
 console.log(`\n${p}/${n} نجحت`);
 process.exit(p === n ? 0 : 1);

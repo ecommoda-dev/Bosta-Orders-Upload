@@ -892,6 +892,19 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <span class="cl-ver-date">15-09-2026</span>
         </div>
         <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>الأوردر اللي خارج التغطية بقى بيترفع بعد ما تختار له منطقة تانية.</b> قبل كده كان طريق مسدود: تفتح النافذة وتحدد منطقة، بادج «حالة العنوان» يخضرّ ويقول <b>📍 عنوان مظبوط</b>، والصف يفضل <b>⛔ موقوف</b> والشيك بوكس مقفول — <b>من غير أي رسالة تقول ليه</b>. السبب إن «هل الصف يترفع» كان بيتحسب <b>مرة واحدة على السيرفر</b> وقت تحميل الصفحة، على المطابقة التلقائية، ومفيش حاجة بترجع تحسبه بعد التعديل اليدوي. دلوقتي اختيار المنطقة بيحرّر الصف فعلًا — في الشاشة <b>وفي الرفع</b>.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>⚠️ <b>«🗺️ ارفع على المدينة بس» و«🏙️ ارفع على المحافظة بس» بيترفضوا على الأوردر اللي خارج التغطية — برسالة صريحة.</b> الدرجتين دول بيغيّروا <b>درجة</b> العنوان مش العنوان نفسه، والشحنة بتفضل رايحة نفس المكان اللي بوسطة مش بتسلّم فيه — تتشحن بفلوس وترجع بعد أيام. المسار الشغّال واحد: <b>اختار منطقة متاحة للتسليم</b> من القايمة (ودي بتحرّر الصف)، أو حوّل الأوردر لخدمة العملاء.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>الصف اللي اتحرّر كده بيفضل <b>متعلّم</b>: التلميح على عمود المنطقة بيقول إن العنوان ده كان خارج التغطية وبيسمّي المنطقة المقفولة اللي طابقها — عشان مراجعة الصف بعدين ماتبقاش عمياء.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>وحتى لو حد عدّى الشاشة، الرفع نفسه كان هيرفض.</b> الـ Worker كان بيفحص التغطية <b>قبل</b> ما يبص على المنطقة اللي الموظف اختارها أصلًا. اتصلح. ⚠️ و<b>المنطقة المقفولة مالهاش باب خلفي</b>: اختيارها بيوقف الصف برسالة صريحة و<b>صفر نداء لبوسطة</b>.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.9.0</span>
+          <span class="cl-ver-date">15-09-2026</span>
+        </div>
+        <ul class="cl-items">
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>«رفع المحدد» بقى بيسأل تأكيد زي «رفع الكل» بالظبط.</b> الزرارين بيعملوا <b>نفس الحاجة</b> — شحنات بفلوس حقيقية على بوسطة — والفرق بينهم مصدر الصفوف مش خطورة العملية. وقفة تأكيد على واحد من غير التاني كانت بتعلّم الموظف إن الرفع من «المحدد» مالوش مرحلة مراجعة. دلوقتي <b>نفس النافذة</b> للاتنين.</span></li>
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>نافذة التأكيد بقت مربعات «حالة العنوان» بدل جملة.</b> الجملة كانت بتقول العدد الإجمالي بس، والرقم اللي بيفرق قبل الضغط هو <b>هيترفع كام أوردر بعنوان مظبوط وكام على المحافظة فقط</b> — الدرجة الأقل دقة بتاخد <b>هب افتراضي</b> وبتدخل مسار العناوين غير الواضحة عند بوسطة. المربعات مصدرها <b>نفس قايمة الفلتر والعمود</b> (<code>ADDR_MODE_ITEMS</code>)، والإجمالي جوّه نفس الرسمة فمستحيل يبقى أكبر من مجموعها. ⚠️ و<b>نوع الشحنة اتنقل لترويسة النافذة</b> (<code>⬆ تأكيد الرفع — استرجاع (type 25)</code>) — الأداة تلات أوضاع، ومن غيره الموظف ممكن يأكّد «استرجاع» وهو فاكر إنه «شحن».</span></li>
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span>أزرار نافذة التأكيد: <b>«تأكيد الرفع»</b> بدل «أيوه، ارفعهم»، و<b>«إلغاء» بقى أحمر</b>.</span></li>
@@ -1935,12 +1948,15 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.9.0';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.10.0';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
 //    القديم من غير ما حد ياخد باله. الحارس بيتنده في `checkWorkerVersion`.
-const MIN_WORKER_VERSION = '2.1.3';
+// 🔴 v2.2.0 — Worker أقدم مابيرجّعش `coverageOnly`، فالصف اللي خارج التغطية
+//    بيفضل ⛔ موقوف حتى بعد ما الموظف يختار منطقة. مش خطر (بيفشل مقفول، مش
+//    مفتوح) بس بيرجّع الطريق المسدود اللي v2.10.0 اتعملت عشانه.
+const MIN_WORKER_VERSION = '2.2.0';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -3108,8 +3124,27 @@ function applySort(rows) {
   });
 }
 
+// 🔴 **مصدر واحد لـ«الصف ده يترفع ولا لأ» في كل الصفحة** — ممنوع أي مكان يقرا
+//    `r.uploadable` خام. `r.uploadable` قيمة السيرفر وقت التحميل، محسوبة على
+//    المطابقة **التلقائية**؛ التدخّل اليدوي بيحصل بعد كده في الصفحة، ومفيش
+//    حاجة بترجع تحسبها تاني. كل قارئ خام كان بيقرا رقم بايت.
+//    الحالة الوحيدة اللي التدخّل بيحرّرها: الصف موقوف **بسبب التغطية وبس**
+//    (`coverageOnly` من الـ Worker) والموظف اختار **منطقة بعينها**.
+//    ⚠️ `forceZone`/`forceProvince` مابيحرّروش — دول بيغيّروا درجة العنوان مش
+//    العنوان، والشحنة بتفضل رايحة على نفس المكان اللي بوسطة مش بتسلّم فيه.
+//    🔴 والواجهة **مش** البوابة: `§BOSTA::coverageProblems` في الـ Worker بيعيد
+//    نفس الفحص بنفس الشرط وقت الرفع، وبيوقف الصف لو المنطقة مش متاحة للتسليم.
+function rowUploadable(r) {
+  return r.uploadable || rowCoverageOverridden(r);
+}
+// الصف اتحرّر بتدخّل يدوي بعد ما كان خارج التغطية. مصدر واحد للشرطين — لو
+// اتكتبوا مرتين، واحدة تتشدّد والتانية لأ، فالصف يترفع من غير ما التلميح
+// يقول إنه كان خارج التغطية (أو العكس).
+function rowCoverageOverridden(r) {
+  return !!(r.coverageOnly && districtOverride[r.orderId]?.districtId);
+}
 function rowUpState(r) {
-  if (!r.uploadable) return 'blocked';
+  if (!rowUploadable(r)) return 'blocked';
   return r.alreadyUploaded ? 'uploaded' : 'ready';
 }
 function rowAddrMode(r) {
@@ -3127,7 +3162,7 @@ function rowAddrMode(r) {
 //    للتحديد يدويًا، بس مستثنى من «تحديد الكل» — المدينة الغلط بتودّي الشحنة
 //    فرع وتسعيرة غلط، ودي مش حاجة تعدّي مع دفعة.
 function rowNeedsCityDecision(r) { return rowAddrMode(r) === 'cityDoubt'; }
-function isAutoSelectable(r)     { return r.uploadable && !rowNeedsCityDecision(r); }
+function isAutoSelectable(r)     { return rowUploadable(r) && !rowNeedsCityDecision(r); }
 function rowUpLabel(r) {
   return { ready: 'جاهز', uploaded: 'مرفوع قبل كده', blocked: 'موقوف' }[rowUpState(r)];
 }
@@ -3164,8 +3199,18 @@ function applyFilters() {
 function addrModeInfo(r) {
   const ov = districtOverride[r.orderId];
   const cityTxt = ov?.cityId && ov.cityId !== r.cityId ? ` (مدينة ${ov.cityName})` : '';
-  if (ov?.districtId)   return { label: `📍 ${ov.districtName}${cityTxt}`, set: true,
-    hint: `منطقة متحدّدة يدويًا — الشحنة هتترفع على مدينة ${ov.cityName || r.cityName} بـ districtId عليها` };
+  if (ov?.districtId) {
+    // 🔴 الصف اللي كان **خارج التغطية** واتحرّر بالاختيار اليدوي لازم يفضل
+    //    باين إنه كان كده. البادج بقى 📍 زيه زي أي اختيار يدوي (وده صح — ده
+    //    نفس القرار)، بس من غير السطر ده مفيش أي أثر إن المطابقة التلقائية
+    //    كانت وصلت لمنطقة بوسطة مش بتسلّم فيها، ومراجعة الصف بعدين بتبقى عمياء.
+    const blocked = rowCoverageOverridden(r)
+      ? ` · ⚠️ العنوان ده كان خارج التغطية (طابق ${(r.blockedDistricts || []).map(d => d.name).filter(Boolean).join(' · ') || 'منطقة مقفولة'}) `
+        + 'واتحرّر بالاختيار ده — اتأكد إن المنطقة دي فعلًا عنوان العميل.'
+      : '';
+    return { label: `📍 ${ov.districtName}${cityTxt}`, set: true,
+      hint: `منطقة متحدّدة يدويًا — الشحنة هتترفع على مدينة ${ov.cityName || r.cityName} بـ districtId عليها${blocked}` };
+  }
   if (ov?.forceZone) return { label: `🗺️ ${ov.zoneName} · مثبّت`, set: true,
     hint: `متثبّت يدويًا على مدينة ${ov.zoneName} — الشحنة هتترفع بالـ zoneId ده، `
         + 'يعني هب وكود فرز محددين بدل الهب الافتراضي للمحافظة. مش هتتبعت منطقة.' };
@@ -3262,7 +3307,7 @@ function tableColumns() {
     { key: 'orderNumber', label: 'رقم الأوردر', sort: 'orderNumber', cell: r => orderLink(r.orderNumber, r.orderId) },
     { key: 'date',        label: 'التاريخ', sort: 'date', cls: 'col-num', cell: r => formatDate(r.createdAt) },
     { key: 'customer',    label: 'العميل', sort: 'customer', cls: 'cell-wrap cell-name',
-      cell: r => `${esc(r.customer || '—')}${!r.uploadable ? `<span class="problem-text">${esc((r.problems || []).join(' · '))}</span>` : ''}` },
+      cell: r => `${esc(r.customer || '—')}${!rowUploadable(r) ? `<span class="problem-text">${esc((r.problems || []).join(' · '))}</span>` : ''}` },
     { key: 'address',     label: 'العنوان كامل', sort: 'address', cls: 'cell-wrap cell-addr',
       cell: r => `<span class="cell-clamp">${esc(fullAddressText(r) || '—')}</span>`,
       attrs: r => `title="${esc(fullAddressText(r) || '—')}"` },
@@ -3368,7 +3413,7 @@ function codCell(r) {
 }
 
 function upCell(r) {
-  if (!r.uploadable) return `<span class="badge badge-danger">⛔ موقوف</span>`;
+  if (!rowUploadable(r)) return `<span class="badge badge-danger">⛔ موقوف</span>`;
   if (r.alreadyUploaded) {
     return `<span class="badge badge-warn" title="${esc(`عليه ${job().tag} أو رقم تتبع في custom.${job().trackingKey}`)}">`
          + `🔁 مرفوع${r.previousTracking ? ` · ${esc(r.previousTracking)}` : ''}</span>`;
@@ -3386,7 +3431,7 @@ function renderTable(rows) {
     return;
   }
   body.innerHTML = rows.map(r => {
-    const blocked = !r.uploadable;
+    const blocked = !rowUploadable(r);
     const cells = cols.map(c => {
       if (c.key === 'cb') {
         return `<td><input type="checkbox" class="row-cb" data-id="${esc(r.orderId)}" ${selected.has(r.orderId) ? 'checked' : ''}
@@ -3451,7 +3496,7 @@ let bulkConfirmSource = null;   // 'all' | 'sel'
 function bulkConfirmRows(source) {
   return source === 'all'
     ? visibleRows.filter(isAutoSelectable)
-    : allRows.filter(r => selected.has(r.orderId) && r.uploadable);
+    : allRows.filter(r => selected.has(r.orderId) && rowUploadable(r));
 }
 
 // 🔴 العدّ بيتبني من الصفوف الأول وبعدين بيتعرض بترتيب `ADDR_MODE_ITEMS` —
@@ -4410,9 +4455,25 @@ function dpEffectiveZone(r) {
 //    8.10.2). يعني كان بيضطر ينزل درجتين بدل واحدة.
 // ⚠️ بيمسح أي منطقة مختارة عن قصد — الزون والمنطقة درجتين مختلفتين، وبعتهم
 //    مع بعض معناه إن الـ payload يبعت المنطقة والزون يتجاهل.
+// 🔴 الدرجة الأقل من المنطقة مابتحرّرش صف خارج التغطية — والرفض هنا **لازم
+//    يتقال**، مش يتسجّل في صمت. من غيره الموظف بيضغط الزرار، ياخد توست أخضر
+//    «اتثبّت»، والبادج يخضرّ، والصف يفضل ⛔ **موقوف** من غير سبب ظاهر — وهي
+//    بالظبط نفس الحيرة اللي التعديل ده اتعمل عشانها.
+//    والمسار الشغّال متقال بالاسم: **منطقة** متاحة للتسليم (بتحرّر الصف فعلًا)،
+//    وإلا تحويل لخدمة العملاء. ومنه كمان بيعدّي اللي محتاج يغيّر المحافظة:
+//    يغيّرها من القايمة ويختار منطقة جوّاها.
+function coverageBlocksDegree(r) {
+  if (r.mode !== 'coverageBlocked') return false;
+  showToast('العنوان ده خارج تغطية بوسطة — الرفع على المدينة أو المحافظة مش بديل، '
+          + 'الشحنة هتتشحن بفلوس وترجع. اختار **منطقة** متاحة للتسليم من القايمة تحت '
+          + '(ودي بتحرّر الصف)، أو حوّل الأوردر لخدمة العملاء.', 'error', 9000);
+  return true;
+}
+
 function pinDistrictToZone() {
   const r = allRows.find(x => x.orderId === dpOrderId);
   if (!r) return;
+  if (coverageBlocksDegree(r)) return;
   const z = dpEffectiveZone(r);
   if (!z || !z.zoneId) {
     showToast(z ? `مدينة ${z.label} مالهاش zoneId في الكتالوج — مينفعش الرفع عليها`
@@ -4432,6 +4493,7 @@ function pinDistrictToZone() {
 function pinDistrictToProvince() {
   const r = allRows.find(x => x.orderId === dpOrderId);
   if (!r) return;
+  if (coverageBlocksDegree(r)) return;
   const cityName = dpCities.find(c => c.cityId === dpCityId)?.cityName || r.cityName;
   districtOverride[dpOrderId] = dpCityId !== r.cityId
     ? { forceProvince: true, cityId: dpCityId, cityName }
@@ -4459,8 +4521,8 @@ function startUpload() {
   const rows = allRows.filter(r => selected.has(r.orderId));
   if (!rows.length) { showToast('محدّدش أي أوردر', 'warning'); return; }
 
-  const blocked = rows.filter(r => !r.uploadable);
-  const ok      = rows.filter(r => r.uploadable);
+  const blocked = rows.filter(r => !rowUploadable(r));
+  const ok      = rows.filter(r => rowUploadable(r));
   if (blocked.length) {
     showToast(`${fmtNum(blocked.length)} أوردر موقوف (بيانات ناقصة) — اتشالوا من الدفعة`, 'warning', 6000);
   }
