@@ -532,9 +532,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
    فالعرض هنا `width` حقيقي + `overflow-wrap` مع قصّ على سطرين. */
 .data-table tbody td.cell-wrap{white-space:normal;text-align:right;overflow-wrap:anywhere;word-break:break-word;}
 .data-table tbody td.cell-name{width:170px;}
-.data-table tbody td.cell-addr{width:360px;font-size:12px;color:var(--text-secondary);}
-/* النص الكامل مش بيضيع: `title` على الخلية + النافذة + تصدير XLSX */
-.cell-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.6;}
+.data-table tbody td.cell-addr{width:360px;font-size:13.5px;font-weight:600;color:var(--text-primary);line-height:1.5;}
 .empty-row td{padding:40px;text-align:center;color:var(--text-muted);font-size:13px;}
 .row-cb{width:16px;height:16px;cursor:pointer;accent-color:var(--accent);}
 
@@ -906,6 +904,28 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">15-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>جملة «محتاج تأكيد يدوي على العنوان — افتح عمود المنطقة» اتشالت من تحت اسم العميل</b> (طلب أحمد). كانت بتتكرر مع بادج «حالة العنوان» اللي جنبها أصلًا بيقول نفس الحاجة («❓ أكتر من مطابقة — محتاج اختيار» · «🟠 المحافظة مشكوك فيها — محتاج مراجعة»).</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>عمود «العنوان كامل» بقى بيعرض النص كله من غير قص</b> (طلب أحمد) — كان مقصوص على سطرين (<code>-webkit-line-clamp</code>) والباقي مش ظاهر إلا بتمرير الماوس. الـ <code>tooltip</code> بتاع الـ hover اتشال كمان، والخط بقى أكبر (13.5px بدل 12px) وأغمق (<code>--text-primary</code> بدل <code>--text-secondary</code> الباهت) وسمك أوضح.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.13.0</span>
+          <span class="cl-ver-date">15-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>نافذة اختيار المنطقة بقت بتفتح على مدينة ٦ أكتوبر/حلوان تلقائي</b> للأوردرات اللي محافظتها اتلغت إداريًا (<code>mode: 'zoneName'</code>). قبل كده كانت خانة «المدينة» بتفتح على «الكل» رغم إن الأداة عارفة المدينة أصلًا وقت الرفع، فالموظف كان بيدوّر يدويًا.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>بادج «🗺️ محافظة تابعة — بتترفع كمدينة» اتدمج في «🗺️ المدينة فقط»</b> (طلب أحمد) — في البادج/الفلتر/التصدير/عنوان النافذة. القرار قصدي: النظام لسه بيسجّل الحالة دي كدرجة <code>district</code> كاملة في D1 (<code>addressDegree</code>) وبيفرّق بينها وبين «المدينة فقط» في تلميح المنطقة نفسها — الدمج ده بصري بس، عشان يبسّط الشاشة على الموظف.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.12.0</span>
           <span class="cl-ver-date">15-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -2009,7 +2029,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.12.0';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.14.0';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2747,9 +2767,6 @@ const UP_STATE_ITEMS = [
 ];
 const ADDR_MODE_ITEMS = [
   { value: 'district', label: '📍 عنوان مظبوط' },
-  // 🔴 محافظة اتلغت إداريًا وبوسطة بقت بتعاملها كـ`zoneId` جوّه محافظة تانية —
-  //    وده في العرض «مدينة» زي أي `zoneId` (القاموس فوق).
-  { value: 'zoneName', label: '🗺️ محافظة تابعة — بتترفع كمدينة' },
   // 🔴 درجة وسيطة حقيقية بين المنطقة والمحافظة (واجهة v2.4.0) — مش تسمية
   //    تجميلية. الـ`zoneId` بيغيّر **الهب وكود الفرز** على البوليصة،
   //    و«المحافظة فقط» بتاخد هب افتراضي. لازم الموظف يفرّق بين الاتنين.
@@ -3150,7 +3167,7 @@ const sortConfig = {
   secondPhone: { type: 'string' },
   address: { type: 'string', get: r => fullAddressText(r) },
   province: { type: 'string' }, cityName: { type: 'string' }, s1: { type: 'string' },
-  addrMode: { type: 'string', get: r => ADDR_MODE_LABEL[rowAddrMode(r)] || rowAddrMode(r) },
+  addrMode: { type: 'string', get: r => ADDR_MODE_LABEL[rowAddrModeGroup(r)] || rowAddrModeGroup(r) },
   upLabel: { type: 'string', get: r => rowUpLabel(r) },
   date: { type: 'date', get: r => r.createdAt },
   // أعمدة R/E — المفاتيح دي لازم تطابق `sort` في `tableColumns()` حرفيًا،
@@ -3237,6 +3254,15 @@ function rowAddrMode(r) {
   if (r.cityDoubt) return 'cityDoubt';
   return r.mode;
 }
+// حالة العنوان **المعروضة** للموظف (بادج/فلتر/تصدير) — بقرار أحمد 15-09-2026
+// `zoneName` (محافظة اتلغت إداريًا زي ٦ أكتوبر/حلوان) بتتعرض زي `zone` بالظبط
+// («🗺️ المدينة فقط»)، رغم إنها بتتسجّل في D1 كدرجة `district` كاملة
+// (`addressDegree` في الـ Worker) — الدمج ده بصري بس، مايمسّش تصنيف الدقة
+// الحقيقي ولا الـ payload اللي بيترفع.
+function rowAddrModeGroup(r) {
+  const m = rowAddrMode(r);
+  return m === 'zoneName' ? 'zone' : m;
+}
 // 🔴 حارس تأكيد يدوي إضافي (قرار أحمد 15-09-2026) — الحالات دي بتفضل موقوفة
 //    عن الرفع حتى لو `r.uploadable` جاي `true` من السيرفر، لحد ما الموظف ياخد
 //    قرار صريح من نافذة اختيار المنطقة:
@@ -3273,7 +3299,7 @@ function applyFilters() {
     if (msState.s1.selected.size       && !msState.s1.selected.has(r[job().statusField])) return false;
     if (msState.province.selected.size && !msState.province.selected.has(r.province || '—')) return false;
     if (msState.upState.selected.size  && !msState.upState.selected.has(rowUpState(r))) return false;
-    if (msState.addrMode.selected.size && !msState.addrMode.selected.has(rowAddrMode(r))) return false;
+    if (msState.addrMode.selected.size && !msState.addrMode.selected.has(rowAddrModeGroup(r))) return false;
     const d = cairoDateStr(r.createdAt);
     if (dateState.main.from && d < dateState.main.from) return false;
     if (dateState.main.to   && d > dateState.main.to)   return false;
@@ -3385,12 +3411,12 @@ function districtCell(r) {
 // عمود «حالة العنوان» = **نفس** قيمة الفلتر بالحرف. مصدر واحد
 // (ADDR_MODE_LABEL) عشان الفلتر والعمود مايفترقوش لما تتضاف حالة جديدة.
 function addrModeCell(r) {
-  const mode = rowAddrMode(r);
+  const mode = rowAddrModeGroup(r);
   // 🔴 «محتاج تأكيد يدوي» (`rowNeedsManualAddressConfirm`) بياخد أصفر دايمًا —
   //    بيشمل الأكتر من مطابقة والمحافظة مشكوك فيها ودلوقتي المحافظة فقط لسه
   //    من غير تثبيت. المحافظة **بعد** التثبيت بتاخد أخضر زي أي مطابقة كاملة.
   const cls  = rowNeedsManualAddressConfirm(r) ? 'badge-warn'
-             : (mode === 'district' || mode === 'zoneName' || mode === 'zone' || mode === 'province') ? 'badge-success'
+             : (mode === 'district' || mode === 'zone' || mode === 'province') ? 'badge-success'
              : (mode === 'blocked' || mode === 'coverageBlocked') ? 'badge-danger' : 'badge-muted';
   return `<span class="badge ${cls}" title="${esc(addrModeInfo(r).hint)}">${esc(ADDR_MODE_LABEL[mode] || mode)}</span>`;
 }
@@ -3407,17 +3433,17 @@ function tableColumns() {
     { key: 'orderNumber', label: 'رقم الأوردر', sort: 'orderNumber', cell: r => orderLink(r.orderNumber, r.orderId) },
     { key: 'date',        label: 'التاريخ', sort: 'date', cls: 'col-num', cell: r => formatDate(r.createdAt) },
     { key: 'customer',    label: 'العميل', sort: 'customer', cls: 'cell-wrap cell-name',
-      // 🔴 حارس التأكيد اليدوي (`rowNeedsManualAddressConfirm`) بيوقف الصف من غير
-      //    أي `problems` من السيرفر — من غير السطر ده الصف كان بيبان موقوف
-      //    والسبب فاضي، والموظف يروح يدوّر ليه.
+      // 🔴 الصف اللي محتاج تأكيد يدوي (`rowNeedsManualAddressConfirm`) بيوقف من
+      //    غير أي `problems` من السيرفر — بس السبب بقى مقروء من بادج «حالة
+      //    العنوان» نفسه («❓ أكتر من مطابقة — محتاج اختيار» ·
+      //    «🟠 المحافظة مشكوك فيها — محتاج مراجعة»)، فمفيش داعي لتكرار نفس
+      //    الجملة تحت اسم العميل (طلب أحمد v2.13.0).
       cell: r => {
         const reasons = rowUploadable(r) ? [] : (r.problems || []).slice();
-        if (rowNeedsManualAddressConfirm(r)) reasons.push('محتاج تأكيد يدوي على العنوان — افتح عمود المنطقة');
         return `${esc(r.customer || '—')}${reasons.length ? `<span class="problem-text">${esc(reasons.join(' · '))}</span>` : ''}`;
       } },
     { key: 'address',     label: 'العنوان كامل', sort: 'address', cls: 'cell-wrap cell-addr',
-      cell: r => `<span class="cell-clamp">${esc(fullAddressText(r) || '—')}</span>`,
-      attrs: r => `title="${esc(fullAddressText(r) || '—')}"` },
+      cell: r => esc(fullAddressText(r) || '—') },
     { key: 'province',    label: 'المحافظة (شوبيفاي)', sort: 'province', cell: r => esc(r.province || '—') },
     { key: 'cityName',    label: 'محافظة بوسطة', sort: 'cityName', cell: cityCell },
     { key: 'district',    label: 'المنطقة', cell: districtCell },
@@ -3621,7 +3647,7 @@ function bulkConfirmRows(source) {
 //    الإجمالي ممكن يبقى أكبر من مجموع المربعات من غير أي خطأ.
 function bulkAddrModeStats(rows) {
   const counts = new Map();
-  rows.forEach(r => { const m = rowAddrMode(r); counts.set(m, (counts.get(m) || 0) + 1); });
+  rows.forEach(r => { const m = rowAddrModeGroup(r); counts.set(m, (counts.get(m) || 0) + 1); });
   const out = [];
   ADDR_MODE_ITEMS.forEach(it => {
     if (counts.has(it.value)) { out.push({ label: it.label, count: counts.get(it.value) }); counts.delete(it.value); }
@@ -3631,7 +3657,7 @@ function bulkAddrModeStats(rows) {
 }
 
 const BULK_STAT_CLS = {
-  district: 'success', zoneName: 'success', zone: 'success',
+  district: 'success', zone: 'success',
   ambiguous: 'warn', cityDoubt: 'warn', cityFixed: 'warn', province: 'skip',
   coverageBlocked: 'error', blocked: 'error',
 };
@@ -3954,7 +3980,7 @@ function dpPickHTML(key) {
 function renderDpTitle(r) {
   const el = document.getElementById('dpTitle');
   if (!el) return;
-  const mode = rowAddrMode(r);
+  const mode = rowAddrModeGroup(r);
   const info = addrModeInfo(r);
   const cls  = mode === 'coverageBlocked' ? ' doubt'
              : info.set ? ' ok'
@@ -4017,9 +4043,17 @@ async function loadDpCity(cityId) {
   //    زون معروض في الخانة وقايمة بـ٤٤٧ منطقة تحته بيخلّي الموظف يفتكر إن
   //    الخانة مالهاش أثر. وده بيشيل الحاجة لأي بانر يقول «اضغط على الزون».
   //    ⚠️ في مدينة الصف فقط — المدينة المعدّلة يدويًا زونها حاجة تانية.
+  // 🔴 `zoneName` (محافظة اتلغت إداريًا — ٦ أكتوبر/حلوان) داخلة هنا كمان:
+  //    اسم الزون بتاعها مش في `r.zoneName` (فاضي دايمًا في الوضع ده) — هو
+  //    `r.districtName` نفسه (`row.zoneOnly.en` من الـ Worker). من غيرها
+  //    خانة «المدينة» بتفتح على «الكل» والموظف بيدوّر يدويًا على حاجة
+  //    الأداة عارفاها أصلًا وقت الرفع.
   if (r && r.mode === 'zone' && r.zoneName && cityId === r.cityId
       && !districtOverride[dpOrderId]?.districtId) {
     dpZoneFilter = r.zoneName;
+  } else if (r && r.mode === 'zoneName' && r.districtName && cityId === r.cityId
+      && !districtOverride[dpOrderId]?.districtId) {
+    dpZoneFilter = r.districtName;
   }
   renderDistrictList();
 }
@@ -4163,19 +4197,32 @@ function dpPickCurrent(key) {
                 + 'غيّر المنطقة لو عايزة مدينة تانية، أو اضغط هنا تقصّر القايمة على مدينة وتختار منها.' };
     }
 
-    const isSentDegree = r.mode === 'zone' && r.zoneName && dpCityId === r.cityId;
+    // 🔴 `zoneName` (محافظة اتلغت إداريًا — ٦ أكتوبر/حلوان) بتتبعت هنا كمان:
+    //    الاسم **هو نفسه اللي هيترفع** (`districtName` على العقد الموثّق)، مش
+    //    زون مشتق زي `mode: 'zone'` (`zoneId` على العقد الغير موثّق) — فالقيمة
+    //    والـ hint لازم يفرّقوا بين الاتنين حتى لو اللون والسلوك واحد.
+    const isZoneDeg     = r.mode === 'zone'     && r.zoneName    && dpCityId === r.cityId;
+    const isZoneNameDeg = r.mode === 'zoneName' && r.districtName && dpCityId === r.cityId;
+    const isSentDegree  = isZoneDeg || isZoneNameDeg;
+    const sentValue      = isZoneDeg ? r.zoneName : isZoneNameDeg ? r.districtName : null;
     if (dpZoneFilter) {
       return { text: cur?.label || dpZoneFilter,
                cls: isSentDegree ? 'set' : 'filter',
-               hint: isSentDegree
+               hint: isZoneDeg
                  ? `الشحنة هتترفع على مدينة ${dpZoneFilter} — والقايمة تحت مقصورة عليها`
+                 : isZoneNameDeg
+                 ? `محافظة اتلغت إداريًا — الشحنة هتترفع على مدينة ${dpZoneFilter} بالاسم `
+                   + '(districtName) جوّه محافظة بوسطة التابعة ليها، والقايمة تحت مقصورة عليها'
                  : `ترشيح عرض فقط — القايمة تحت مقصورة على مدينة ${dpZoneFilter}. `
                    + 'مابيتبعتش لبوسطة ومابيغيّرش المنطقة — اختر منطقة من القايمة.' };
     }
     if (isSentDegree) {
-      return { text: r.zoneName, cls: 'set',
-               hint: `مفيش مطابقة منطقة، فالشحنة هتترفع على مدينة ${r.zoneName} (zoneId) — `
-                   + 'هب وكود فرز محددين بدل الهب الافتراضي للمحافظة.' };
+      return { text: sentValue, cls: 'set',
+               hint: isZoneDeg
+                 ? `مفيش مطابقة منطقة، فالشحنة هتترفع على مدينة ${sentValue} (zoneId) — `
+                   + 'هب وكود فرز محددين بدل الهب الافتراضي للمحافظة.'
+                 : `محافظة اتلغت إداريًا — الشحنة هتترفع على مدينة ${sentValue} بالاسم `
+                   + '(districtName) جوّه محافظة بوسطة التابعة ليها.' };
     }
     return { text: 'الكل', cls: 'muted',
              hint: 'اختر مدينة عشان تقصّر قايمة المناطق تحت — المدينة ترشيح، مابتحددش منطقة' };
@@ -5032,7 +5079,7 @@ function currentFilteredRows() {
     if (msState.s1.selected.size       && !msState.s1.selected.has(r[job().statusField])) return false;
     if (msState.province.selected.size && !msState.province.selected.has(r.province || '—')) return false;
     if (msState.upState.selected.size  && !msState.upState.selected.has(rowUpState(r))) return false;
-    if (msState.addrMode.selected.size && !msState.addrMode.selected.has(rowAddrMode(r))) return false;
+    if (msState.addrMode.selected.size && !msState.addrMode.selected.has(rowAddrModeGroup(r))) return false;
     const d = cairoDateStr(r.createdAt);
     if (dateState.main.from && d < dateState.main.from) return false;
     if (dateState.main.to   && d > dateState.main.to)   return false;
@@ -5074,7 +5121,7 @@ async function exportOrdersXLSX() {
       province: r.province, cityName: effCity(r).cityName,
       cityAuto: effCity(r).changed ? r.cityName : '',
       district: ov?.districtName || r.districtName || '',
-      addrMode: ADDR_MODE_LABEL[rowAddrMode(r)] || rowAddrMode(r),
+      addrMode: ADDR_MODE_LABEL[rowAddrModeGroup(r)] || rowAddrModeGroup(r),
       address: fullAddressText(r),
       cod: r.cod, goodsValue: r.goodsValue, itemsCount: r.itemsCount,
       status: r[job().statusField] || '', upLabel: rowUpLabel(r), previousTracking: r.previousTracking || '',
