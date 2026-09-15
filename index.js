@@ -77,7 +77,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.1.3';
+const WORKER_VERSION = '2.2.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2185,7 +2185,7 @@ function buildDeliveryPayload(order, plan, mode) {
 
 // ─── §BOSTA::validateOrder ───
 // اللي بيمنع الرفع أصلاً — بيتعرض للموظف قبل ما يضغط، مش بعد الفشل.
-function validateOrder(order, plan) {
+function validateOrder(order, plan, override) {
   const problems = [];
   const sa = order.shippingAddress || {};
   if (!plan.ok) { problems.push(plan.error); return problems; }
@@ -2197,7 +2197,7 @@ function validateOrder(order, plan) {
   const cod = Math.max(0, Number(order.totalOutstandingSet?.presentmentMoney?.amount || 0));
   if (cod > COD_MAX) problems.push(`قيمة التحصيل ${cod.toLocaleString('en-US')} أعلى من الحد الموثّق ${COD_MAX.toLocaleString('en-US')}`);
   problems.push(...goodsProblems(Math.abs(Number(order.currentSubtotalPriceSet?.presentmentMoney?.amount || 0))));
-  problems.push(...coverageProblems(plan));
+  problems.push(...coverageProblems(plan, override));
   return problems;
 }
 
@@ -2223,8 +2223,19 @@ function goodsProblems(goods) {
 // 🔴 العنوان طابق منطقة **مقفولة للتسليم** = برّه تغطية بوسطة (8.11). الوقف هنا
 //    مش تشدّد: النزول لمسار المحافظة بيشتري شحنة بفلوس ترجع بعد أيام بـ
 //    *outside Bosta's delivery coverage area*. المسار الصح تحويل لخدمة العملاء.
-function coverageProblems(plan) {
+//
+// 🔴 **استثناء واحد بس: منطقة اختارها الموظف بإيده** (`override.districtId`).
+//    الوقف قايم على إن **المطابقة التلقائية** وصلت لمنطقة مقفولة؛ الموظف اللي
+//    فتح النافذة وحدد منطقة تانية بدّل نتيجة المطابقة دي بالكامل، والـ payload
+//    بيبعت `districtId` بتاعه هو. والمنطقة المختارة بتتحقق بعد كده من
+//    `availableDistricts` — اللي **مابترجّعش المقفولة أصلًا** — فمفيش طريق
+//    لمنطقة مقفولة تعدّي من هنا: اختيارها بيوقف الصف برسالة صريحة.
+//    ⚠️ **و`forceZone`/`forceProvince` مش استثناء**: دول بيغيّروا **درجة**
+//    العنوان مش العنوان نفسه، وبوسطة بتفضل بتوصّل على نص العنوان اللي طابق
+//    المنطقة المقفولة — يعني نفس الشحنة اللي بترجع، وده اللي الوقف موجود عشانه.
+function coverageProblems(plan, override) {
   if (!plan.ok || plan.mode !== 'coverageBlocked') return [];
+  if (override?.districtId) return [];
   const names = (plan.blockedDistricts || []).map(d => d.name || d.nameAr).filter(Boolean);
   return [`العنوان طابق منطقة بوسطة **مش بتسلّم فيها** (${names.join(' · ') || '—'}) — `
         + `العنوان خارج التغطية. الرفع على المحافظة مش بديل: الشحنة هتتشحن وترجع. `
@@ -2432,6 +2443,14 @@ function buildRow(order, catalog) {
     problems,
     // 🔴 بيتحسب من القايمة **الكاملة** — شيل الرسالة من العرض مايشيلش المنع
     uploadable:  all.length === 0,
+    // 🔴 الصف موقوف **بسبب التغطية وبس** — يعني اختيار منطقة يدويًا بيحرّره.
+    //    بيتحسب هنا مش في الواجهة عن قصد: الواجهة ماتعرفش أنهي رسالة من `all`
+    //    بتاعة التغطية وأنهي بتاعة التليفون أو قيمة البضاعة، وأي محاولة تخمّن
+    //    ده من `problems` معناها نسخة تانية من `validateOrder` عايشة في
+    //    الفرونت إند وبتفترق عنها بصمت.
+    //    ⚠️ ومعناها **مش** «الصف قابل للرفع»: القرار اليدوي هو اللي بيحرّره،
+    //    والحارس الحقيقي في `§BOSTA::coverageProblems` وقت الرفع نفسه.
+    coverageOnly: !problems.length && plan.ok && plan.mode === 'coverageBlocked',
   };
 }
 
@@ -2461,7 +2480,11 @@ async function uploadOne(env, token, order, catalog, override) {
   };
 
   const plan = resolveAddress(order, catalog);
-  const problems = validateOrder(order, plan);
+  // 🔴 الـ `override` بيتبعت للڤاليديشن **قبل** ما يتطبّق تحت، وده مقصود:
+  //    حارس التغطية الوحيد اللي بيتأثر بيه (`coverageProblems`) لازم يعرف إن
+  //    الموظف بدّل المنطقة، وإلا الصف بيترفض هنا ويرجع قبل ما الكود يوصل أصلًا
+  //    للسطور اللي بتقرا `override` — يعني اختيار يدوي سليم بيتبلع في صمت.
+  const problems = validateOrder(order, plan, override);
   if (problems.length) {
     row.status = 'error';
     row.error  = problems.join(' · ');
@@ -2867,7 +2890,7 @@ function buildRePayload(order, plan, mode, jobType, parts) {
 // ─── §RE-UPLOAD::validateReOrder ───
 // `worker-builder` ⑩① — كل فحص رخيص بيشتغل **قبل** النداء اللي مافيش رجوع منه.
 // إنشاء الشحنة بيكلّف فلوس حقيقية؛ رفض بعده بيسيب شحنة مدفوعة محدش طلبها.
-function validateReOrder(order, plan, parts, jobType) {
+function validateReOrder(order, plan, parts, jobType, override) {
   const problems = [];
   const sa = order.shippingAddress || {};
 
@@ -2889,7 +2912,7 @@ function validateReOrder(order, plan, parts, jobType) {
   //    البضاعة في R/E متحسبة من سعر القطع اللي بتسافر (مش subtotal الأوردر)،
   //    فقطعة راجعة بـ٨٠ جنيه بتدّي `amount: 80` وبوسطة بترفض بـ41591.
   problems.push(...goodsProblems(parts.goodsValue));
-  problems.push(...coverageProblems(plan));
+  problems.push(...coverageProblems(plan, override));
 
   // شحنة من غير طرد على أي من الناحيتين مش شحنة. ناحية الاستبدال متمنوعة فوق
   // (`EXCHANGE_WITHOUT_ITEMS`)؛ ده بيمسك ناحية الاسترجاع، اللي مفيش حاجة تانية بتفحصها.
@@ -2935,7 +2958,9 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   const plan  = resolveAddress(order, catalog);
   const parts = buildPayloadParts(order, job.jobType);
 
-  const problems = validateReOrder(order, plan, parts, job.jobType);
+  // 🔴 الـ `override` بيتبعت هنا للسبب اللي في `§UPLOAD::uploadOne` بالظبط:
+  //    حارس التغطية بيقف **قبل** السطور اللي بتقرا التعديل اليدوي تحت.
+  const problems = validateReOrder(order, plan, parts, job.jobType, override);
   if (problems.length) { row.error = problems.join(' · '); return row; }
 
   const ref = buildUniqueRef(order, job.jobType);
@@ -3227,6 +3252,10 @@ function buildReRow(order, catalog, job, cycleAnalysis) {
     problems,
     // 🔴 من القايمة **الكاملة** — شيل الرسالة من العرض مايشيلش المنع
     uploadable:  all.length === 0,
+    // 🔴 نفس `§UPLOAD::buildRow` بالحرف — موقوف بسبب التغطية وبس، يعني اختيار
+    //    منطقة يدويًا بيحرّره. ⚠️ وحارس الدورات **مش** بيتحرّر بالتعديل اليدوي:
+    //    صف `info.blocked` بيدخل في `problems` فبيطفّي العلم ده تلقائيًا.
+    coverageOnly: !problems.length && plan.ok && plan.mode === 'coverageBlocked',
   };
 }
 

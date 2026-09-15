@@ -20,7 +20,7 @@ const api = new Function(src + `
  return { normalizeCatalog, availableDistricts, ensureNormalized, resolveAddress,
           buildAddressObject, addressDegree, nextAddressDegree, goodsProblems,
           coverageProblems, validateOrder, buildDeliveryPayload, humanizeBostaError,
-          terminateDelivery, buildRow, resolveZoneOverride,
+          terminateDelivery, buildRow, resolveZoneOverride, uploadOne,
           GOODS_MIN, GOODS_MAX, COD_MAX, COD_REFUND_MIN };`)();
 
 let pass = 0, fail = 0;
@@ -256,6 +256,59 @@ console.log('\n⑥ب الصف الموقوف — الرسالة اتشالت و�
   ok('وموقوف برضه', rc.uploadable === false);
 }
 
+// ─── ⑥د المنطقة اللي الموظف اختارها بتحرّر الوقف ──────────────
+// 🔴 الوقف قايم على نتيجة **المطابقة التلقائية**. الموظف اللي فتح النافذة
+//    وحدد منطقة تانية بدّل النتيجة دي بالكامل — والـ payload بيبعت الـ
+//    `districtId` بتاعه. من غير الاستثناء ده الصف بيفضل ⛔ موقوف للأبد:
+//    البادج بيخضرّ («عنوان مظبوط») والرفع مايعدّيش، والموظف مالوش أي طريق
+//    يكمّل بيه غير إنه يسيب الأوردر.
+// ⚠️ والضابط أهم من الحالة نفسها: الدرجة الأقل (زون/محافظة) **مابتحرّرش**،
+//    لأنها بتغيّر درجة العنوان مش العنوان — الشحنة بتفضل رايحة نفس المكان.
+console.log('\n⑥د التعديل اليدوي — المنطقة بتحرّر الوقف، الدرجة الأقل لأ');
+{
+  const blocked = order({ city: 'طابا', province: 'South Sinai', provinceCode: 'JS' });
+  const plan = api.resolveAddress(blocked, CAT);
+  eq('نقطة البداية — الخطة موقوفة على التغطية', plan.mode, 'coverageBlocked');
+
+  eq('من غير تعديل: الوقف قايم', api.coverageProblems(plan).length, 1);
+  eq('منطقة مختارة يدويًا بتحرّر الوقف',
+     api.coverageProblems(plan, { districtId: 'd-dahab', cityId: 'nG_c44vHQht' }).length, 0);
+  // 🔴 الضابط — دول بيغيّروا الدرجة مش العنوان
+  eq('«ارفع على الزون بس» مابيحرّرش',
+     api.coverageProblems(plan, { forceZone: true, zoneId: 'z-dahab' }).length, 1);
+  eq('و«ارفع على المحافظة بس» مابيحرّرش',
+     api.coverageProblems(plan, { forceProvince: true }).length, 1);
+  eq('وتعديل المدينة لوحده من غير منطقة مابيحرّرش',
+     api.coverageProblems(plan, { cityId: '0064Qb0OgcA' }).length, 1);
+
+  // نفس القاعدة من فوق — `validateOrder` هي الباب اللي `uploadOne` بيعدّي منه
+  eq('validateOrder من غير تعديل بتوقف', api.validateOrder(blocked, plan).length, 1);
+  eq('ومع المنطقة المختارة بتعدّي',
+     api.validateOrder(blocked, plan, { districtId: 'd-dahab' }).length, 0);
+
+  // ⚠️ وسبب منع تاني **مابيتحرّرش** بالتعديل — التعديل بيخص التغطية وبس
+  const cheap = order({ city: 'طابا', province: 'South Sinai', provinceCode: 'JS' },
+                      { subtotal: 50 });
+  ok('وسبب منع تاني بيفضل واقف حتى مع المنطقة المختارة',
+     api.validateOrder(cheap, api.resolveAddress(cheap, CAT), { districtId: 'd-dahab' })
+        .some(p => /قيمة البضاعة/.test(p)));
+}
+{
+  // 🔴 العلم اللي الواجهة بتقرا منه. من غيره الواجهة بتضطر تخمّن من `problems`
+  //    أنهي رسالة بتاعة التغطية — يعني نسخة تانية من `validateOrder` في
+  //    الفرونت إند بتفترق عنها في صمت.
+  const r = api.buildRow(order({ city: 'طابا', province: 'South Sinai', provinceCode: 'JS' }), CAT);
+  ok('الصف الموقوف على التغطية وبس متعلّم coverageOnly', r.coverageOnly === true, r);
+  ok('والرفع لسه موقوف — العلم مش إذن رفع', r.uploadable === false);
+
+  const rc = api.buildRow(order({ city: 'طابا', province: 'South Sinai', provinceCode: 'JS' },
+                                { subtotal: 50 }), CAT);
+  ok('وصف عليه سبب منع تاني **مش** متعلّم', rc.coverageOnly === false, rc.problems);
+
+  const rok = api.buildRow(order({ city: 'دهب', province: 'South Sinai', provinceCode: 'JS' }), CAT);
+  ok('وصف سليم مش متعلّم', rok.coverageOnly === false);
+}
+
 // ─── ⑥ج حارس الزون المختار يدويًا ────────────────────────────
 // 🔴 «ارفع على الزون بس» (v2.1.2) بيدّي الموظف درجة وسطى يختارها بنفسه — بس
 //    الزون اللي بييجي من الواجهة **مايتصدّقش**: لازم يكون في **مدينة الرفع**
@@ -314,6 +367,73 @@ console.log('\n⑦ terminate — الإلغاء المكرر نجاح مش فش�
   globalThis.fetch = reply(500, { message: 'boom' });
   const boom = await api.terminateDelivery({ BOSTA_API_KEY: 'k' }, '226230854');
   ok('وأي فشل تاني بيفضل فشل', boom.ok === false, boom);
+
+  // ─── ⑧ الوصلة نفسها — `uploadOne` من الطلب لنداء بوسطة ─────
+  // 🔴 ⑥د بتجرّب `coverageProblems` و`validateOrder` كدوال. الجزء ده بيجرّب
+  //    **الترتيب جوّه `uploadOne`** — وهو اللي كان مكسور فعلًا: الڤاليديشن
+  //    بيتنده وبيرجع **قبل** السطور اللي بتقرا `override` أصلًا، فاختيار
+  //    الموظف كان بيتبلع في صمت مهما كانت الدالة سليمة.
+  // ⚠️ والعدّاد مقصود: الادعاء «مفيش ولا شحنة اتعملت» على الصف المرفوض لازم
+  //    يتقاس بعدد نداءات بوسطة الفعلية — لو غلط، الموظف يسيب شحنة مدفوعة وراه.
+  console.log('\n⑧ uploadOne — التعديل اليدوي بيوصل قبل حارس التغطية');
+  {
+    const env = { BOSTA_API_KEY: 'k', SHOP_DOMAIN: 'shop.myshopify.com' };
+    const blocked = order({ city: 'طابا', province: 'South Sinai', provinceCode: 'JS' });
+
+    // راوتر: بيعدّ نداءات بوسطة، وبيخلي كتابة شوبيفاي تنجح
+    const run = async (override) => {
+      const bosta = [];
+      globalThis.fetch = async (url, opts) => {
+        const u = String(url);
+        if (u.includes('/admin/api/')) {
+          const body = JSON.parse(opts.body);
+          const vars = body.variables || {};
+          if (/metafieldsSet/.test(body.query)) {
+            return { ok: true, status: 200, text: async () => JSON.stringify({ data: { metafieldsSet: {
+              metafields: (vars.metafields || []).map(m => ({
+                key: m.key, value: m.value, namespace: m.namespace, owner: { id: m.ownerId } })),
+              userErrors: [] } } }) };
+          }
+          if (/tagsAdd/.test(body.query)) {
+            return { ok: true, status: 200, text: async () => JSON.stringify({
+              data: { tagsAdd: { node: { id: vars.id }, userErrors: [] } } }) };
+          }
+          return { ok: true, status: 200, text: async () => JSON.stringify({ data: {} }) };
+        }
+        bosta.push({ url: u, body: JSON.parse(opts.body) });
+        return { ok: true, status: 201, text: async () => JSON.stringify({
+          success: true, data: { trackingNumber: '999', _id: 'x1' } }) };
+      };
+      const row = await api.uploadOne(env, 'tok', blocked, CAT, override);
+      return { row, bosta };
+    };
+
+    const chosen = await run({ districtId: 'd-dahab' });
+    ok('المنطقة المختارة بتعدّي لبوسطة فعلًا', chosen.bosta.length === 1, chosen.row);
+    ok('ومش error', chosen.row.status !== 'error', chosen.row.error);
+    eq('والـ payload بعت districtId بتاع الموظف',
+       chosen.bosta[0]?.body?.dropOffAddress?.districtId, 'd-dahab');
+    ok('وعلى العقد الموثّق (درجة المنطقة)', chosen.bosta[0]?.url.includes('apiVersion=1'));
+    eq('ودرجة العنوان المسجّلة district', chosen.row.addressDegree, 'district');
+
+    // 🔴 الضابط الأول — من غير تعديل الوقف قايم و**مفيش ولا نداء**
+    const none = await run(null);
+    eq('من غير تعديل: صفر نداء لبوسطة', none.bosta.length, 0);
+    ok('والرسالة بتقول خارج التغطية', /خارج التغطية/.test(none.row.error || ''), none.row.error);
+
+    // 🔴 الضابط التاني — منطقة **مقفولة** مالهاش طريق تعدّي حتى لو الموظف
+    //    اختارها: `availableDistricts` مابترجّعهاش، فالصف بيقف برسالة صريحة
+    //    من غير أي نداء. ده اللي بيمنع «التعديل اليدوي» يبقى باب خلفي.
+    const taba = await run({ districtId: 'd-taba' });
+    eq('منطقة مقفولة مختارة يدويًا: صفر نداء', taba.bosta.length, 0);
+    ok('وبتقف برسالة صريحة', /مش موجودة|مش متاحة للتسليم/.test(taba.row.error || ''), taba.row.error);
+
+    // 🔴 والضابط التالت — الدرجة الأقل مابتفتحش الطريق
+    const prov = await run({ forceProvince: true });
+    eq('«ارفع على المحافظة بس»: صفر نداء', prov.bosta.length, 0);
+    const zone = await run({ forceZone: true, zoneId: 'z-dahab' });
+    eq('و«ارفع على الزون بس»: صفر نداء', zone.bosta.length, 0);
+  }
 
   globalThis.fetch = realFetch;
 

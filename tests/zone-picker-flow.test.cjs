@@ -419,5 +419,38 @@ console.log('\n── ⑭ بانر التغطية اتشال والمنع فضل
       api.ADDR_MODE_LABEL?.coverageBlocked);
 }
 
+// ══════════════════════════════════════════════════════════════
+// ⑮ زرارين الدرجة الأقل بيترفضوا على صف خارج التغطية — **بصوت**
+//
+// 🔴 المنطقة بتحرّر الصف، والزون والمحافظة لأ (دول بيغيّروا درجة العنوان مش
+//    العنوان — الشحنة بتفضل رايحة نفس المكان اللي بوسطة مش بتسلّم فيه).
+//    بس تسجيل الاختيار وسيبان الصف موقوف بيدّي **بالظبط** نفس الحيرة اللي
+//    v2.10.0 اتعملت عشانها: توست أخضر «اتثبّت» · بادج أخضر · وصف ⛔ موقوف
+//    من غير أي سبب ظاهر. فالرفض لازم يبقى رفض معلن، والـ override مايتكتبش.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑮ الدرجة الأقل بترفض على صف خارج التغطية ──');
+{
+  const blockedRow = { ...row, mode: 'coverageBlocked', coverageOnly: true,
+                       blockedDistricts: [{ id: 'tb', name: 'Taba', nameAr: 'طابا' }] };
+  api.setup([blockedRow],cairo,cities,'B','c');
+  delete api.ov()['B'];
+
+  api.pinDistrictToProvince();
+  chk('«ارفع على المحافظة بس» مابيسجّلش تثبيت', !api.ov()['B'], JSON.stringify(api.ov()['B']));
+  api.pinDistrictToZone();
+  chk('و«ارفع على الزون بس» مابيسجّلش تثبيت', !api.ov()['B'], JSON.stringify(api.ov()['B']));
+
+  // ✅ والمسار الشغّال لسه مفتوح — المنطقة بتتسجّل عادي
+  api.chooseDistrict('c1', 'Nasr City');
+  chk('واختيار المنطقة لسه بيعدّي', api.ov()['B']?.districtId === 'c1', JSON.stringify(api.ov()['B']));
+  delete api.ov()['B'];
+
+  // ⚠️ الضابط — الزرارين لسه شغّالين على الصفوف العادية
+  api.setup([row],cairo,cities,'B','c');
+  api.pinDistrictToProvince();
+  chk('والصف العادي لسه بيتثبّت على المحافظة', api.ov()['B']?.forceProvince === true);
+  delete api.ov()['B'];
+}
+
 console.log(`\n${p}/${n} نجحت`);
 process.exit(p===n?0:1);
