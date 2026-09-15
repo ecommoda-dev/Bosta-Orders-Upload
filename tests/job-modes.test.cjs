@@ -182,5 +182,36 @@ console.log('\n⑤ حارس نسخة الـ Worker');
      api.MIN_WORKER_VERSION === wv, { page: api.MIN_WORKER_VERSION, worker: wv });
 }
 
+// ─── ⑥ بادج حالة الرفع — رقم التتبع مايختفيش ورا «موقوف» ────
+// 🔴 الرفع مابيحركش حالة الأوردر، فالصف بيرجع في القايمة بعد التحديث ومعاه
+//    رقم تتبع. لو كان **كمان** موقوف (عنوانه خارج التغطية مثلًا)، البادج كان
+//    بيقول «⛔ موقوف» بس — ورقم التتبع يختفي من الشاشة خالص. الموظف يقرا
+//    «ما اترفعش» على شحنة موجودة بفلوس، ويروح داشبورد بوسطة يتأكد بنفسه.
+console.log('\n⑥ بادج حالة الرفع — الشحنة الموجودة بتتقال');
+{
+  api.setJob('s1');
+  const up = (over) => api.upCell({ orderId:'X', uploadable:true, addressOk:true,
+    mode:'district', problems:[], alreadyUploaded:true, previousTracking:'8464592804', ...over });
+
+  const plain = up({});
+  ok('الصف المرفوع السليم: «مرفوع» + رقم التتبع',
+     /🔁 مرفوع/.test(plain) && plain.includes('8464592804'), plain);
+  ok('ومفيهوش علامة وقف', !plain.includes('⛔'), plain);
+
+  // 🔴 الحالة اللي كانت مكسورة — مرفوع **و**موقوف
+  const both = up({ uploadable:false, coverageOnly:true, mode:'coverageBlocked' });
+  ok('المرفوع الموقوف: رقم التتبع لسه باين', both.includes('8464592804'), both);
+  ok('و«مرفوع» لسه هي البادج', /🔁 مرفوع/.test(both), both);
+  ok('والوقف متقال جنبه (⛔)', both.includes('⛔'), both);
+  ok('والتلميح بيقول إن الشحنة موجودة فعلًا',
+     /موجودة عند بوسطة فعلًا/.test(both), both);
+
+  // ⚠️ والضابط: الموقوف اللي **ما اترفعش** لسه «⛔ موقوف» زي ما هو
+  const blocked = api.upCell({ orderId:'Y', uploadable:false, addressOk:true,
+    mode:'coverageBlocked', problems:[], alreadyUploaded:false });
+  ok('والموقوف غير المرفوع لسه «⛔ موقوف»',
+     /⛔ موقوف/.test(blocked) && !/مرفوع/.test(blocked), blocked);
+}
+
 console.log(`\n${'═'.repeat(50)}\nنجح ${pass} · فشل ${fail}\n`);
 process.exit(fail ? 1 : 0);

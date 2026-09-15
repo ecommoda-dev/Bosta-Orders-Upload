@@ -99,5 +99,28 @@ api.ov['D'] = { cityId:'c', cityName:'Cairo', districtId:'d9', districtName:'X' 
 chk('D (تليفون ناقص) بيفضل موقوف', api.rowUploadable(rows[3]),    false);
 delete api.ov['D']; delete api.ov['E'];
 
+// ─── الصف المرفوع فعلًا — «مرفوع» أسبق من «موقوف» ─────────────
+// 🔴 الرفع **مابيحركش حالة الأوردر**، فالصف بيرجع في القايمة بعد التحديث
+//    (ده مقصود). و`districtOverride` بيتمسح مع كل تحميل، فالصف اللي كان خارج
+//    التغطية بيرجع موقوف — وساعتها كان بيقرا «⛔ موقوف» **ورقم التتبع يختفي**،
+//    يعني الصف يبان «لسه ما اترفعش» وهو مرفوع فعلًا بشحنة بفلوس. وبادج
+//    «🔁 مرفوع» هو الحارس المرئي الوحيد ضد إعادة الرفع.
+console.log('\n— الصف المرفوع قبل كده —');
+const upBlocked = { ...cov, orderId:'F', alreadyUploaded:true, previousTracking:'8464592804' };
+api.setRows([...rows, upBlocked]);
+
+chk('مرفوع وموقوف: البادج بيقول «مرفوع»', api.rowUpState(upBlocked),  'uploaded');
+chk('والتسمية «مرفوع قبل كده»',          api.rowUpLabel(upBlocked),  'مرفوع قبل كده');
+// 🔴 والمنع **ما ضعفش** — عايش في rowUploadable مش في البادج
+chk('والرفع لسه موقوف',                  api.rowUploadable(upBlocked), false);
+chk('ومستبعد من «تحديد الكل»',            api.isAutoSelectable(upBlocked), false);
+
+// ⚠️ والضابط: صف مرفوع ومفيهوش أي مانع لسه بيقرا «مرفوع» زي ما هو
+const upOk = { ...rows[0], orderId:'G', alreadyUploaded:true, previousTracking:'111' };
+api.setRows([...rows, upBlocked, upOk]);
+chk('وصف مرفوع سليم زي ما هو',           api.rowUpState(upOk),        'uploaded');
+chk('وصف موقوف مش مرفوع لسه «موقوف»',     api.rowUpState(rows[3]),     'blocked');
+chk('وصف سليم مش مرفوع «جاهز»',           api.rowUpState(rows[0]),     'ready');
+
 console.log(`\n${p}/${n} نجحت`);
 process.exit(p === n ? 0 : 1);
