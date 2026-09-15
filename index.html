@@ -889,6 +889,21 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">15-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>«رفع المحدد» بقى بيسأل تأكيد زي «رفع الكل» بالظبط.</b> الزرارين بيعملوا <b>نفس الحاجة</b> — شحنات بفلوس حقيقية على بوسطة — والفرق بينهم مصدر الصفوف مش خطورة العملية. وقفة تأكيد على واحد من غير التاني كانت بتعلّم الموظف إن الرفع من «المحدد» مالوش مرحلة مراجعة. دلوقتي <b>نفس النافذة</b> للاتنين.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>نافذة التأكيد بقت مربعات «حالة العنوان» بدل جملة.</b> الجملة كانت بتقول العدد الإجمالي بس، والرقم اللي بيفرق قبل الضغط هو <b>هيترفع كام أوردر بعنوان مظبوط وكام على المحافظة فقط</b> — الدرجة الأقل دقة بتاخد <b>هب افتراضي</b> وبتدخل مسار العناوين غير الواضحة عند بوسطة. المربعات مصدرها <b>نفس قايمة الفلتر والعمود</b> (<code>ADDR_MODE_ITEMS</code>)، والإجمالي جوّه نفس الرسمة فمستحيل يبقى أكبر من مجموعها. ⚠️ و<b>نوع الشحنة اتنقل لترويسة النافذة</b> (<code>⬆ تأكيد الرفع — استرجاع (type 25)</code>) — الأداة تلات أوضاع، ومن غيره الموظف ممكن يأكّد «استرجاع» وهو فاكر إنه «شحن».</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>أزرار نافذة التأكيد: <b>«تأكيد الرفع»</b> بدل «أيوه، ارفعهم»، و<b>«إلغاء» بقى أحمر</b>.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>تأكيد متأخر بعد الإلغاء كان هيرفع.</b> <code>confirmBulkUpload</code> بقى بيتأكد إن فيه مصدر صفوف مفتوح فعلًا — من غير الحارس ده أي نداء والنافذة مقفولة كان بيرفع التحديد الحالي <b>من غير أي وقفة</b>.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>تسميات «حالة العنوان» بقت أوضح: <b>🗺️ المدينة فقط</b> (كانت «بالمدينة») · <b>🏙️ المحافظة فقط</b> (كانت «بالمحافظة بس») · <b>⛔ محافظة خارج الجدول</b> (كانت «محافظة مش في الجدول»). الاسم بيتغيّر في <b>الفلتر والعمود وعنوان نافذة اختيار المنطقة</b> مع بعض — مصدر واحد.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>التثبيت على المحافظة بقى أخضر زي التثبيت على المدينة.</b> الاتنين قرار يدوي صريح من الموظف، وكان التثبيت على المحافظة بيبان <b>رمادي زي الصف اللي محدش لمسه</b> — فالموظف مش عارف إن الزرار اشتغل أصلًا. ⚠️ العلامة دي <b>مالهاش علاقة بإيه اللي بيتبعت</b>: التثبيت على المحافظة لسه مابيبعتش لا <code>districtId</code> ولا <code>zoneId</code>.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.8.0</span>
           <span class="cl-ver-date">14-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -1145,7 +1160,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li>سياق نافذة المنطقة <strong>جدول واحد بأعمدة متطابقة</strong>: فوق <strong>العنوان بالكامل</strong> (أخضر) — هو المصدر الوحيد اللي المطابقة بتقرا منه — وتحته صف <strong>🛍️ شوبيفاي</strong> (المحافظة · المدينة) وصف <strong>🚚 بوسطة</strong> (المدينة · المنطقة) من غير أي فاصل بينهم، فالخانة الزرقا بتقع فوق الخانة الحمرا بالظبط. خانات شوبيفاي بتفضل <strong>منفصلة</strong>: الترجيح بيفرّق بين خانة <code>city</code> وخانة <code>address1</code>، فدمجهم في العرض بيخفي الخانة اللي المطابقة اتبنت عليها. و<strong>حالة العنوان</strong> بقت في <strong>عنوان النافذة</strong> نفسه (<code>📍 اختر المنطقة — #12345 — حالة العنوان: …</code>) والشرح الكامل على الـ hover عليها.</li>
             <li><strong>منتقي المحافظة جوّه صف بوسطة نفسه</strong> — نفس الخانة اللي بتعرض المحافظة هي اللي بتغيّرها، مش صف تاني تحت. لو غيّرتها، الرفع بيتبعت عليها هي — وعمود «محافظة بوسطة» في الجدول بيوريها بعلامة ✎. اقتراحات المحافظات التانية بتتحط فوق القايمة، والضغط عليها بيغيّر المحافظة والمنطقة مع بعض.</li>
             <li>أي صف ينفع يتفتح بزرار <em>اختر المنطقة</em> — والنافذة فيها <strong>↺ رجّع للمطابقة التلقائية</strong> (بتشيل التدخّل اليدوي) و<strong>🏙️ ارفع على المحافظة بس</strong> (بتثبّت الصف على المحافظة حتى لو المطابقة نجحت وقت الرفع). الاختيار كله اختياري، والرفع شغّال من غيره.</li>
-            <li>الموظف يحدد الأوردرات ويضغط <strong>رفع المحدد</strong>، أو يضغط <strong>⬆ رفع الكل</strong> اللي بيحدد <strong>كل المعروض حسب الفلتر الحالي</strong> (والعدد مكتوب جوّه الزرار) ويسأل تأكيد قبل ما يرفع. صفوف 🟠 <strong>المحافظة مشكوك فيها مستثناة من الاتنين</strong> — تتحدد بالإيد بعد المراجعة. والأوردر المرفوع قبل كده بيطلب تأكيد صريح.</li>
+            <li>الموظف يحدد الأوردرات ويضغط <strong>رفع المحدد</strong>، أو يضغط <strong>⬆ رفع الكل</strong> اللي بيحدد <strong>كل المعروض حسب الفلتر الحالي</strong> (والعدد مكتوب جوّه الزرار). <strong>الزرارين بيوقفوا على نفس نافذة التأكيد</strong> — فيها مربعات بتقول هيترفع كام أوردر من كل <strong>حالة عنوان</strong>، ونوع الشحنة في ترويسة النافذة. صفوف 🟠 <strong>المحافظة مشكوك فيها مستثناة من «رفع الكل»</strong> — تتحدد بالإيد بعد المراجعة. والأوردر المرفوع قبل كده بيطلب تأكيد صريح تاني.</li>
             <li>الرفع بيحصل على دفعات، وكل صف بيجيب نتيجته الخاصة ومعاه رقم تتبعه.</li>
             <li>بعد كل نجاح: اللي في عمود «بيكتب إيه» في جدول الأوضاع فوق — بيختلف بالوضع.</li>
             <li>بعد ما الرفع يخلص بتيجي <strong>نافذة نتيجة الرفع</strong> — مستنية ضغطة، مش توست بيختفي لوحده. في النجاح الكامل بتقول العدد بس، و<strong>في أي حالة تانية بتفتح التفاصيل لوحدها</strong> (صف بصف: رقم التتبع · العقد · المدينة والمنطقة المبعوتة · ما تم فعليًا · السبب). وزرار <strong>▾ عرض التفاصيل</strong> بيفتحها بالإيد حتى لما يكون كله نجاح.</li>
@@ -1301,19 +1316,27 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
   </div>
 </div>
 
-<!-- رفع الكل — تأكيد صريح -->
+<!-- الرفع — تأكيد صريح. **نفس النافذة** لـ«رفع الكل» و«رفع المحدد» (واجهة v2.9.0):
+     الضغطتين بيعملوا **نفس الحاجة بالظبط** — شحنات بفلوس حقيقية على بوسطة —
+     والفرق الوحيد بينهم هو مصدر الصفوف. وقفة تأكيد على واحدة من غير التانية
+     معناها إن الموظف يتعوّد إن الرفع بيتنفّذ من غير مراجعة.
+     🔴 نوع الشحنة في **ترويسة النافذة** — الجسم بقى مربعات أرقام بس، والأداة
+     تلات أوضاع، فمن غيره الموظف ممكن يأكّد «استرجاع» وهو فاكر إنه «شحن». -->
 <div class="eco-overlay" id="bulkAllOverlay" onclick="if(event.target===this)closeBulkAllConfirm()">
-  <div class="eco-modal" style="max-width:560px;">
+  <div class="eco-modal" style="max-width:620px;">
     <div class="eco-modal-hdr">
-      <span>⬆ رفع كل المعروض</span>
+      <span id="bulkAllTitle">⬆ تأكيد الرفع</span>
       <button class="modal-close-x" onclick="closeBulkAllConfirm()">✕</button>
     </div>
     <div class="eco-modal-body">
-      <div class="dp-state" id="bulkAllMsg"></div>
+      <!-- 🔴 مربعات «حالة العنوان» — مصدرها `ADDR_MODE_ITEMS` نفسها بتاعة الفلتر
+           والعمود، فالاسم واحد في التلات شاشات. الإجمالي جوّه نفس القايمة عشان
+           يستحيل يبقى أكبر من مجموع المربعات. -->
+      <div class="res-stats" id="bulkAllStats"></div>
     </div>
     <div class="eco-modal-ftr">
-      <button class="btn-ghost" onclick="closeBulkAllConfirm()">إلغاء</button>
-      <button class="btn-modal-save" onclick="confirmUploadAllVisible()">أيوه، ارفعهم</button>
+      <button class="btn-modal-save" id="bulkAllOkBtn" onclick="confirmBulkUpload()">تأكيد الرفع</button>
+      <button class="btn-red" onclick="closeBulkAllConfirm()">إلغاء</button>
     </div>
   </div>
 </div>
@@ -1698,7 +1721,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <button class="big-btn all" id="bulkAllBtn" onclick="event.stopPropagation(); askUploadAllVisible();"
                   title="بيحدد كل الصفوف المعروضة حسب الفلتر الحالي ويرفعها — صفوف 🟠 المحافظة مشكوك فيها مستثناة">
             <span>⬆ رفع الكل</span><span class="cnt" id="bulkAllCnt">0</span></button>
-          <button class="big-btn sel" id="bulkBtn" disabled onclick="event.stopPropagation(); startUpload();">
+          <button class="big-btn sel" id="bulkBtn" disabled onclick="event.stopPropagation(); askUploadSelected();">
             <span id="bulkSelLbl">⬆ رفع المحدد</span><span class="cnt" id="bulkSelCnt">0</span></button>
           <button class="big-btn clear" id="clearSelBtn" disabled onclick="event.stopPropagation(); clearSelection();">إلغاء التحديد</button>
         </div>
@@ -1912,7 +1935,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.8.0';   // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.9.0';   // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2649,8 +2672,8 @@ const ADDR_MODE_ITEMS = [
   // 🔴 درجة وسيطة حقيقية بين المنطقة والمحافظة (واجهة v2.4.0) — مش تسمية
   //    تجميلية. الـ`zoneId` بيغيّر **الهب وكود الفرز** على البوليصة،
   //    و«المحافظة بس» بتاخد هب افتراضي. لازم الموظف يفرّق بين الاتنين.
-  { value: 'zone',     label: '🗺️ بالمدينة' },
-  { value: 'province', label: '🏙️ بالمحافظة بس' },
+  { value: 'zone',     label: '🗺️ المدينة فقط' },
+  { value: 'province', label: '🏙️ المحافظة فقط' },
   { value: 'ambiguous',label: '❓ أكتر من مطابقة — محتاج اختيار' },
   // ⚠️ الشك هنا على **`cityId`** — يعني «المحافظة» في العرض، مش «المدينة».
   { value: 'cityDoubt',label: '🟠 المحافظة مشكوك فيها — محتاج مراجعة' },
@@ -2658,7 +2681,7 @@ const ADDR_MODE_ITEMS = [
   // 🔴 دي **مش** نقص مطابقة — دي عنوان بوسطة مش بتسلّم فيه أصلًا. لازم تبقى
   //    حالة مستقلة في الفلتر عشان الأوبريشن يقدر يطلّعهم كلهم ويحوّلهم.
   { value: 'coverageBlocked', label: '🚫 خارج التغطية' },
-  { value: 'blocked',  label: '⛔ محافظة مش في الجدول' },
+  { value: 'blocked',  label: '⛔ محافظة خارج الجدول' },
 ];
 // مصدر واحد لتسمية «حالة العنوان»: الفلتر والعمود وعنوان نافذة اختيار
 // المنطقة بيقروا منه التلاتة — اسم واحد للمفهوم في كل الشاشات
@@ -3146,7 +3169,13 @@ function addrModeInfo(r) {
   if (ov?.forceZone) return { label: `🗺️ ${ov.zoneName} · مثبّت`, set: true,
     hint: `متثبّت يدويًا على مدينة ${ov.zoneName} — الشحنة هتترفع بالـ zoneId ده، `
         + 'يعني هب وكود فرز محددين بدل الهب الافتراضي للمحافظة. مش هتتبعت منطقة.' };
-  if (ov?.forceProvince) return { label: `🏙️ ${ov.cityName || r.cityName} بس · مثبّت`, set: false,
+  // 🔴 `set:false` لأن **مفيش مفتاح عنوان بيتبعت** — لا `districtId` ولا `zoneId`.
+  //    لكن `pinned:true`: الصف ده قرار يدوي صريح من الموظف زيه زي التثبيت على
+  //    المدينة، فبياخد **نفس** العلامة الخضرا في عمود المنطقة. من غيرها
+  //    التثبيت على المحافظة كان بيبان رمادي زي الصف اللي محدش لمسه، والموظف
+  //    مش عارف إن الزرار اشتغل أصلًا. الخانتين بيقروا `set` لحاجة تانية
+  //    (إيه اللي بيتبعت لبوسطة)، فالعلامة دي علم منفصل مش تغيير في `set`.
+  if (ov?.forceProvince) return { label: `🏙️ ${ov.cityName || r.cityName} بس · مثبّت`, set: false, pinned: true,
     hint: 'متثبّت يدويًا على مستوى المحافظة — مش هتتبعت منطقة حتى لو المطابقة نجحت وقت الرفع' };
   if (ov?.cityId) return { label: `🏙️ ${ov.cityName} · مدينة معدّلة`, set: false,
     hint: `المحافظة اتغيّرت يدويًا لـ ${ov.cityName} ولسه من غير منطقة — الشحنة هتترفع على المحافظة دي وتدخل مسار العناوين غير الواضحة` };
@@ -3201,8 +3230,11 @@ function districtCell(r) {
   if (!r.addressOk) return `<span class="badge badge-danger">محافظة مش معروفة</span>`;
   const info = addrModeInfo(r);
   const mode = rowAddrMode(r);
+  // `info.pinned` = تثبيت يدوي على المحافظة — بياخد نفس الأخضر بتاع التثبيت
+  // على المدينة. الاتنين قرار الموظف، والتفرقة بينهم بصريًا كانت بتخلي واحد
+  // منهم يبان كأنه ما اتعملش.
   const cls = mode === 'coverageBlocked' ? ' doubt'
-            : info.set ? ' set'
+            : (info.set || info.pinned) ? ' set'
             : ((mode === 'cityDoubt' || mode === 'cityFixed') ? ' doubt' : '');
   return `<button class="mini-btn${cls}" title="${esc(info.hint)}"
                   onclick="openDistrictPicker('${jsq(r.orderId)}')">${esc(info.label)}</button>`;
@@ -3404,32 +3436,92 @@ function updateSelectionUI() {
 }
 function clearSelection() { selected.clear(); applyFilters(); }
 
-// ⬆ رفع الكل = كل الصفوف المعروضة حسب الفلتر الحالي.
-// 🟠 صفوف «المدينة مشكوك فيها» مستثناة هنا بالظبط زي «تحديد الكل» — المدينة
-//    الغلط بتودّي الشحنة فرع وتسعيرة غلط، ودي مش حاجة تعدّي مع دفعة.
-// 🔴 وقفة تأكيد قبلها: دي شحنات بفلوس حقيقية، والضغطة الواحدة من غير تحديد
-//    مسبق معناها إن مفيش مرحلة مراجعة بين النية والتنفيذ.
-function askUploadAllVisible() {
+// ─── §TOOL-JS::uploadConfirm ───
+// 🔴 **نافذة تأكيد واحدة للزرارين** (واجهة v2.9.0). «رفع الكل» و«رفع المحدد»
+//    بيعملوا نفس الحاجة بالظبط — شحنات بفلوس حقيقية — والفرق بينهم مصدر
+//    الصفوف مش خطورة العملية. وقفة على واحد من غير التاني كانت بتعلّم الموظف
+//    إن الرفع من زرار «المحدد» ما بيحتاجش مراجعة.
+// 🔴 والجسم مربعات **حالة العنوان** — الرقم اللي بيفرق قبل الضغط هو «هيترفع كام
+//    أوردر بعنوان مظبوط وكام على المحافظة فقط»، مش إجمالي مجرد: الدرجة الأقل
+//    دقة بتودّي الشحنة هب افتراضي وبتدخل مسار العناوين غير الواضحة.
+let bulkConfirmSource = null;   // 'all' | 'sel'
+
+// الصفوف اللي **هتترفع فعلًا** من كل مصدر — نفس الفلترة اللي المسار نفسه بيعملها
+// بعدها بالظبط، عشان المربعات ماتقولش رقم غير اللي هيتنفّذ.
+function bulkConfirmRows(source) {
+  return source === 'all'
+    ? visibleRows.filter(isAutoSelectable)
+    : allRows.filter(r => selected.has(r.orderId) && r.uploadable);
+}
+
+// 🔴 العدّ بيتبني من الصفوف الأول وبعدين بيتعرض بترتيب `ADDR_MODE_ITEMS` —
+//    وأي حالة مش في القايمة بتتعرض بمفتاحها الخام في الآخر. من غير الذيل ده
+//    الإجمالي ممكن يبقى أكبر من مجموع المربعات من غير أي خطأ.
+function bulkAddrModeStats(rows) {
+  const counts = new Map();
+  rows.forEach(r => { const m = rowAddrMode(r); counts.set(m, (counts.get(m) || 0) + 1); });
+  const out = [];
+  ADDR_MODE_ITEMS.forEach(it => {
+    if (counts.has(it.value)) { out.push({ label: it.label, count: counts.get(it.value) }); counts.delete(it.value); }
+  });
+  counts.forEach((count, m) => out.push({ label: m, count }));
+  return out;
+}
+
+const BULK_STAT_CLS = {
+  district: 'success', zoneName: 'success', zone: 'success',
+  ambiguous: 'warn', cityDoubt: 'warn', cityFixed: 'warn', province: 'skip',
+  coverageBlocked: 'error', blocked: 'error',
+};
+function renderBulkConfirmStats(rows) {
+  const el = document.getElementById('bulkAllStats');
+  if (!el) return;
+  const byLabel = Object.fromEntries(ADDR_MODE_ITEMS.map(it => [it.label, BULK_STAT_CLS[it.value] || '']));
+  el.innerHTML =
+    `<div class="res-stat total on"><span class="res-stat-num">${fmtNum(rows.length)}</span>` +
+    `<span class="res-stat-lbl">الإجمالي</span></div>` +
+    bulkAddrModeStats(rows).map(st =>
+      `<div class="res-stat ${byLabel[st.label] || ''} on">` +
+      `<span class="res-stat-num">${fmtNum(st.count)}</span>` +
+      `<span class="res-stat-lbl">${esc(st.label)}</span></div>`).join('');
+}
+
+// 🟠 صفوف «المحافظة مشكوك فيها» مستثناة من «رفع الكل» بالظبط زي «تحديد الكل» —
+//    المدينة الغلط بتودّي الشحنة فرع وتسعيرة غلط، ودي مش حاجة تعدّي مع دفعة.
+function askUploadAllVisible() { openBulkConfirm('all'); }
+function askUploadSelected()   { openBulkConfirm('sel'); }
+
+function openBulkConfirm(source) {
   if (uploadRunning) return;
-  const rows = visibleRows.filter(isAutoSelectable);
-  if (!rows.length) { showToast('لا توجد صفوف صالحة للرفع', 'warning'); return; }
-  const doubt = visibleRows.filter(rowNeedsCityDecision).length;
-  const dups  = rows.filter(r => r.alreadyUploaded).length;
-  document.getElementById('bulkAllMsg').className = 'dp-state' + (doubt || dups ? ' doubt' : '');
-  document.getElementById('bulkAllMsg').innerHTML =
-    `هيترفع <b>${fmtNum(rows.length)}</b> أوردر — كل المعروض حسب الفلتر الحالي. ` +
-    // 🔴 نوع الشحنة مكتوب في نص التأكيد نفسه. الأداة بقت تلات أوضاع، والموظف
-    //    لازم يشوف إنه بيعمل «استرجاع» مش «شحن» في اللحظة دي بالذات.
-    `دي <b>شحنات ${esc(job().label)} حقيقية على بوسطة (type ${job().bostaType})</b>.` +
-    (doubt ? `<br>🟠 <b>${fmtNum(doubt)}</b> صف «المحافظة مشكوك فيها» <b>مستثنى</b> — راجعه وحدده بإيدك.` : '') +
-    (dups  ? `<br>🔁 <b>${fmtNum(dups)}</b> أوردر مرفوع قبل كده — هيتسألك عليه تأكيد تاني.` : '');
+  if (source === 'sel' && !selected.size) { showToast('محدّدش أي أوردر', 'warning'); return; }
+  const rows = bulkConfirmRows(source);
+  if (!rows.length) {
+    showToast(source === 'all' ? 'لا توجد صفوف صالحة للرفع' : 'مفيش أوردر صالح للرفع في التحديد',
+              source === 'all' ? 'warning' : 'error', 6000);
+    return;
+  }
+  bulkConfirmSource = source;
+  // 🔴 نوع الشحنة في الترويسة — الجسم أرقام بس، والأداة تلات أوضاع.
+  document.getElementById('bulkAllTitle').textContent =
+    `⬆ تأكيد الرفع — ${job().label} (type ${job().bostaType})`;
+  renderBulkConfirmStats(rows);
   document.getElementById('bulkAllOverlay').classList.add('open');
 }
-function closeBulkAllConfirm() { document.getElementById('bulkAllOverlay').classList.remove('open'); }
-function confirmUploadAllVisible() {
+function closeBulkAllConfirm() {
+  bulkConfirmSource = null;
+  document.getElementById('bulkAllOverlay').classList.remove('open');
+}
+function confirmBulkUpload() {
+  const source = bulkConfirmSource;
+  // 🔴 من غير الحارس ده أي نداء والنافذة مقفولة (ضغطة اتأخرت · مسار جديد
+  //    بيقفل النافذة) بيرفع التحديد الحالي **من غير أي وقفة تأكيد** — شحنات
+  //    بفلوس حقيقية من ضغطة الموظف ألغاها.
+  if (!source) return;
   closeBulkAllConfirm();
-  visibleRows.filter(isAutoSelectable).forEach(r => selected.add(r.orderId));
-  applyFilters();
+  if (source === 'all') {
+    visibleRows.filter(isAutoSelectable).forEach(r => selected.add(r.orderId));
+    applyFilters();
+  }
   startUpload();
 }
 
