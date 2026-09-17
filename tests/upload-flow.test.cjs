@@ -109,8 +109,11 @@ function run2() {
   api.ensureNormalized(catalog);
   api.uploadOneRE(env, TOKEN, order(), catalog, JOB, null).then((row) => {
     ok('نداءين: الموثّق ثم غير الموثّق', calls.length === 2 && calls[0].url.includes('apiVersion=1') && !calls[1].url.includes('apiVersion=1'));
-    ok('النتيجة warning مش error — الشحنة اتعملت', row.status === 'warning', row.status);
-    ok('والسبب مكتوب للموظف', (row.warnings[0] || '').includes('المحافظة'));
+    // 🔴 v2.7.0: النزول درجة **ملحوظة مش تحذير** — الشحنة اتعملت كاملة ومفيش
+    //    حاجة ناقصة ولا تدخّل مطلوب، فالصف أخضر والملحوظة جنبه.
+    ok('النتيجة success — الشحنة اتعملت وكل حاجة تمّت', row.status === 'success', row.status);
+    ok('ومفيش تحذير نقص', row.warnings.length === 0, row.warnings);
+    ok('والسبب مكتوب للموظف كملحوظة', (row.advisories[0] || '').includes('المحافظة'), row.advisories);
     ok('النداء التاني بعت المدينة بالاسم بس', calls[1].body.pickupAddress.districtId === undefined);
     // 🔴 المقارنة بالرقم 3003 بدل النص كانت هتخلي الرجوع ده ما يحصلش خالص
     ok('errorCode اتقارن كنص', row.trackingNumber === '999');
@@ -168,7 +171,9 @@ function run6() {
     ok('المدينة اللي اتبعتت هي المعدّلة', calls[0].body.pickupAddress.city === 'El Kalioubia', calls[0].body.pickupAddress.city);
     ok('واتسجّل إن الموظف غيّرها (قياس city_overridden)', row.cityOverridden === true);
     ok('والمدينة التلقائية اتسجّلت جنبها للمقارنة', row.cityAuto === 'Cairo');
-    ok('warning مش success — التغيير اليدوي لازم يبان', row.status === 'warning');
+    // 🔴 v2.7.0: توثيق لفعل الموظف نفسه — بيبان كملحوظة، مش بيصفّر الصف.
+    ok('success — التغيير اليدوي مش نقص في العملية', row.status === 'success', row.status);
+    ok('وبيبان في الملحوظات', (row.advisories.join(' ')).includes('اتغيّرت يدويًا'), row.advisories);
     ok('واتحوّل لمسار المحافظة (المنطقة القديمة مش تابعة للمدينة الجديدة)', calls[0].body.pickupAddress.districtId === undefined);
     return run7();
   });
@@ -279,6 +284,54 @@ function run10() {
     ok('التحذير بيسمّي السبب', (row.warnings.join(' ')).includes('number_integer'), row.warnings);
     ok('والتاج اتحط برضه — الصف مش هيبان «مش مرفوع» تاني',
        (gql.find((c) => /tagsAdd/.test(c.q))?.vars.tags || []).includes('Bosta_Uploaded_S2'));
+    return run11();
+  });
+}
+
+// ─── ⑪ قص المبلغ عند حد بوسطة — ملحوظة مش تحذير (v2.7.0) ─────
+// 🔴 الحالة اللي التعديل ده اتعمل عشانها بالظبط (`#54618`): الشحنة اتعملت،
+//    رقم التتبع اتكتب، الحالة اتحدّثت، التاج اتحط — **كل حاجة تمّت** — والصف
+//    كان بياخد «⚠ تم جزئيًا» لمجرد إن مستحق العميل 2,700 اتقص عند حد بوسطة
+//    2,000. الأصفر في الأداة دي معناه «شحنة بفلوس وحاجة ناقصة — متعيدش
+//    الرفع»، فالأصفر الكذّاب بيعلّم الموظف يعدّي على الأصفر الحقيقي.
+function run11() {
+  console.log('\n⑪ القص عند حد بوسطة — الصف أخضر والملحوظة باقية');
+  const calls = [];
+  const api = load(router(async (url, opts) => {
+    calls.push(JSON.parse(opts.body));
+    return reply(201, { success: true, data: { trackingNumber: '1513632634', _id: 'c1' } });
+  }));
+  api.ensureNormalized(catalog);
+  const clipped = order({ totalOutstandingSet: { shopMoney: { amount: '-2700' } },
+    currentCycle: { name: '#54618-R1', returnLineItems: order().currentCycle.returnLineItems } });
+  return api.uploadOneRE(env, TOKEN, clipped, catalog, JOB, null).then((row) => {
+    ok('المبلغ اتقص عند -2000 (حد بوسطة 3008)', calls[0].cod === -2000, calls[0].cod);
+    ok('واتعلّم في الصف', row.codClipped === true && row.codRemainder === 700, row.codRemainder);
+    ok('🔴 الحالة success — مفيش حاجة ناقصة', row.status === 'success', row.status);
+    ok('ومفيش تحذير خالص', row.warnings.length === 0, row.warnings);
+    // ⚠️ الملحوظة **مش بتتشال** — الباقي 700 فلوس بيتسوّى مكتبيًا، والرقم
+    //    لازم يفضل قدام الموظف. الفرق في اللون بس.
+    ok('والملحوظة فيها الرقمين', (row.advisories.join(' ')).includes('2,700')
+       && (row.advisories.join(' ')).includes('700'), row.advisories);
+    return run12();
+  });
+}
+
+// ─── ⑫ قص + فشل كتابة مع بعض — التحذير هو اللي بيحكم ────────
+// 🔴 الفصل مش «ملحوظة بدل تحذير» — ده **قايمتين مستقلتين**. صف عليه الاتنين
+//    لازم يفضل أصفر: فيه حاجة ناقصة فعلًا، والملحوظة جنبها مش بدالها.
+function run12() {
+  console.log('\n⑫ قص + فشل الكتابة على شوبيفاي — الأصفر لسه بيكسب');
+  const api = load(router(
+    async () => reply(201, { success: true, data: { trackingNumber: '445566', _id: 'c2' } }),
+    () => reply(500, { errors: [{ message: 'Shopify down' }] })));
+  api.ensureNormalized(catalog);
+  const clipped = order({ totalOutstandingSet: { shopMoney: { amount: '-2700' } },
+    currentCycle: { name: '#54618-R2', returnLineItems: order().currentCycle.returnLineItems } });
+  return api.uploadOneRE(env, TOKEN, clipped, catalog, JOB, null).then((row) => {
+    ok('warning — الكتابة الرجعية فشلت', row.status === 'warning', row.status);
+    ok('والتحذير بيقول متعيدش الرفع', (row.warnings.join(' ')).includes('متعيدش الرفع'), row.warnings);
+    ok('والملحوظة موجودة جنبه مش بداله', (row.advisories.join(' ')).includes('حد بوسطة'), row.advisories);
     done();
   });
 }

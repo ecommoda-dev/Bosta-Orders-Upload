@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>رفع أوردرات بوسطة — EcomModa</title>
-<!-- skills: html-builder v7.2.0 · constants v1.10.0 · order-lifecycle v1.3.0 · bosta-api-helper v1.1.0 — 15-09-2026 -->
+<!-- skills: html-builder v7.2.0 · constants v1.10.0 · order-lifecycle v1.3.0 · bosta-api-helper v1.1.0 — 17-09-2026 -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 </head>
@@ -573,6 +573,13 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .problem-text{color:var(--red);font-size:11px;font-weight:700;white-space:normal;max-width:240px;
   display:block;line-height:1.6;text-align:right;}
 .act-list{font-size:11px;color:var(--text-secondary);white-space:normal;max-width:260px;line-height:1.7;text-align:right;}
+/* ℹ️ الملحوظة الإعلامية — لون تالت غير الأخضر والأصفر **عن قصد**: دي مش حالة
+   الصف، دي معلومة جنبه (المبلغ اتقص · المحافظة اتعدّلت · العنوان نزل درجة).
+   توحيدها بصريًا مع التحذير الأصفر بيرجّع الباج اللي v2.18.0 اتعملت عشانه:
+   صف اتعمل فيه كل حاجة بيتقرا «ناقص». */
+.res-note{color:var(--accent-dark);font-weight:700;}
+.res-verdict-note{margin-top:7px;padding-top:7px;border-top:1px solid var(--accent-border);
+  color:var(--accent-dark);font-weight:700;font-size:12.5px;line-height:1.8;}
 
 /* ── Pagination ─────────────────────────────────────────────── */
 .pagination-row{display:flex;align-items:center;justify-content:center;gap:8px;margin:16px 0;flex-wrap:wrap;}
@@ -933,6 +940,20 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">17-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>الصف اللي اتعمل فيه كل حاجة بقى أخضر — مش «⚠ تم جزئيًا»</b> (طلب أحمد، على حالة حقيقية). <code>#54618</code> اترفع صح بالكامل — الشحنة اتعملت على بوسطة، رقم التتبع اتكتب، الحالة بقت <code>In-Return</code>، والتاج اتحط — وظهر <b>أصفر</b> لسبب واحد: مستحق العميل <b>2,700</b> اتقص عند <b>حد بوسطة 2,000</b>. القص ده <b>مش نقص في العملية</b> — هو حد من بوسطة والباقي بيتسوّى مكتبيًا.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>ℹ️ <b>وبقى فيه فرق بين «تحذير» و«ملحوظة».</b> <b>التحذير الأصفر</b> = الشحنة موجودة بفلوس و<b>حاجة بعدها ما تمّتش</b> (الكتابة على شوبيفاي فشلت · بوسطة ما رجّعتش رقم تتبع) — <b>متعيدش الرفع</b>. <b>الملحوظة الزرقا ℹ️</b> = العملية <b>تمّت بالكامل</b> وفيه معلومة تستاهل تتقال: قص المبلغ · تعديل المحافظة بإيدك · نزول درجة العنوان لما بوسطة ترفض المنطقة.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>⚠️ <b>ومفيش معلومة اتشالت.</b> الملحوظة بتتعرض في عمود <b>«السبب / الملحوظة»</b> (كان «السبب / التحذير»)، و<b>بتفتح التفاصيل لوحدها</b> رغم إن الصف أخضر — عشان رقم الباقي يفضل قدامك — وليها <b>عمود مستقل في تصدير النتيجة</b>، وبتتكتب في السجل. والصف اللي عليه <b>الاتنين</b> (قص + فشل كتابة) بيفضل <b>أصفر</b>: الملحوظة جنب التحذير مش بداله.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>ليه ده مهم:</b> الأصفر في الأداة دي معناه <b>شحنة موجودة بفلوس وحاجة ناقصة</b>. أصفر على صف سليم بيعلّم الموظف يعدّي على الأصفر — ولما يحصل نقص <b>فعلًا</b> مفيش إشارة تفرق.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>📄 وعمود «النتيجة» في تصدير النتيجة بقى بالعربي (<b>نجاح</b> · <b>تم جزئيًا</b> · <b>فشل</b> · <b>اتخطّى</b>) بدل <code>success</code>/<code>warning</code> — الملف هو اللي بيروح للمراجعة.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.17.0</span>
           <span class="cl-ver-date">17-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -1334,6 +1355,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li>الرفع بيحصل على دفعات، وكل صف بيجيب نتيجته الخاصة ومعاه رقم تتبعه.</li>
             <li>بعد كل نجاح: اللي في عمود «بيكتب إيه» في جدول الأوضاع فوق — بيختلف بالوضع.</li>
             <li>بعد ما الرفع يخلص بتيجي <strong>نافذة نتيجة الرفع</strong> — مستنية ضغطة، مش توست بيختفي لوحده. في النجاح الكامل بتقول العدد فقط، و<strong>في أي حالة تانية بتفتح التفاصيل لوحدها</strong> (صف بصف: رقم التتبع · العقد · المدينة والمنطقة المبعوتة · ما تم فعليًا · السبب). وزرار <strong>▾ عرض التفاصيل</strong> بيفتحها بالإيد حتى لما يكون كله نجاح.</li>
+            <li>ℹ️ <strong>والصف الأخضر ممكن يكون عليه ملحوظة</strong> — العملية تمّت بالكامل وفيه معلومة تستاهل تتقال (المبلغ اتقص عند حد بوسطة والباقي يتسوّى مكتبيًا · المحافظة اتعدّلت يدويًا · العنوان نزل درجة). الملحوظة <strong>بتفتح التفاصيل لوحدها</strong> رغم إن الصف أخضر، وبتتصدّر في عمود مستقل.</li>
             <li>🔴 <strong>لو الشحنة اتعملت وحاجة بعدها فشلت، الصف بيبقى <em>أصفر</em> مش أحمر.</strong> الأصفر معناه <strong>الشحنة موجودة عند بوسطة ومعاها رقم تتبع</strong> — إعادة الرفع بتشتري شحنة تانية بفلوس. الحل: صلّح باليد، أو اضغط <strong>✕ إلغاء الشحنة</strong> في تفاصيل نافذة النتيجة وبعدين ارفع تاني (الإلغاء بيحرّر المرجع الفريد عند بوسطة).</li>
           </ol>
 
@@ -1345,6 +1367,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <tr><td>✗ فشل</td><td>الشحنة ما اترفعتش، والسبب معروض</td></tr>
             <tr><td>⏭️ اتخطّى</td><td>الأوردر مرفوع قبل كده ومفيش تأكيد صريح</td></tr>
           </table>
+          <p>ℹ️ <strong>والملحوظة مش حالة خامسة</strong> (واجهة v2.18.0 · Worker v2.7.0). الصف اللي <strong>كل حاجة فيه تمّت</strong> وعليه معلومة تستاهل تتقال — المبلغ اتقص عند حد بوسطة · المحافظة اتعدّلت يدويًا · بوسطة رفضت المنطقة فنزلنا درجة — بيفضل <strong>✓ نجاح أخضر</strong>، والمعلومة بتيجي تحته بسطر أزرق ℹ️ في عمود «السبب / الملحوظة» وفي عمود «ملحوظات» في تصدير النتيجة. قبل كده كان بياخد «⚠ تم جزئيًا» — و«تم جزئيًا» هنا معناها <strong>شحنة بفلوس وحاجة ناقصة</strong>، فالأصفر على صف سليم كان بيعلّم الموظف يعدّي على الأصفر الحقيقي.</p>
 
           <h4>الـ Endpoints الرئيسية</h4>
           <table>
@@ -1389,6 +1412,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <ul>
             <li><strong>«اتخطّى» حالة رابعة مقصودة</strong> جنب التلاتة القياسية — العقد المرجعي (SPEC §٦.٢) بيفرضها، لأن «نجح/فشل» لوحدهم بيخفوا الأوردر اللي محتاج تأكيد.</li>
             <li><strong>«تم جزئيًا» مش فشل.</strong> معناها الشحنة موجودة عند بوسطة فعلًا — إعادة الرفع بتعمل شحنة مكررة بفلوس حقيقية.</li>
+            <li><strong>والأصفر محجوز للنقص بس</strong> (v2.18.0): الـ Worker بيرجّع قايمتين — <code>warnings</code> (حاجة ناقصة محتاجة تدخّل، وهي اللي بتحدد الحالة) و<code>advisories</code> (ملحوظة على عملية تمّت، ومابتغيّرش اللون خالص). الاتنين بيتكتبوا في D1 منفصلين كمان (<code>extra.warnings</code> · <code>extra.advisories</code>) — أي تقرير بيعدّ «صفوف محتاجة مراجعة» كان بيعدّ القص والتعديل اليدوي معاها.</li>
             <li><strong>الأوردر المرفوع قبل كده بيفضل ظاهر في القايمة</strong> ومعاه تنبيه — مش بيتشال، لأن فيه حالات حقيقية بتحتاج إعادة رفع.</li>
             <li><strong>بانر أحمر «فلتر الحالة مش متسق»</strong> معناه عدّ <code>Confirmed</code> + عدّ <code>Confirmed + Edit</code> مش بيساوي العدّ المدمج — بلّغ فورًا، والأداة بتفضل شغّالة على الاستعلام المدمج.</li>
             <li>المحافظة اللي مش في جدول <code>ecommoda-constants</code> §3.5 بتوقف رفع الصف بتاعها برسالة صريحة — <strong>مفيش تخمين</strong>.</li>
@@ -1480,7 +1504,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
               <th>المدينة</th>
               <th>المنطقة المبعوتة</th>
               <th>ما تم فعليًا</th>
-              <th>السبب / التحذير</th>
+              <th>السبب / الملحوظة</th>
               <th>إجراء</th>
             </tr></thead>
             <tbody id="resBody"></tbody>
@@ -2118,7 +2142,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.17.0';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.18.0';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2130,7 +2154,7 @@ const TOOL_VERSION       = 'v2.17.0';  // مصدر واحد لرقم نسخة ا
 //    عنده مطابقة محلية سليمة (اسم متكرر بين محافظتين زي «السادات»)، فالصف
 //    بيتوقف عن الرفع والاقتراح بيودّي للمحافظة الغلط. والواجهة **مش** بتقدر
 //    تصلّحها: الشك محسوب في `resolveAddress` جوّه الـ Worker.
-const MIN_WORKER_VERSION = '2.6.0';
+const MIN_WORKER_VERSION = '2.7.0';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -5145,6 +5169,12 @@ function summarize(rows) {
 // 🔴 «تم جزئيًا» (أصفر) **مش فشل**: الشحنة موجودة عند بوسطة ومعاها رقم تتبع
 //    وحاجة بعدها ما تمّتش. إعادة الرفع بتعمل شحنة تانية بفلوس — الحل تصحيح
 //    يدوي أو إلغاء وإعادة رفع مصححة.
+// 🔴 **ومن v2.18.0 الأصفر بقى محجوز للحالة دي بس** (Worker v2.7.0): الملحوظة
+//    الإعلامية (قص المبلغ عند حد بوسطة · تعديل المحافظة يدويًا · نزول درجة
+//    العنوان) بتيجي في `r.advisories` ومابتغيّرش لون الصف خالص. قبل كده
+//    الاتنين كانوا قايمة واحدة، فصف اتعمل فيه **كل حاجة** (`#54618`) كان
+//    بياخد «⚠ تم جزئيًا» لمجرد إن مستحق العميل اتقص عند حد بوسطة — والأصفر
+//    الكذّاب بيعلّم الموظف يعدّي على الأصفر الحقيقي.
 const RESULT_BADGE = {
   success: '<span class="badge badge-success">✓ نجاح</span>',
   warning: '<span class="badge badge-warn">⚠ تم جزئيًا</span>',
@@ -5152,10 +5182,29 @@ const RESULT_BADGE = {
   skipped: '<span class="badge badge-muted">⏭️ اتخطّى</span>',
 };
 
+// ─── §RESULT::labels — مصدر واحد لنص الحالة في التصدير ───
+// 🔴 التصدير لازم يقول نفس اللي الشاشة بتقوله (`html-builder` Step 3C): الملف
+//    هو اللي بيروح للمراجعة، وكتابة `warning` بالإنجليزي فيه بتخلي الصف
+//    الأصفر يتقرا مصطلح تقني بدل «تم جزئيًا».
+const RESULT_LABEL = { success: 'نجاح', warning: 'تم جزئيًا', error: 'فشل', skipped: 'اتخطّى' };
+const resultLabel = v => RESULT_LABEL[v] || '—';   // '—' = حالة مش معروفة، وبس
+
+// ℹ️ عدد الصفوف اللي عليها ملحوظة إعلامية.
+// ⚠️ **مش حالة** — عشان كده مالهاش مربع في `RESULT_STATS` ومش في `summarize`:
+//    الإجمالي = مجموع المربعات، ومربع لحاجة مش حالة بيكسر الجمع (نفس الفخ
+//    المكتوب فوق `RESULT_STATS` بالظبط، بس من الناحية التانية).
+function advisoryCount(rows) {
+  return rows.filter(r => (r.advisories || []).length).length;
+}
+
 // 🔴 أي صف مش «نجاح» بيفتح التفاصيل لوحده. وصف اتسجّلش في D1 بيتحسب معاهم:
 //    العملية تمت والسجل ناقص — وده بالظبط اللي بيخلي الموظف يعيد الرفع بعدين.
+// 🔴 **والصف الأخضر اللي عليه ملحوظة بيفتحها كمان** (v2.18.0): الملحوظة فيها
+//    رقم بيتصرّف فيه (باقي مستحق العميل بعد القص) أو تغيير على العنوان —
+//    وإخفاؤها ورا ضغطة بعد ما شِلنا عنها الأصفر معناه إنها **ماتتشافش خالص**.
 function resultsNeedDetails(rows) {
-  return rows.some(r => r.status !== 'success' || r.logged === false);
+  return rows.some(r => r.status !== 'success' || r.logged === false
+                     || (r.advisories || []).length > 0);
 }
 function openResultsModal() {
   resultsPending = false;
@@ -5206,7 +5255,11 @@ function renderResults() {
   body.innerHTML = lastResults.map(r => {
     const notLogged = r.logged === false
       ? `<div style="color:var(--amber);font-weight:700;">⚠️ العملية تمت لكن ما اتسجلتش في السجل</div>` : '';
+    // 🔴 التحذير والملحوظة في نفس الخانة بس **مش بنفس الوزن**: التحذير بيقول
+    //    «فيه حاجة ناقصة — اتدخّل»، والملحوظة بتقول «تمّت، وده اللي حصل».
     const reason = [r.error, ...(r.warnings || [])].filter(Boolean).map(esc).join('<br>');
+    const notes  = (r.advisories || []).filter(Boolean)
+      .map(a => `<div class="res-note">ℹ️ ${esc(a)}</div>`).join('');
     return `
     <tr>
       <td>${orderLink(r.orderNumber, r.orderId)}</td>
@@ -5217,7 +5270,7 @@ function renderResults() {
       <td>${esc(r.citySent || '—')}</td>
       <td>${esc(r.districtSent || '—')}</td>
       <td class="act-list">${(r.actions || []).length ? (r.actions || []).map(a => `• ${esc(a)}`).join('<br>') : '—'}</td>
-      <td class="act-list">${reason || '—'}${notLogged}</td>
+      <td class="act-list">${(reason || notes) ? `${reason}${notes}` : '—'}${notLogged}</td>
       <td>${resultAction(r)}</td>
     </tr>`;
   }).join('');
@@ -5230,23 +5283,34 @@ function renderResultVerdict(s) {
   const el = document.getElementById('resVerdict');
   if (!el) return;
   const j = job();
+  let cls, msg;
   if (s.error) {
-    el.className = 'res-verdict bad';
-    el.innerHTML = `✗ <b>${fmtNum(s.error)}</b> صف فشل في ${esc(j.label)}` +
+    cls = 'bad';
+    msg = `✗ <b>${fmtNum(s.error)}</b> صف فشل في ${esc(j.label)}` +
       (s.success || s.warning ? ` — و<b>${fmtNum(s.success + s.warning)}</b> اتعملت لهم شحنة فعلًا.` : '.') +
       ` راجع التفاصيل تحت قبل أي إعادة رفع.`;
   } else if (s.warning) {
-    el.className = 'res-verdict warn';
-    el.innerHTML = `⚠ <b>${fmtNum(s.warning)}</b> صف «تم جزئيًا» — ` +
+    cls = 'warn';
+    msg = `⚠ <b>${fmtNum(s.warning)}</b> صف «تم جزئيًا» — ` +
       `<b>الشحنة اتعملت عند بوسطة ومعاها رقم تتبع</b>، وحاجة بعدها ما تمّتش. ` +
       `إعادة الرفع بتعمل شحنة تانية بفلوس — صحّح يدويًا أو ألغي الشحنة وارفع تاني.`;
   } else if (s.skipped) {
-    el.className = 'res-verdict warn';
-    el.innerHTML = `⏭️ <b>${fmtNum(s.skipped)}</b> صف اتخطّى — شوف السبب في التفاصيل.`;
+    cls = 'warn';
+    msg = `⏭️ <b>${fmtNum(s.skipped)}</b> صف اتخطّى — شوف السبب في التفاصيل.`;
   } else {
-    el.className = 'res-verdict ok';
-    el.innerHTML = `✅ <b>${fmtNum(s.success)}</b> شحنة ${esc(j.label)} اترفعت بنجاح.`;
+    cls = 'ok';
+    msg = `✅ <b>${fmtNum(s.success)}</b> شحنة ${esc(j.label)} اترفعت بنجاح.`;
   }
+  // ℹ️ سطر الملحوظات **تحت الحكم مش مكانه** — الحكم بيقول «فيه حاجة ناقصة ولا
+  //    لأ»، والملحوظة معلومة على عمليات **تمّت**. دمجهم في جملة واحدة بيرجّع
+  //    الخلط اللي التعديل ده اتعمل عشانه.
+  const adv = advisoryCount(lastResults);
+  el.className = `res-verdict ${cls}`;
+  el.innerHTML = msg + (adv
+    ? `<div class="res-verdict-note">ℹ️ و<b>${fmtNum(adv)}</b> صف عليه ملحوظة — ` +
+      `العملية تمّت بالكامل، والتفاصيل في عمود «السبب / الملحوظة» تحت ` +
+      `(زي قص المبلغ عند حد بوسطة — الباقي بيتسوّى مكتبيًا).</div>`
+    : '');
   document.getElementById('resTitle').textContent =
     s.error ? `✗ نتيجة الرفع — فيه فشل` : s.warning ? `⚠️ نتيجة الرفع — فيه تحذير` : `✅ نتيجة الرفع`;
 }
@@ -5579,11 +5643,16 @@ async function exportResultsXLSX() {
     { header: 'المنطقة', key: 'districtSent', width: 20 },
     { header: 'ما تم فعليًا', key: 'actions', width: 46 },
     { header: 'السبب / التحذير', key: 'reason', width: 50 },
+    // 🔴 عمود مستقل — لو اتلمّ مع «السبب / التحذير» في عمود واحد، اللي بيفتح
+    //    الملف مايقدرش يفرّق بين «ناقص» و«تمّت ومعاها ملحوظة»، وهي نفس
+    //    التفرقة اللي الشاشة اتعملت عشانها.
+    { header: 'ملحوظات', key: 'advisories', width: 50 },
   ], lastResults.map(r => ({
-    orderNumber: r.orderNumber, status: r.status, trackingNumber: r.trackingNumber || '',
+    orderNumber: r.orderNumber, status: resultLabel(r.status), trackingNumber: r.trackingNumber || '',
     contractUsed: r.contractUsed || '', citySent: r.citySent || '', districtSent: r.districtSent || '',
     actions: (r.actions || []).join(' · '),
     reason: [r.error, ...(r.warnings || [])].filter(Boolean).join(' · '),
+    advisories: (r.advisories || []).filter(Boolean).join(' · '),
   })), `bosta-upload-result-${new Date().toISOString().slice(0, 10)}.xlsx`);
   showToast(`تم تصدير ${fmtNum(lastResults.length)} صف ✓`, 'success');
 }
