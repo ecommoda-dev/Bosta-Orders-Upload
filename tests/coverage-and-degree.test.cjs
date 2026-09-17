@@ -448,9 +448,9 @@ console.log('\n⑦ terminate — الإلغاء المكرر نجاح مش فش�
     const near = order({ city: 'الهرم', address1: 'هضبه الهرم شارع 9',
                          province: 'Giza', provinceCode: 'GZ' });
     const plan = api.resolveAddress(near, CAT);
-    eq('الصف «المحافظة فقط» زي ما هو', plan.mode, 'province');
     eq('والمرساة لقت «هضبة»', plan.addressAnchor?.text, 'هضبة');
-    eq('وواصلة لهضبة الاهرام', plan.addressAnchor?.districtId, 'd-hadaba');
+    eq('واتطبّقت على هضبة الاهرام', plan.districtId, 'd-hadaba');
+    ok('والعلم راجع مع الخطة', plan.districtFromAnchor === true);
 
     const run = async (override) => {
       globalThis.fetch = async (url, opts) => {
@@ -473,20 +473,52 @@ console.log('\n⑦ terminate — الإلغاء المكرر نجاح مش فش�
     };
 
     const auto = await run(null);
-    eq('من غير تدخّل: مفيش تعديل منطقة', auto.districtOverridden, false);
-    eq('و anchorHit فاضي — مفيش اختيار يتقاس', auto.anchorHit, null);
+    eq('من غير تدخّل: الشحنة اتعملت على منطقة المرساة', auto.anchorApplied, true);
+    eq('ودرجة العنوان district', auto.addressDegree, 'district');
+    eq('والمنطقة المبعوتة هي هضبة الاهرام', auto.districtSent, 'Hadabet ElAhram');
+    eq('ومفيش تعديل منطقة', auto.districtOverridden, false);
+    eq('و anchorHit فاضي — الموظف ما لمسش (موافق ضمنيًا)', auto.anchorHit, null);
     eq('والمرساة نفسها متسجّلة', auto.addressAnchor, 'هضبة');
 
     const hit = await run({ districtId: 'd-hadaba' });
-    eq('اختار اللي المرساة وصلت له → hit', hit.anchorHit, true);
+    eq('أكّد نفس المنطقة بإيده → hit', hit.anchorHit, true);
     eq('والتعديل متسجّل', hit.districtOverridden, true);
+    eq('🔴 والاختيار اليدوي بيلغي نسبة المرساة للشحنة', hit.anchorApplied, false);
 
+    // 🔴 دي **إشارة الخطأ**: الموظف شاف المرشّح التلقائي وغيّره
     const miss = await run({ districtId: 'd-abu-rawash' });
     eq('اختار منطقة تانية → miss (مش null)', miss.anchorHit, false);
+    eq('والشحنة راحت على اختياره هو', miss.districtSent, 'Abu Rawash');
 
     const prov = await run({ forceProvince: true });
     eq('التثبيت على المحافظة متسجّل كدرجة', prov.degreeForced, 'province');
     eq('و anchorHit فاضي — ما اختارش منطقة', prov.anchorHit, null);
+    eq('و anchorApplied مطفي — الشحنة راحت على المحافظة', prov.anchorApplied, false);
+
+    // 🔴 وسلّم النزول بيلغيها كمان — الشحنة اللي موجودة عند بوسطة دلوقتي
+    //    **مش** على منطقة المرساة، فصف سجل بيقول إنها عليها بيكدب على القياس.
+    globalThis.fetch = async (url, opts) => {
+      const u = String(url);
+      if (u.includes('/admin/api/')) {
+        const body = JSON.parse(opts.body);
+        return { ok: true, status: 200, text: async () => JSON.stringify({ data: { metafieldsSet: {
+          metafields: (body.variables?.metafields || []).map(m => ({
+            key: m.key, value: m.value, namespace: m.namespace, owner: { id: m.ownerId } })),
+          userErrors: [] }, tagsAdd: { node: { id: '1' }, userErrors: [] } } }) };
+      }
+      // بوسطة بترفض المنطقة (3003) وبتقبل المحافظة
+      if (u.includes('apiVersion=1')) {
+        return { ok: false, status: 400, text: async () => JSON.stringify({
+          success: false, errorCode: '3003', message: 'District Not Found' }) };
+      }
+      return { ok: true, status: 201, text: async () => JSON.stringify({
+        success: true, data: { trackingNumber: '999', _id: 'x1' } }) };
+    };
+    const fell = await api.uploadOne(env, 'tok', near, CAT, null);
+    eq('بوسطة رفضت المنطقة → نزلنا للمحافظة', fell.addressDegree, 'province');
+    eq('🔴 و anchorApplied مطفي — القياس بيقرا الدرجة اللي اتبعتت فعلًا',
+       fell.anchorApplied, false);
+    ok('والشحنة اتعملت برضه', !!fell.trackingNumber, fell);
 
     // 🔴 والحقول لازم توصل **للسجل** مش للصف بس — إضافتها في `uploadOne`
     //    ونسيانها في `logRow` معناها قياس شكله موجود ومفيش منه ولا صف في D1.
@@ -496,6 +528,8 @@ console.log('\n⑦ terminate — الإلغاء المكرر نجاح مش فش�
     eq('district_overridden في extra', extra.district_overridden, true);
     eq('anchor_hit في extra', extra.anchor_hit, true);
     eq('address_anchor في extra', extra.address_anchor, 'هضبة');
+    await api.logRow({ DB: db }, auto, 'tester');
+    eq('anchor_applied في extra', extra.anchor_applied, true);
     await api.logRow({ DB: db }, prov, 'tester');
     eq('degree_forced في extra', extra.degree_forced, 'province');
   }

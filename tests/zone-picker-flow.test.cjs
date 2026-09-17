@@ -26,7 +26,8 @@ const api=new Function('document','window','localStorage','Chart','ExcelJS', src
     renderDpControls, confirmDistrictPick, el(id){ return document.getElementById(id); },
     orderId(){ return dpOrderId; },
     rowAddrMode, addrModeInfo, ADDR_MODE_LABEL,
-    dpAnchorText, listHTML(){ return null; },
+    districtCell, addrModeCell, rowUploadable, rowNeedsManualAddressConfirm,
+    dpTableHead, listHTML(){ return null; },
     zf(){ return dpZoneFilter; }, ov(){ return districtOverride; },
     setZf(z){ dpZoneFilter = z; }, open(){ return dpPickOpen; } };`
 )(doc,win,{getItem:()=>null,setItem(){},removeItem(){}});
@@ -528,21 +529,23 @@ console.log('\n── ⑯ تأكيد العنوان مظبوط ──');
 }
 
 // ══════════════════════════════════════════════════════════════
-// ⑰ 🔍 المرساة — خانة البحث بتفتح مليانة (v2.16.0)
+// ⑰ 🔍 المرشّح التلقائي (Worker v2.6.0 · واجهة v2.17.0 · قرار أحمد)
 //
-// 🔴 البند: المرساة **نص بحث بس**. والخطر التاني إنها تشتغل جنب قصر الزون —
-//    البحث **بيلغي** القصر (v2.6.1)، فبحث جاهز جنب زون مقصور كان هيفكّ القصر
-//    لوحده أول ما النافذة تفتح، والموظف يقرا بانر «البحث بيلف على كل مناطق
-//    المحافظة» من غير ما يكون كتب حرف.
+// 🔴 المرساة بقت **بتترفع**. الحارس الوحيد الباقي هو إنها تفضل **متميّزة عن
+//    المطابقة الحقيقية**: مطابقة اسم منطقة كامل ومنطقة مخمّنة من كلمة واحدة
+//    مش نفس الثقة، وتوحيد البادج بيخلي الموظف يعدّي على تخمين وهو فاكره حقيقة.
+// ⚠️ **وهي قابلة للرفع وداخلة «رفع الكل» عن قصد** (طلب أحمد صراحةً) — فأي
+//    إضافة لها في `rowNeedsManualAddressConfirm` بتلغي القرار ده.
 // ══════════════════════════════════════════════════════════════
-console.log('\n── ⑰ المرساة ──');
+console.log('\n── ⑰ المرشّح التلقائي ──');
 {
   const alx = [
     D('k1','King Maryout','كنج مريوط','King Maryout','كنج مريوط'),
     D('s1','Sidi Bishr','سيدي بشر','Sidi Bishr','سيدي بشر'),
   ];
-  const arow = { orderId:'A', orderNumber:'#55065', uploadable:false, addressOk:true,
-    mode:'province', cityName:'Alexandria', cityId:'alx', province:'Alexandria',
+  const arow = { orderId:'A', orderNumber:'#55065', uploadable:true, addressOk:true,
+    mode:'district', districtId:'k1', districtName:'King Maryout', districtFromAnchor:true,
+    cityName:'Alexandria', cityId:'alx', province:'Alexandria',
     ambiguous:false, cityDoubt:false, candidates:[], localZones:[], crossCity:[],
     address1:'الكينج مريوط قبلي السكه فيلا وليد الحو', address2:'', addressCity:'الاسكندرية',
     addressAnchor:{ text:'مريوط', token:'مريوط', fieldLabel:'العنوان',
@@ -552,40 +555,68 @@ console.log('\n── ⑰ المرساة ──');
 
   api.setup([arow],alx,acities,'A','alx');
   delete api.ov()['A'];
-  chk('بتتكتب في خانة البحث', api.dpAnchorText(arow,'alx') === 'مريوط');
-  // ⚠️ المرساة محسوبة على محافظة الصف — في كتالوج تاني هي ضوضاء
-  chk('ومابتتكتبش لو الموظف بدّل المحافظة', api.dpAnchorText(arow,'c') === '');
-  api.ov()['A'] = { districtId:'s1' };
-  chk('ومابتتكتبش بعد اختيار منطقة', api.dpAnchorText(arow,'alx') === '');
-  delete api.ov()['A'];
-  chk('وصف بلا مرساة بيفضل بخانة فاضية',
-      api.dpAnchorText({...arow, addressAnchor:null},'alx') === '');
 
-  // 🔴 **مفيش بانر فوق القايمة** (v2.16.1 · طلب أحمد). الفرق عن قصر الزون:
-  //    القصر مالوش أثر مرئي فمحتاج بانر يقول إنه قايم، لكن البحث **مكتوب في
-  //    الخانة قدام الموظف** — فالبانر بيشرح حاجة ظاهرة، وفوق كده كان بيتقسّم
-  //    على عمودين جوّه `.dp-tbl` ويتقرا مبعثر.
-  api.setSearch('مريوط');
-  api.renderDistrictList();
-  chk('🔴 مفيش أي بانر فوق القايمة', !/البحث اتكتب لوحده/.test(listHTML), listHTML.slice(0,120));
-  chk('والمنطقة بانت في القايمة', /King Maryout/.test(listHTML));
-  chk('والقايمة اتقصرت عليها فعلًا', !/Sidi Bishr/.test(listHTML));
-  // والخانة نفسها هي الإعلان — الكلمة مكتوبة فيها وقابلة للمسح
-  chk('والكلمة لسه مكتوبة في الخانة', api.el('dpSearch').value === 'مريوط');
+  // ① الحالة المعروضة — **مش** `district`
+  chk('🔴 حالة العنوان «anchor» مش «district»', api.rowAddrMode(arow) === 'anchor',
+      api.rowAddrMode(arow));
+  chk('وليها تسمية خاصة في المصدر الواحد',
+      /مرشّح تلقائي/.test(api.ADDR_MODE_LABEL['anchor'] || ''));
+  const info = api.addrModeInfo(arow);
+  chk('والبادج بيسمّي المنطقة بعلامة 🔍', info.label === '🔍 King Maryout', info.label);
+  chk('والتلميح بيقول الكلمة اللي وصلت لها', /مريوط/.test(info.hint));
+  chk('وبيقول إنها كلمة واحدة مش اسم كامل', /كلمة واحدة|منطقة واحدة بس/.test(info.hint));
+  chk('و`set` شغّال — فيه districtId هيتبعت فعلًا', info.set === true);
+
+  // ② اللون — تالت مختلف عن الأخضر والأصفر
+  chk('🔴 عمود المنطقة بياخد كلاس `cand` مش `set`',
+      / cand/.test(api.districtCell(arow)) && !/ set/.test(api.districtCell(arow)),
+      api.districtCell(arow).slice(0,90));
+  chk('وبادج حالة العنوان `badge-info` مش `badge-success`',
+      /badge-info/.test(api.addrModeCell(arow)) && !/badge-success/.test(api.addrModeCell(arow)));
+
+  // ③ 🔴 قابل للرفع وداخل «رفع الكل» — قرار أحمد صراحةً
+  chk('🔴 مش محتاج تأكيد يدوي', api.rowNeedsManualAddressConfirm(arow) === false);
+  chk('🔴 وقابل للرفع', api.rowUploadable(arow) === true);
+
+  // ④ الاختيار اليدوي بيغلبه — بيرجع مطابقة عادية
+  api.ov()['A'] = { districtId:'s1', districtName:'Sidi Bishr' };
+  chk('اختيار يدوي بيرجّعه district', api.rowAddrMode(arow) === 'district');
+  chk('وبادجه بيرجع 📍', api.addrModeInfo(arow).label.startsWith('📍'));
+  delete api.ov()['A'];
+
+  // ⑤ النافذة — مثبّت فوق القايمة بسبب مكتوب، ومش بشريط «المطابقة التلقائية»
   api.setSearch('');
   api.renderDistrictList();
-  chk('وتفضيتها بترجّع القايمة كلها',
-      /King Maryout/.test(listHTML) && /Sidi Bishr/.test(listHTML));
+  chk('النافذة بتثبّته فوق القايمة', /King Maryout/.test(listHTML));
+  chk('🔴 وبيقول «مرشّح تلقائي» مش «المطابقة التلقائية»',
+      /مرشّح تلقائي/.test(listHTML) && !/المطابقة التلقائية/.test(listHTML));
+  chk('والسبب مكتوب — الكلمة نفسها', /كلمة «مريوط»/.test(listHTML));
+  chk('ومفيش بحث جاهز في الخانة', api.el('dpSearch').value === '');
 
-  // 🔴 الضابط الهيكلي: المرساة في `else` بتاعة قصر الزون — مش فرع مستقل
+  // ⑥ 🔴 ترتيب أعمدة القايمة = ترتيب جدول السياق فوقها (طلب أحمد v2.17.0)
+  //    المحافظة │ المدينة │ المنطقة — يمين لشمال. القايمة عمودين: المدينة
+  //    يمين (أول عنصر في RTL) والمنطقة شمال.
+  const thead = api.dpTableHead();
+  chk('🔴 ترويسة القايمة: المدينة قبل المنطقة',
+      thead.indexOf('المدينة') < thead.indexOf('المنطقة'), thead);
+  const rowHTML = listHTML.slice(listHTML.indexOf('King Maryout') - 400);
+  chk('🔴 وخانة المدينة قبل خانة المنطقة في الصف نفسه',
+      rowHTML.indexOf('dp-cell') < rowHTML.indexOf('dp-main'));
   const page = fs.readFileSync('/home/user/Bosta-Orders-Upload/index.html','utf8');
-  // 🔴 وخانة البحث بتتفضّى مع كل تحميل محافظة — من غير ده نص المحافظة اللي
-  //    فاتت بيفضل شغّال على قايمة المحافظة الجديدة ويدّي «مفيش مناطق مطابقة»
-  //    من غير أي سبب ظاهر، والموظف مش عارف أصلًا إن فيه بحث مكتوب.
-  chk('🔴 والخانة بتتفضّى مع كل تحميل محافظة',
+  // ⚠️ العمود العريض لازم يمشي مع اسم المنطقة — قلب الترتيب من غير قلب العرض
+  //    بيلفّ الاسم الطويل على تلات سطور من غير أي خطأ
+  chk('والعمود العريض بقى التاني (اسم المنطقة)',
+      /grid-template-columns:minmax\(0,1fr\) minmax\(0,1\.6fr\)/.test(page));
+  // ⚠️ كل صفوف القايمة لازم تتقلب مع بعض — صف اقتراح بترتيب مختلف بيخلي
+  //    عمود يقع تحت ترويسة مش بتاعته في صمت
+  chk('🔴 وكل صفوف القايمة متقلوبة مع بعض',
+      page.split('class="dp-item').slice(1)
+          .every(chunk => { const c = chunk.indexOf('dp-cell'), m = chunk.indexOf('dp-main');
+                            return c === -1 || m === -1 || c < m; }));
+
+  // ⑦ 🔴 والخانة بتتفضّى مع كل تحميل محافظة
+  chk('🔴 الخانة بتتفضّى مع كل تحميل محافظة',
       /const searchBox = document\.getElementById\('dpSearch'\);\s*\n\s*searchBox\.value = '';/.test(page));
-  chk('🔴 ومستحيل تشتغل جنب قصر الزون (في الـ else بتاعته)',
-      /dpZoneFilter = r\.districtName;\s*\n\s*\} else \{[\s\S]{0,1200}?dpAnchorText\(r, cityId\)/.test(page));
 }
 
 console.log(`\n${p}/${n} نجحت`);
