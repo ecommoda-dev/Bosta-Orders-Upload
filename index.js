@@ -1,8 +1,10 @@
 // ══════════════════════════════════════════════════════════════
 // EcomModa — Bosta-Orders-Upload (v2.0.0)
-// skills: worker-builder v3.3.0 · html-builder v7.1.0 · constants v2.5.0 ·
-//         bosta-api-helper v2.0.0 · shopify-graphql-helper v2.2.0 ·
-//         order-lifecycle v1.6.0 — 13-09-2026
+// skills: worker-builder v3.3.0 · html-builder v7.2.0 · constants v2.5.0 ·
+//         bosta-api-helper v5.0.0 · shopify-graphql-helper v2.2.0 ·
+//         order-lifecycle v1.6.0 — 17-09-2026
+// ⚠️ اللي اتراجع بندًا بندًا في v2.7.0: `worker-builder` 5A ④ (حالات النتيجة)
+//    و⑭ (`type` بالأثر الخارجي) و`html-builder` Step 3C. الباقي متوارث.
 //
 // v2.0.0 — **الدمج**: الأداة بقت بترفع كل شحنات بوسطة، مش الشحن العادي فقط.
 // `Bosta-Return-Exchange-Exporter` v6.0.0 اتنقلت هنا بالكامل (MERGE-BRIEF.md).
@@ -138,6 +140,29 @@
 // ⚠️ **والمرساة لسه بتتلغي لو المدينة مشكوك فيها** (`cityDoubt`) — اقتراح
 //    المحافظة التانية إشارة أقوى، وتطبيق منطقة فوق شك بيثبّت الشك.
 //
+// v2.7.0 (17-09-2026) — **الملحوظة الإعلامية اتفصلت عن التحذير الناقص**
+// (طلب أحمد، على حالة حقيقية: `#54618` اترفع صح بالكامل — شحنة · رقم تتبع ·
+// `status_2_r_e = In-Return` · تاج — وظهر **«⚠ تم جزئيًا»** لأن مستحق العميل
+// 2,700 اتقص عند حد بوسطة 2,000).
+// 🔴 السبب كان سطر واحد: `row.status = row.warnings.length ? 'warning' : 'success'`
+//    و`warnings` كانت **قايمة واحدة** بتلمّ نوعين مختلفين تمامًا:
+//      · حاجة **ناقصة** — الشحنة موجودة بفلوس وحاجة بعدها ما تمّتش
+//        (مفيش رقم تتبع · الكتابة على شوبيفاي فشلت · الميتافيلد اتسقّط)
+//      · **ملحوظة** على عملية تمّت بالكامل — قص المبلغ عند حد بوسطة ·
+//        الموظف غيّر المحافظة بإيده · بوسطة رفضت الدرجة فنزلنا درجة
+// 🔴 القايمة بقت اتنين: `row.warnings` (بتحدد الحالة) و`row.advisories`
+//    (مابتغيّرش اللون خالص). الحالة زي ما هي: `warnings.length ? 'warning'`.
+// ⚠️ **ومفيش معلومة اتشالت** — الملحوظة بتتعرض في نافذة النتيجة بسطر أزرق
+//    ℹ️، وبتفتح التفاصيل لوحدها، وليها عمود في تصدير النتيجة، وبتتكتب في
+//    `notes` وفي `extra.advisories` في D1.
+// 🔴 **والسبب إن ده يستاهل تعديل أصلًا:** «تم جزئيًا» في الأداة دي معناها
+//    **شحنة موجودة بفلوس وحاجة ناقصة — متعيدش الرفع**. أصفر على صف سليم
+//    بيعلّم الموظف يعدّي على الأصفر، ولما يحصل ناقص **فعلًا** مفيش إشارة
+//    (نفس مرض `already` — `worker-builder` 5A ④).
+// ⚠️ **وأثر على القياس:** أي تقرير بيعدّ `extra.warnings` على إنه «صفوف محتاجة
+//    مراجعة» كان بيعدّ القص والتعديل اليدوي معاها. الصفوف القديمة زي ما هي —
+//    فيها `warnings` بالخلط، ومن v2.7.0 القايمتين منفصلتين.
+//
 // العقد المرجعي الكامل: SPEC.md في نفس الريبو.
 // ══════════════════════════════════════════════════════════════
 
@@ -153,7 +178,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.6.0';
+const WORKER_VERSION = '2.7.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2758,6 +2783,17 @@ async function uploadOne(env, token, order, catalog, override) {
     anchorApplied: false,
     error: null,
     warnings: [],
+    // ─── ℹ️ ملحوظات إعلامية — منفصلة عن `warnings` عن قصد (v2.7.0) ───
+    // 🔴 `warnings` = **حاجة ناقصة**: الشحنة موجودة عند بوسطة بفلوس وحاجة بعدها
+    //    ما تمّتش، والصف بياخد «⚠ تم جزئيًا» عشان الموظف يتدخّل.
+    //    `advisories` = العملية **تمّت بالكامل** وفيه معلومة تستاهل تتقال
+    //    (المبلغ اتقص عند حد بوسطة · المدينة اتعدّلت يدويًا · العنوان نزل درجة).
+    //    الاتنين كانوا في قايمة واحدة، والشرط `warnings.length ? 'warning'`
+    //    كان بيدّي **أصفر على صف سليم اتعمل فيه كل حاجة** — والأصفر الكذّاب
+    //    بيعلّم الموظف يعدّي على الأصفر الحقيقي (نفس مرض `already` في
+    //    `worker-builder` 5A ④). القاعدة الفاصلة: **فيه حاجة محتاجة تدخّل؟**
+    //    أيوه = `warnings` · لأ = `advisories`.
+    advisories: [],
     logged: true,
   };
 
@@ -2878,7 +2914,10 @@ async function uploadOne(env, token, order, catalog, override) {
   while (!res.ok) {
     const next = nextAddressDegree(mode, res.errorCode, fallbackZoneId);
     if (!next) break;
-    row.warnings.push(next === 'zone'
+    // ℹ️ **ملحوظة مش تحذير** (v2.7.0): الشحنة اتعملت كاملة — بوسطة رفضت الدرجة
+    //    الأعلى وإحنا نزلنا درجة **بقرارنا**، ومفيش حاجة ناقصة ولا تدخّل مطلوب.
+    //    والدرجة اللي اتبعتت فعلًا ظاهرة في عمودي «العقد» و«المنطقة المبعوتة».
+    row.advisories.push(next === 'zone'
       ? `بوسطة رفضت المنطقة "${row.districtSent}" — اترفعت على زون "${planUsed.localZones?.[0]?.zone || '—'}" بدلها`
       : `بوسطة رفضت ${row.districtSent ? `المنطقة "${row.districtSent}"` : `الزون "${row.zoneSent}"`} — اترفعت على مستوى المحافظة بدلها`);
     mode = next;
@@ -2911,6 +2950,8 @@ async function uploadOne(env, token, order, catalog, override) {
   try {
     const w = await writeBackToShopify(env, token, order, res.trackingNumber, actions, S1_JOB);
     row.warnings.push(...w);
+    // 🔴 الحالة بتتقرا من `warnings` **لوحدها** (v2.7.0) — `advisories`
+    //    مابتغيّرش اللون: الصف اللي كل حاجة فيه تمّت بيفضل أخضر ومعاه ملحوظته.
     row.status = row.warnings.length ? 'warning' : 'success';
   } catch (e) {
     row.status = 'warning';
@@ -2936,7 +2977,10 @@ async function logRow(env, row, employee, job = S1_JOB) {
       employee,
       orderId:   row.orderId,
       orderName: row.orderNumber,
-      notes:     row.error || row.warnings.join(' · ') || `رقم التتبع ${row.trackingNumber || '—'}`,
+      // نص السجل بياخد الاتنين — التفرقة عايشة في `extra`, والصف المكتوب
+      // لازم يفضل مقروء لوحده من غير ما حد يفتح الـ JSON.
+      notes:     row.error || [...row.warnings, ...(row.advisories || [])].join(' · ')
+                 || `رقم التتبع ${row.trackingNumber || '—'}`,
       extra: {
         jobType:         job.jobType,
         result:          row.status,
@@ -2966,7 +3010,12 @@ async function logRow(env, row, employee, job = S1_JOB) {
         anchor_applied:  !!row.anchorApplied,
         anchor_hit:      row.anchorHit,
         actions:         row.actions,
+        // 🔴 قايمتين منفصلتين في السجل كمان (v2.7.0): `warnings` = حاجة ناقصة
+        //    محتاجة تدخّل · `advisories` = ملحوظة على عملية تمّت. أي تقرير
+        //    بيعدّ «الصفوف اللي محتاجة مراجعة» بيقرا `warnings` — قبل كده كان
+        //    بيعدّ القص والتعديل اليدوي معاها.
         warnings:        row.warnings,
+        advisories:      row.advisories || [],
       },
     });
   } catch (e) {
@@ -3267,6 +3316,17 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     //    الدورة تاريخ اتحرك فيه حاجة على الورق فقط.
     s2Written: false,
     warnings: [],
+    // ─── ℹ️ ملحوظات إعلامية — منفصلة عن `warnings` عن قصد (v2.7.0) ───
+    // 🔴 `warnings` = **حاجة ناقصة**: الشحنة موجودة عند بوسطة بفلوس وحاجة بعدها
+    //    ما تمّتش، والصف بياخد «⚠ تم جزئيًا» عشان الموظف يتدخّل.
+    //    `advisories` = العملية **تمّت بالكامل** وفيه معلومة تستاهل تتقال
+    //    (المبلغ اتقص عند حد بوسطة · المدينة اتعدّلت يدويًا · العنوان نزل درجة).
+    //    الاتنين كانوا في قايمة واحدة، والشرط `warnings.length ? 'warning'`
+    //    كان بيدّي **أصفر على صف سليم اتعمل فيه كل حاجة** — والأصفر الكذّاب
+    //    بيعلّم الموظف يعدّي على الأصفر الحقيقي (نفس مرض `already` في
+    //    `worker-builder` 5A ④). القاعدة الفاصلة: **فيه حاجة محتاجة تدخّل؟**
+    //    أيوه = `warnings` · لأ = `advisories`.
+    advisories: [],
     error: null,
     logged: true,
   };
@@ -3386,7 +3446,10 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   while (!res.ok) {
     const next = nextAddressDegree(mode, res.errorCode, fallbackZoneId);
     if (!next) break;
-    row.warnings.push(next === 'zone'
+    // ℹ️ **ملحوظة مش تحذير** (v2.7.0): الشحنة اتعملت كاملة — بوسطة رفضت الدرجة
+    //    الأعلى وإحنا نزلنا درجة **بقرارنا**، ومفيش حاجة ناقصة ولا تدخّل مطلوب.
+    //    والدرجة اللي اتبعتت فعلًا ظاهرة في عمودي «العقد» و«المنطقة المبعوتة».
+    row.advisories.push(next === 'zone'
       ? `بوسطة رفضت المنطقة "${row.districtSent}" — اترفعت على زون "${planUsed.localZones?.[0]?.zone || '—'}" بدلها`
       : `بوسطة رفضت ${row.districtSent ? `المنطقة "${row.districtSent}"` : `الزون "${row.zoneSent}"`} — اترفعت على مستوى المحافظة بدلها`);
     mode = next;
@@ -3410,15 +3473,18 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   row.trackingNumber = res.trackingNumber;
   row.bostaId        = res.bostaId;
 
+  // ✂ القص **معلَن ومقصود** — حد بوسطة (`errorCode 3008`)، والشحنة اتعملت
+  //    بالمبلغ المقصوص بنجاح. ملحوظة للتسوية المكتبية، مش نقص في العملية.
   if (parts.clipped) {
-    row.warnings.push(
+    row.advisories.push(
       `العميل ليه ${Math.abs(parts.raw).toLocaleString('en-US')} — بوسطة هترجّع `
       + `${Math.abs(COD_REFUND_MIN).toLocaleString('en-US')} فقط (حد بوسطة)، والباقي `
       + `${parts.remainder.toLocaleString('en-US')} يتسوّى مكتبيًا`,
     );
   }
+  // ✎ توثيق لفعل **الموظف نفسه** — مش حاجة ما تمّتش.
   if (row.cityOverridden) {
-    row.warnings.push(`المحافظة اتغيّرت يدويًا من ${row.cityAuto} إلى ${row.citySent}`);
+    row.advisories.push(`المحافظة اتغيّرت يدويًا من ${row.cityAuto} إلى ${row.citySent}`);
   }
 
   // 🔴 من هنا ورايح الشحنة **موجودة وبتكلّف فلوس**. أي حاجة بعدها warning،
@@ -3446,6 +3512,9 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     row.shopifyWriteFailed = true;
   }
 
+  // 🔴 نفس قاعدة §UPLOAD: `advisories` **مش** بتلوّن الصف (v2.7.0). صف اتعملت
+  //    فيه الشحنة والكتابة والتاج والحالة — وكل اللي عليه إن المبلغ اتقص عند
+  //    حد بوسطة — **نجاح**، والملحوظة بتتعرض جنبه.
   row.status = row.warnings.length ? 'warning' : 'success';
   return row;
 }
@@ -3468,7 +3537,7 @@ async function runUploadBatchRE(env, token, orders, catalog, job, overrides) {
       } catch (e) {
         out[i] = {
           orderId: cleanText(order.id), orderNumber: cleanText(order.name),
-          status: 'error', actions: [], warnings: [],
+          status: 'error', actions: [], warnings: [], advisories: [],
           trackingNumber: null, error: `خطأ غير متوقع: ${e.message}`, logged: true,
         };
       }
@@ -4013,7 +4082,7 @@ export default {
           const order = byGid.get(gid);
           if (!order) {
             const row = { orderId: String(item.orderId), orderNumber: item.orderNumber || '—',
-                          status: 'error', actions: [], warnings: [], trackingNumber: null,
+                          status: 'error', actions: [], warnings: [], advisories: [], trackingNumber: null,
                           error: 'الأوردر مش موجود على شوبيفاي (اتحذف أو الـ ID غلط)', logged: true };
             await logRow(env, row, employee);
             return row;
@@ -4027,7 +4096,7 @@ export default {
           if ((prevTracking || hasTag) && !item.allowDuplicate) {
             const row = {
               orderId: String(order.legacyResourceId), orderNumber: order.name,
-              status: 'skipped', skipped: true, actions: [], warnings: [], trackingNumber: null,
+              status: 'skipped', skipped: true, actions: [], warnings: [], advisories: [], trackingNumber: null,
               error: `الأوردر مرفوع قبل كده${prevTracking ? ` (رقم تتبع ${prevTracking})` : ''} — ` +
                      `محتاج تأكيد صريح قبل إعادة الرفع`,
               logged: true,
@@ -4041,7 +4110,7 @@ export default {
             row = await uploadOne(env, token, order, catalog, item);
           } catch (e) {
             row = { orderId: String(order.legacyResourceId), orderNumber: order.name,
-                    status: 'error', actions: [], warnings: [], trackingNumber: null,
+                    status: 'error', actions: [], warnings: [], advisories: [], trackingNumber: null,
                     error: e.message, logged: true };
           }
           await logRow(env, row, employee);
@@ -4228,7 +4297,11 @@ export default {
             valueAfter:  r.s2Written ? job.uploadStatus : (order.s2Status || job.expectedStatus),
             notes: r.status === 'error'
               ? `فشل رفع ${job.label} على بوسطة — ${r.error}`
-              : `رفع ${job.label} على بوسطة · تتبع ${r.trackingNumber || '—'}${r.warnings.length ? ` · ${r.warnings.join(' · ')}` : ''}`,
+              : (() => {
+                  const notes = [...(r.warnings || []), ...(r.advisories || [])];
+                  return `رفع ${job.label} على بوسطة · تتبع ${r.trackingNumber || '—'}`
+                       + (notes.length ? ` · ${notes.join(' · ')}` : '');
+                })(),
             extra: {
               jobType: job.jobType,
               result: r.status,
@@ -4261,7 +4334,11 @@ export default {
               codRemainder: r.codRemainder,
               cycleName: order.cycleName || null,
               actions: r.actions,
+              // 🔴 نفس تقسيم §UPLOAD::logRow (v2.7.0) — `warnings` محتاجة
+              //    تدخّل، و`advisories` ملحوظة على عملية تمّت (القص · تعديل
+              //    المدينة · نزول الدرجة).
               warnings: r.warnings,
+              advisories: r.advisories || [],
               error: r.error,
             },
           };

@@ -36,7 +36,9 @@ const api = new Function('document','window','localStorage','Chart','ExcelJS', s
 return { ADDR_MODE_ITEMS, ADDR_MODE_LABEL, filterLabels, tableColumns, RESULT_BADGE,
          resultsNeedDetails, dpContextHTML, renderDpTitle, rowAddrMode,
          RESULT_STATS, renderResultStats, summarize, trackingLink,
-         setRows(r){ allRows = r; }, setPicked(id){ dpOrderId = id; } };`
+         RESULT_LABEL, resultLabel, advisoryCount, renderResultVerdict,
+         setRows(r){ allRows = r; }, setPicked(id){ dpOrderId = id; },
+         setResults(r){ lastResults = r; } };`
 )(doc, win, { getItem:()=>null, setItem(){}, removeItem(){} }, undefined, undefined);
 
 let pass = 0, fail = 0;
@@ -71,6 +73,13 @@ console.log('\n③ التفاصيل بتتفتح لوحدها في أي حالة
 const R = (status, extra) => Object.assign({ orderNumber:'#1', status }, extra);
 ok('نجاح كامل → مقفولة', api.resultsNeedDetails([R('success'), R('success')]) === false);
 ok('تحذير → مفتوحة', api.resultsNeedDetails([R('success'), R('warning')]) === true);
+// 🔴 الصف الأخضر اللي عليه ملحوظة بيفتح التفاصيل كمان (v2.18.0) — الملحوظة
+//    فيها رقم بيتصرّف فيه (باقي مستحق العميل بعد القص)، وبعد ما شِلنا عنها
+//    الأصفر، إخفاؤها ورا ضغطة معناه إنها ماتتشافش خالص.
+ok('نجاح + ملحوظة → مفتوحة',
+   api.resultsNeedDetails([R('success', { advisories: ['العميل ليه 2,700 …'] })]) === true);
+ok('ونجاح بملحوظات فاضية → مقفولة',
+   api.resultsNeedDetails([R('success', { advisories: [] })]) === false);
 ok('فشل → مفتوحة',   api.resultsNeedDetails([R('error')]) === true);
 ok('اتخطّى → مفتوحة', api.resultsNeedDetails([R('skipped')]) === true);
 // 🔴 العملية تمت والسجل ناقص — الصف ده هو اللي بيخلي الموظف يعيد الرفع بعدين
@@ -165,6 +174,41 @@ ok('الاسم تحت الرقم في نفس المربع', /res-stat-num">2<\/s
 ok('زرار التفاصيل ليه تصميم خاص', html.includes('class="res-ftr-btn details"'));
 ok('وزرار التصدير كمان',          html.includes('class="res-ftr-btn export"'));
 ok('البادجات القديمة اتشالت من النافذة', !html.includes('id="resSummary"'));
+
+// ─── ⑧ الملحوظة الإعلامية ≠ التحذير الناقص (واجهة v2.18.0) ───
+// 🔴 الحالة اللي القسم ده اتكتب عليها (`#54618`): الشحنة اتعملت · رقم التتبع
+//    اتكتب · الحالة اتحدّثت · التاج اتحط — **وكله تمّ** — والصف كان بياخد
+//    «⚠ تم جزئيًا» لمجرد إن مستحق العميل اتقص عند حد بوسطة. الأصفر هنا معناه
+//    «شحنة بفلوس وحاجة ناقصة»، فالأصفر الكذّاب بيعلّم الموظف يعدّي على الأصفر.
+console.log('\n⑧ الملحوظة الإعلامية منفصلة عن التحذير');
+// ⚠️ **مش حالة** — الإجمالي = مجموع المربعات، فمربع لحاجة مش حالة بيكسر الجمع
+ok('«ملحوظة» مش حالة في summarize', !('advisory' in api.summarize([])), Object.keys(api.summarize([])));
+ok('ولا ليها مربع في RESULT_STATS', api.RESULT_STATS.length === 5);
+ok('عدّاد الملحوظات بيعدّ الصفوف مش الملحوظات',
+   api.advisoryCount([R('success', { advisories: ['a', 'b'] }), R('success'),
+                      R('warning', { advisories: ['c'] })]) === 2);
+// 🔴 التصدير بيقول نفس اللي الشاشة بتقوله (`html-builder` Step 3C)
+ok('نص الحالة في التصدير عربي زي البادج', api.resultLabel('warning') === 'تم جزئيًا');
+ok('وحالة مش معروفة بتاخد «—» — دي بتاعت «ما اتحاولش»', api.resultLabel('nope') === '—');
+ok('والتصدير بيستخدم الماب مش القيمة الخام', html.includes('status: resultLabel(r.status)'));
+// 🔴 عمود مستقل في الملف — اللي بيفتحه مش قدامه الشاشة، فلمّ الاتنين في عمود
+//    واحد بيضيّع التفرقة اللي التعديل كله اتعمل عشانها
+ok('وفيه عمود «ملحوظات» مستقل في التصدير',
+   html.includes("{ header: 'ملحوظات', key: 'advisories', width: 50 }"));
+ok('وعمود التحذير لسه موجود جنبه', html.includes("{ header: 'السبب / التحذير', key: 'reason', width: 50 }"));
+// الحكم فوق النافذة: سطر الملحوظات **تحت** الحكم مش مدموج فيه
+api.setResults([R('success'), R('success', { advisories: ['العميل ليه 2,700 — بوسطة هترجّع 2,000'] })]);
+api.renderResultVerdict(api.summarize([R('success'), R('success')]));
+const verdict = els.resVerdict.innerHTML;
+ok('الحكم لسه بيقول نجاح كامل', verdict.includes('اترفعت بنجاح'), verdict);
+ok('وسطر الملحوظة تحته', /res-verdict-note/.test(verdict), verdict);
+ok('وبيقول إن العملية تمّت', verdict.includes('تمّت بالكامل'), verdict);
+api.setResults([R('success')]);
+api.renderResultVerdict(api.summarize([R('success')]));
+ok('ومن غير ملحوظات مفيش سطر زيادة', !/res-verdict-note/.test(els.resVerdict.innerHTML));
+// ⚠️ اللون تالت عن قصد — توحيده مع الأصفر بيرجّع الباج
+ok('الملحوظة ليها كلاس بلون مستقل', html.includes('.res-note{'));
+ok('وعمود الجدول اسمه «السبب / الملحوظة»', html.includes('<th>السبب / الملحوظة</th>'));
 
 // ─── ⑦ رقم التتبع = لينك لداشبورد بوسطة (واجهة v2.15.0) ──────
 // 🔴 الصيغة نفسها هي العقد: `https://business.bosta.co/orders/{trackingNumber}`.
