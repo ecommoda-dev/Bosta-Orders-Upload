@@ -85,7 +85,12 @@ delete api.ov['H'];
 api.ov['B'] = { cityId:'c', cityName:'Cairo' };
 chk('B بعد تعديل المدينة',        api.rowAddrMode(rows[1]),      'cityFixed');
 chk('B بقى داخل تحديد الكل',      api.isAutoSelectable(rows[1]), true);
-chk('B المدينة الفعلية',          api.effCity(rows[1]),          {cityId:'c',cityName:'Cairo',changed:true});
+// 🔤 `effCity` بترجّع الاسمين — العمود بيعرض العربي واللي بيتبعت هو الإنجليزي.
+//    الاسم العربي الفاضي بيفضل سلسلة فاضية عشان `displayName` ترجع للإنجليزي.
+chk('B المدينة الفعلية',          api.effCity(rows[1]),
+    {cityId:'c',cityName:'Cairo',cityNameAr:'',changed:true});
+api.ov['B'] = { cityId:'c', cityName:'Cairo', cityNameAr:'القاهرة' };
+chk('B الاسم العربي بيعدّي مع التعديل اليدوي', api.effCity(rows[1]).cityNameAr, 'القاهرة');
 
 api.ov['B'] = { cityId:'c', cityName:'Cairo', districtId:'d1', districtName:'Obour' };
 chk('B بعد اختيار المنطقة',       api.rowAddrMode(rows[1]),      'district');

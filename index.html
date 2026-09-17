@@ -943,6 +943,11 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <span class="cl-ver-date">17-09-2026</span>
         </div>
         <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔤 <b>عمود «محافظة بوسطة» وعمود «المنطقة» بقوا بالعربي</b> (طلب أحمد). الأسماء دي <b>مش ترجمة عندنا</b> — بوسطة نفسها بترجّع لكل مستوى <b>اسمين</b> في كتالوجها (إنجليزي وعربي)، وكنا بنعرض الإنجليزي بس. ⚠️ والمنطقة اللي كتالوج بوسطة مالوش لها اسم عربي بتفضل <b>بالإنجليزي</b> مش خانة فاضية. 🔴 <b>واللي بيتبعت لبوسطة ما اتغيّرش</b>: الشحنة لسه بتتعمل بالـ <code>districtId</code> وبالاسم الإنجليزي — العربي <b>للعرض وبس</b>، وفيه اختبار بيتأكد إن مفيش حرف عربي بيدخل الـ payload.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>تسميات «حالة العنوان» بقت أقصر: <b>🔍 مرشّح تلقائي</b> (كانت «— راجعه») · <b>❓ احتمالات متعددة</b> (كانت «أكتر من مطابقة — محتاج اختيار») · <b>🟠 المحافظة خطأ غالباً</b> (كانت «مشكوك فيها — محتاج مراجعة»). الاسم بيتغيّر في <b>الفلتر والعمود وعنوان نافذة اختيار المنطقة</b> مع بعض — مصدر واحد. ⚠️ <b>والسلوك ما اتغيّرش</b>: التلاتة لسه موقوفين/مميّزين زي ما هم بالظبط.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔍 <b>البحث في نافذة اختيار المنطقة بقى بيلاقي «المنشيه» على «المنشية».</b> كان بيقارن النص الخام، فالموظف يكتب الإملاء الشائع ويقرا <b>«مفيش مناطق مطابقة»</b> على منطقة معروضة قدامه في نفس القايمة — <b>من غير أي خطأ</b>. دلوقتي الطرفين متطبّعين (ة/ه · ى/ي · همزات · تشكيل)، في <b>القايمة الكبيرة والقوايم المنسدلة</b> مع بعض.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>أسماء المناطق ما بقتش بتتكرر ولا بتبدأ بشرطة.</b> الكتالوج بيرجّع الحقلين متساويين على بعض المناطق (كانت بتطلع <code>Tanta — Tanta</code>) وبيرجّع الإنجليزي فاضي على غيرها (كانت بتطلع <code> — المنشية</code>). الحارس كان موجود في القوايم المنسدلة وناقص في صفوف القايمة الكبيرة — بقى <b>مصدر واحد</b> للتلاتة.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>اختيار منطقة من القايمة المنسدلة كان بيخزّن اسمها مقصوص.</b> الأداة بتركّب الاسم المعروض «إنجليزي — عربي» وكانت بتفكّه تاني <b>على نفس الشرطة</b> عشان تطلّع الاسم — فأي منطقة اسمها الإنجليزي جوّاه شرطة كانت بتترجّع ناقصة، ونفس المنطقة تتخزّن باسمين مختلفين حسب مكان الضغط. الاسم بقى بيتقرا من <b>الكتالوج بالـ id</b>.</span></li>
           <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>الصف اللي اتعمل فيه كل حاجة بقى أخضر — مش «⚠ تم جزئيًا»</b> (طلب أحمد، على حالة حقيقية). <code>#54618</code> اترفع صح بالكامل — الشحنة اتعملت على بوسطة، رقم التتبع اتكتب، الحالة بقت <code>In-Return</code>، والتاج اتحط — وظهر <b>أصفر</b> لسبب واحد: مستحق العميل <b>2,700</b> اتقص عند <b>حد بوسطة 2,000</b>. القص ده <b>مش نقص في العملية</b> — هو حد من بوسطة والباقي بيتسوّى مكتبيًا.</span></li>
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span>ℹ️ <b>وبقى فيه فرق بين «تحذير» و«ملحوظة».</b> <b>التحذير الأصفر</b> = الشحنة موجودة بفلوس و<b>حاجة بعدها ما تمّتش</b> (الكتابة على شوبيفاي فشلت · بوسطة ما رجّعتش رقم تتبع) — <b>متعيدش الرفع</b>. <b>الملحوظة الزرقا ℹ️</b> = العملية <b>تمّت بالكامل</b> وفيه معلومة تستاهل تتقال: قص المبلغ · تعديل المحافظة بإيدك · نزول درجة العنوان لما بوسطة ترفض المنطقة.</span></li>
           <li class="cl-item"><span class="cl-tag change">تغيير</span><span>⚠️ <b>ومفيش معلومة اتشالت.</b> الملحوظة بتتعرض في عمود <b>«السبب / الملحوظة»</b> (كان «السبب / التحذير»)، و<b>بتفتح التفاصيل لوحدها</b> رغم إن الصف أخضر — عشان رقم الباقي يفضل قدامك — وليها <b>عمود مستقل في تصدير النتيجة</b>، وبتتكتب في السجل. والصف اللي عليه <b>الاتنين</b> (قص + فشل كتابة) بيفضل <b>أصفر</b>: الملحوظة جنب التحذير مش بداله.</span></li>
@@ -2142,7 +2147,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.18.0';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.19.0';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2154,7 +2159,13 @@ const TOOL_VERSION       = 'v2.18.0';  // مصدر واحد لرقم نسخة ا
 //    عنده مطابقة محلية سليمة (اسم متكرر بين محافظتين زي «السادات»)، فالصف
 //    بيتوقف عن الرفع والاقتراح بيودّي للمحافظة الغلط. والواجهة **مش** بتقدر
 //    تصلّحها: الشك محسوب في `resolveAddress` جوّه الـ Worker.
-const MIN_WORKER_VERSION = '2.7.0';
+// 🔴 v2.8.0 — Worker أقدم مابيرجّعش `cityNameAr` / `districtNameAr` /
+//    `zoneNameAr`، فعمودي «محافظة بوسطة» و«المنطقة» بيرجعوا **إنجليزي** في
+//    صمت. مش خطر على الشحنة (`displayName` بترجع للإنجليزي بدل ما تفضّي
+//    الخانة) لكن الموظف بيقرا شاشة غير اللي اتدرّب عليها ومفيش أي رسالة
+//    تقول السبب — والاسم العربي **مش قابل للاشتقاق في الواجهة** أصلًا:
+//    مصدره الكتالوج، والكتالوج بيتقرا في الـ Worker.
+const MIN_WORKER_VERSION = '2.8.0';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -2318,6 +2329,49 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 function jsq(s) { return String(s ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+
+// ══════════════════════════════════════════════════════════════
+// §NAMES — 🔤 مصدر واحد لشكل اسم أي مستوى عنوان (محافظة · مدينة · منطقة)
+// ══════════════════════════════════════════════════════════════
+// 🔴 **بوسطة بترجّع حقلين منفصلين لكل مستوى** — إنجليزي (`name`) وعربي
+//    (`otherName`/`nameAr`) — والشكل «EN — AR» **إحنا اللي بنركّبه**، مش جاي
+//    كده من عندها. مفيش أي ترجمة في الأداة: الاسمين الاتنين من الكتالوج الحي.
+// 🔴 **والاسمين ممنوع يتخلطوا**: اللي بيتبعت لبوسطة هو الإنجليزي (أو الـ id
+//    مباشرةً)، والعربي **للعرض وبس**. أي كود بيبني payload أو بيكتب `override`
+//    بيقرا `name` الخام من `dpDistricts`/`dpCities` — مابيقراش نص معروض.
+//    (والـ Worker بيعيد استخراج الاسم من الـ id تاني قبل الرفع — حارس تاني.)
+
+// شكل النافذة: الاتنين جنب بعض. 🔴 **حارس التطابق والفاضي إلزامي** — الكتالوج
+// بيرجّع الحقلين متساويين على بعض المناطق (فكان بيطلع «Tanta — Tanta»)، وبيرجّع
+// الإنجليزي فاضي على غيرها (فكان بيطلع « — المنشية» بشرطة بادئة بلا اسم).
+function bilingualName(en, ar) {
+  const e = String(en ?? '').trim(), a = String(ar ?? '').trim();
+  if (e && a && e !== a) return `${e} — ${a}`;
+  return e || a;
+}
+// شكل الجدول والتصدير: **العربي وإلا الإنجليزي** (طلب أحمد 17-09-2026).
+// ⚠️ الرجوع للإنجليزي مش تجميل — منطقة من غير `otherName` في الكتالوج كانت
+//    هتبقى خانة فاضية، والخانة الفاضية بتتقرا «الأداة مالقتش منطقة» وهي لاقية.
+function displayName(en, ar) {
+  const a = String(ar ?? '').trim();
+  return a || String(en ?? '').trim();
+}
+// 🔍 تطبيع نص البحث **في خانات البحث بس** — مرآة `normText` بتاعة الـ Worker.
+// 🔴 دي **مش** نسخة تانية من محرك المطابقة: مابتلمسش أي قرار عنوان ولا payload،
+//    وأي افتراق بينها وبين الـ Worker بيخلّي البحث أوسع أو أضيق شوية وبس.
+//    السبب إن الكتالوج بيكتب «المنشية» والموظف بيكتب «المنشيه» — والمقارنة
+//    الخام كانت بترجّع «مفيش مناطق مطابقة» على منطقة موجودة قدامه في القايمة.
+function normSearch(s) {
+  return String(s ?? '')
+    .replace(/[\u064B-\u0652\u0670\u0640]/g, '')   // تشكيل + تطويل
+    .replace(/[إأآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/[ؤئ]/g, 'ء')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .toLowerCase();
+}
 
 // ══════════════════════════════════════════════════════════════
 // §SHELL-JS
@@ -2904,15 +2958,15 @@ const ADDR_MODE_ITEMS = [
   //    الكل» — قرار أحمد)، فالتفرقة البصرية هي الحاجة الوحيدة اللي بتفضل
   //    بين تخمين وحقيقة. توحيدها مع «عنوان مظبوط» بيخلي الموظف يعدّي على
   //    التخمين وهو فاكره مطابقة.
-  { value: 'anchor',   label: '🔍 مرشّح تلقائي — راجعه' },
+  { value: 'anchor',   label: '🔍 مرشّح تلقائي' },
   // 🔴 درجة وسيطة حقيقية بين المنطقة والمحافظة (واجهة v2.4.0) — مش تسمية
   //    تجميلية. الـ`zoneId` بيغيّر **الهب وكود الفرز** على البوليصة،
   //    و«المحافظة فقط» بتاخد هب افتراضي. لازم الموظف يفرّق بين الاتنين.
   { value: 'zone',     label: '🗺️ المدينة فقط' },
   { value: 'province', label: '🏙️ المحافظة فقط' },
-  { value: 'ambiguous',label: '❓ أكتر من مطابقة — محتاج اختيار' },
+  { value: 'ambiguous',label: '❓ احتمالات متعددة' },
   // ⚠️ الشك هنا على **`cityId`** — يعني «المحافظة» في العرض، مش «المدينة».
-  { value: 'cityDoubt',label: '🟠 المحافظة مشكوك فيها — محتاج مراجعة' },
+  { value: 'cityDoubt',label: '🟠 المحافظة خطأ غالباً' },
   { value: 'cityFixed',label: '🏙️ محافظة معدّلة يدويًا' },
   // 🔴 دي **مش** نقص مطابقة — دي عنوان بوسطة مش بتسلّم فيه أصلًا. لازم تبقى
   //    حالة مستقلة في الفلتر عشان الأوبريشن يقدر يطلّعهم كلهم ويحوّلهم.
@@ -3304,7 +3358,12 @@ const sortConfig = {
   orderNumber: { type: 'string' }, customer: { type: 'string' }, phone: { type: 'string' },
   secondPhone: { type: 'string' },
   address: { type: 'string', get: r => fullAddressText(r) },
-  province: { type: 'string' }, cityName: { type: 'string' }, s1: { type: 'string' },
+  province: { type: 'string' },
+  // 🔴 العمود بيعرض العربي من v2.19.0 — فالترتيب لازم يقرا **نفس** النص.
+  //    الترتيب على `r.cityName` الإنجليزي مع عمود عربي بيدّي عمود «مرتّب»
+  //    شكله عشوائي على الشاشة من غير أي خطأ.
+  cityName: { type: 'string', get: r => displayName(effCity(r).cityName, effCity(r).cityNameAr) },
+  s1: { type: 'string' },
   addrMode: { type: 'string', get: r => ADDR_MODE_LABEL[rowAddrModeGroup(r)] || rowAddrModeGroup(r) },
   upLabel: { type: 'string', get: r => rowUpLabel(r) },
   date: { type: 'date', get: r => r.createdAt },
@@ -3460,21 +3519,32 @@ function applyFilters() {
 // شرح كل شكل عنوان — نفس النص في الخلية (hover) وفي سطر الحالة جوه النافذة
 function addrModeInfo(r) {
   const ov = districtOverride[r.orderId];
-  const cityTxt = ov?.cityId && ov.cityId !== r.cityId ? ` (مدينة ${ov.cityName})` : '';
+  // 🔤 كل اسم مستوى معروض في العمود ده بيعدّي على `displayName` — العربي وإلا
+  //    الإنجليزي (طلب أحمد 17-09-2026). ⚠️ **العرض بس**: `ov.districtId` /
+  //    `ov.zoneId` / `cityName` الإنجليزي هما اللي بيتبعتوا للـ Worker.
+  // 🔴 **الاسمين بيتاخدوا من نفس المصدر دايمًا.** `ov.cityName || r.cityName`
+  //    مع `ov.cityNameAr || r.cityNameAr` كان بيخلط: تعديل يدوي لمحافظة
+  //    مالهاش اسم عربي في الكتالوج كان بياخد **الاسم العربي بتاع المحافظة
+  //    الأصلية** — يعني العمود يقول محافظة والـ payload يبعت غيرها.
+  const city = ov?.cityName ? { en: ov.cityName, ar: ov.cityNameAr || '' }
+                            : { en: r.cityName,  ar: r.cityNameAr  || '' };
+  const cityTxt = ov?.cityId && ov.cityId !== r.cityId
+    ? ` (مدينة ${displayName(city.en, city.ar)})` : '';
   if (ov?.districtId) {
     // 🔴 الصف اللي كان **خارج التغطية** واتحرّر بالاختيار اليدوي لازم يفضل
     //    باين إنه كان كده. البادج بقى 📍 زيه زي أي اختيار يدوي (وده صح — ده
     //    نفس القرار)، لكن من غير السطر ده مفيش أي أثر إن المطابقة التلقائية
     //    كانت وصلت لمنطقة بوسطة مش بتسلّم فيها، ومراجعة الصف بعدين بتبقى عمياء.
     const blocked = rowCoverageOverridden(r)
-      ? ` · ⚠️ العنوان ده كان خارج التغطية (طابق ${(r.blockedDistricts || []).map(d => d.name).filter(Boolean).join(' · ') || 'منطقة مقفولة'}) `
+      ? ` · ⚠️ العنوان ده كان خارج التغطية (طابق ${(r.blockedDistricts || []).map(d => displayName(d.name, d.nameAr)).filter(Boolean).join(' · ') || 'منطقة مقفولة'}) `
         + 'واتحرّر بالاختيار ده — اتأكد إن المنطقة دي فعلًا عنوان العميل.'
       : '';
-    return { label: `📍 ${ov.districtName}${cityTxt}`, set: true,
-      hint: `منطقة متحدّدة يدويًا — الشحنة هتترفع على مدينة ${ov.cityName || r.cityName} بـ districtId عليها${blocked}` };
+    return { label: `📍 ${displayName(ov.districtName, ov.districtNameAr)}${cityTxt}`, set: true,
+      hint: `منطقة متحدّدة يدويًا — الشحنة هتترفع على مدينة ${
+        displayName(city.en, city.ar)} بـ districtId عليها${blocked}` };
   }
-  if (ov?.forceZone) return { label: `🗺️ ${ov.zoneName} · مثبّت`, set: true,
-    hint: `متثبّت يدويًا على مدينة ${ov.zoneName} — الشحنة هتترفع بالـ zoneId ده، `
+  if (ov?.forceZone) return { label: `🗺️ ${displayName(ov.zoneName, ov.zoneNameAr)} · مثبّت`, set: true,
+    hint: `متثبّت يدويًا على مدينة ${displayName(ov.zoneName, ov.zoneNameAr)} — الشحنة هتترفع بالـ zoneId ده، `
         + 'يعني هب وكود فرز محددين بدل الهب الافتراضي للمحافظة. مش هتتبعت منطقة.' };
   // 🔴 `set:false` لأن **مفيش مفتاح عنوان بيتبعت** — لا `districtId` ولا `zoneId`.
   //    لكن `pinned:true`: الصف ده قرار يدوي صريح من الموظف زيه زي التثبيت على
@@ -3482,14 +3552,14 @@ function addrModeInfo(r) {
   //    التثبيت على المحافظة كان بيبان رمادي زي الصف اللي محدش لمسه، والموظف
   //    مش عارف إن الزرار اشتغل أصلًا. الخانتين بيقروا `set` لحاجة تانية
   //    (إيه اللي بيتبعت لبوسطة)، فالعلامة دي علم منفصل مش تغيير في `set`.
-  if (ov?.forceProvince) return { label: `🏙️ ${ov.cityName || r.cityName} فقط · مثبّت`, set: false, pinned: true,
+  if (ov?.forceProvince) return { label: `🏙️ ${displayName(city.en, city.ar)} فقط · مثبّت`, set: false, pinned: true,
     hint: 'متثبّت يدويًا على مستوى المحافظة — مش هتتبعت منطقة حتى لو المطابقة نجحت وقت الرفع' };
-  if (ov?.cityId) return { label: `🏙️ ${ov.cityName} · مدينة معدّلة`, set: false,
-    hint: `المحافظة اتغيّرت يدويًا لـ ${ov.cityName} ولسه من غير منطقة — الشحنة هتترفع على المحافظة دي وتدخل مسار العناوين غير الواضحة` };
+  if (ov?.cityId) return { label: `🏙️ ${displayName(city.en, city.ar)} · مدينة معدّلة`, set: false,
+    hint: `المحافظة اتغيّرت يدويًا لـ ${displayName(city.en, city.ar)} ولسه من غير منطقة — الشحنة هتترفع على المحافظة دي وتدخل مسار العناوين غير الواضحة` };
   // 🔴 أسبق من كل حاجة: العنوان برّه تغطية بوسطة. الرفع موقوف، والزرار بيفتح
   //    النافذة عشان الموظف يشوف المنطقة المقفولة بنفسه ويختار بديل لو فيه.
   if (r.mode === 'coverageBlocked') {
-    const names = (r.blockedDistricts || []).map(d => d.name).filter(Boolean).join(' · ');
+    const names = (r.blockedDistricts || []).map(d => displayName(d.name, d.nameAr)).filter(Boolean).join(' · ');
     return { label: `🚫 ${names || 'منطقة مقفولة'}`, set: false,
       hint: `العنوان طابق منطقة بوسطة مش بتسلّم فيها (${names || '—'}) — خارج تغطية بوسطة. `
           + 'الرفع على المحافظة **مش** بديل: الشحنة هتتشحن بفلوس وترجع بعد أيام. '
@@ -3499,21 +3569,21 @@ function addrModeInfo(r) {
   //    الـ`mode` للاتنين، والفرق في العلم.
   if (r.districtFromAnchor) {
     const a = r.addressAnchor || {};
-    return { label: `🔍 ${r.districtName}`, set: true, candidate: true,
+    return { label: `🔍 ${displayName(r.districtName, r.districtNameAr)}`, set: true, candidate: true,
       hint: `مفيش مطابقة لاسم المنطقة كامل، لكن كلمة "${a.text || '—'}" في ${a.fieldLabel || 'العنوان'} `
-          + `موجودة في اسم **منطقة واحدة بس** في ${r.cityName} — فالشحنة هتترفع عليها. `
+          + `موجودة في اسم **منطقة واحدة بس** في ${displayName(city.en, city.ar)} — فالشحنة هتترفع عليها. `
           + 'دي **كلمة واحدة مش اسم كامل**، فلو الكلمة دي علامة مميزة (مستشفى · مسجد · سنتر) '
           + 'مش عنوان العميل، افتح وغيّر المنطقة.' };
   }
-  if (r.mode === 'district') return { label: `📍 ${r.districtName}`, set: true,
+  if (r.mode === 'district') return { label: `📍 ${displayName(r.districtName, r.districtNameAr)}`, set: true,
     hint: 'المطابقة التلقائية لقت منطقة واحدة في كتالوج بوسطة — الشحنة هتترفع بالمنطقة دي' };
   // 🗺️ درجة الزون — بين المنطقة والمحافظة. `set: true` لأن الشحنة **بتترفع
   //    بمفتاح حقيقي** (`zoneId`) مش على مستوى المحافظة.
-  if (r.mode === 'zone') return { label: `🗺️ ${r.zoneName}`, set: true,
-    hint: `مفيش مطابقة منطقة، لكن العنوان طابق مدينة واحدة (${r.zoneName}) — الشحنة هتترفع `
+  if (r.mode === 'zone') return { label: `🗺️ ${displayName(r.zoneName, r.zoneNameAr)}`, set: true,
+    hint: `مفيش مطابقة منطقة، لكن العنوان طابق مدينة واحدة (${displayName(r.zoneName, r.zoneNameAr)}) — الشحنة هتترفع `
         + `على المدينة دي (zoneId)، يعني هب وكود فرز محددين بدل الهب الافتراضي للمحافظة. `
         + `المدينة جواها ${fmtNum(r.zoneDistrictCount || 0)} منطقة — افتح لو عايز تحدد واحدة بالظبط.` };
-  if (r.mode === 'zoneName') return { label: `🗺️ ${r.districtName}`, set: true,
+  if (r.mode === 'zoneName') return { label: `🗺️ ${displayName(r.districtName, r.districtNameAr)}`, set: true,
     hint: 'محافظة اتلغت إداريًا — بتتبعت كمدينة جوّه محافظة بوسطة التابعة ليها' };
   if (r.ambiguous) return { label: `❓ ${r.candidates.length} احتمالات`, set: false,
     hint: `نص العنوان طابق ${r.candidates.length} مناطق — الرفع موقوف لحد ما تختار منطقة، `
@@ -3522,10 +3592,12 @@ function addrModeInfo(r) {
     // اسم المدينة المقترحة في البادج نفسه — الموظف يعرف من الجدول من غير ما
     // يفتح النافذة، والضغطة بتوديه على الاقتراح جاهز
     const f = r.crossCity?.[0];
-    const what = f ? (f.kind === 'zone' ? `مدينة ${f.zone}` : f.districtName) : '';
-    return { label: f ? `🟠 ${f.cityName}؟` : '🟠 المحافظة مشكوك فيها', set: false,
-      hint: `مفيش مطابقة جوّه ${r.cityName}، لكن العنوان طابق في مدينة تانية` +
-            (f ? ` — ${f.cityName} ← ${what} (طابق "${f.matchedText}")` : '') +
+    const what = f ? (f.kind === 'zone' ? `مدينة ${displayName(f.zone, f.zoneAr)}`
+                                        : displayName(f.districtName, f.districtNameAr)) : '';
+    const fCity = f ? displayName(f.cityName, f.cityNameAr) : '';
+    return { label: f ? `🟠 ${fCity}؟` : '🟠 المحافظة مشكوك فيها', set: false,
+      hint: `مفيش مطابقة جوّه ${displayName(city.en, city.ar)}، لكن العنوان طابق في مدينة تانية` +
+            (f ? ` — ${fCity} ← ${what} (طابق "${f.matchedText}")` : '') +
             `. افتح واضغط على الاقتراح: بيظبّط المدينة` +
             (f?.kind === 'zone' ? ` ويقصّر القايمة على ${fmtNum(f.districtCount || 0)} منطقة` : ' والمنطقة') +
             `. الرفع على مدينة غلط بيودّي الشحنة فرع وتسعيرة غلط — والرفع موقوف لحد ما تراجع المدينة.` };
@@ -3536,14 +3608,19 @@ function addrModeInfo(r) {
         + '(زرار «ارفع على المحافظة فقط» تحت) أو تختار منطقة/مدينة.' +
       // ⚠️ الصف اللي كان بيتضغط اتشال (v2.6.0) — الإحالة بقت على **قايمة الزون**
       //    في صف بوسطة، وهي المكان الواحد للمعلومة دي.
-      (lz ? ` · 🗺️ فقط العنوان طابق مدينة ${lz.zone} في نفس المحافظة — افتح واختارها من قايمة «المدينة» عشان تشوف ${fmtNum(lz.districtCount || 0)} منطقة فقط.` : '') };
+      (lz ? ` · 🗺️ فقط العنوان طابق مدينة ${displayName(lz.zone, lz.zoneAr)} في نفس المحافظة — افتح واختارها من قايمة «المدينة» عشان تشوف ${fmtNum(lz.districtCount || 0)} منطقة فقط.` : '') };
 }
 // المدينة المعروضة = اللي هتتبعت فعلًا. لو الموظف عدّلها، الأصلية بتفضل
 // مكتوبة في الـ tooltip — عشان مراجعة الصف تفضل ممكنة.
+// 🔤 **بالعربي** (طلب أحمد 17-09-2026) — الاسم جاي من كتالوج بوسطة نفسه، مش
+//    ترجمة عندنا، وبيرجع للإنجليزي لو الكتالوج مالوش اسم عربي.
+//    ⚠️ العرض بس: الـ payload لسه بيبعت `cityName` الإنجليزي.
 function cityCell(r) {
-  const c = effCity(r);
-  if (!c.changed) return esc(c.cityName || '—');
-  return `<span class="badge badge-warn" title="${esc(`المطابقة التلقائية كانت: ${r.cityName}`)}">${esc(c.cityName)} ✎</span>`;
+  const c   = effCity(r);
+  const txt = displayName(c.cityName, c.cityNameAr);
+  if (!c.changed) return esc(txt || '—');
+  return `<span class="badge badge-warn" title="${
+    esc(`المطابقة التلقائية كانت: ${displayName(r.cityName, r.cityNameAr)}`)}">${esc(txt)} ✎</span>`;
 }
 function districtCell(r) {
   if (!r.addressOk) return `<span class="badge badge-danger">محافظة مش معروفة</span>`;
@@ -4031,6 +4108,10 @@ function effCity(r) {
   return {
     cityId:   ov?.cityId   || r.cityId,
     cityName: ov?.cityName || r.cityName,
+    // 🔤 الاسمين بيمشوا مع بعض — العمود بيعرض العربي، واللي بيتبعت لبوسطة هو
+    //    `cityName` الإنجليزي (`city` في الـ payload). فصلهم معناه عمود بيقول
+    //    محافظة والـ payload بيبعت غيرها.
+    cityNameAr: (ov?.cityId ? ov.cityNameAr : r.cityNameAr) || '',
     changed:  !!(ov?.cityId && ov.cityId !== r.cityId),
   };
 }
@@ -4248,7 +4329,7 @@ function dpPickOptions(key) {
     const list = dpCities.length ? dpCities : [{ cityId: r.cityId, cityName: r.cityName, cityAr: '' }];
     return list.map(c => ({
       id: c.cityId,
-      label: `${c.cityName}${c.cityAr && c.cityAr !== c.cityName ? ` — ${c.cityAr}` : ''}`,
+      label: bilingualName(c.cityName, c.cityAr) || '—',
       // ⚠️ عدد المناطق المقفولة **مابيتعرضش** هنا (v2.6.0، بطلب أحمد): الرقم
       //    مالوش أثر على أي قرار — اللي بيفرق هو إن **المنطقة دي بالذات**
       //    مقفولة، وده باين على المنطقة نفسها في قايمة المناطق.
@@ -4279,7 +4360,11 @@ function dpPickOptions(key) {
       .map(z => ({
         id: z.id,
         zoneId: z.zoneId,
-        label: `${z.name || z.nameAr}${z.nameAr && z.nameAr !== z.name ? ` — ${z.nameAr}` : ''}`,
+        // 🔤 الاسم العربي بيتحمل جنب الليبل — «ارفع على المدينة فقط» بيخزّنه في
+        //    الـ`override` وعمود «المنطقة» بيعرضه. من غيره التثبيت اليدوي كان
+        //    بيرجّع الصف إنجليزي وسط عمود عربي.
+        nameAr: z.nameAr || '',
+        label: bilingualName(z.name, z.nameAr) || '—',
         sub: `${fmtNum(z.count)} منطقة`,
         blocked: false,
         cur: dpZoneFilter != null && dpZoneFilter.toLowerCase() === z.id.toLowerCase(),
@@ -4301,7 +4386,7 @@ function dpPickOptions(key) {
     .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'en'))
     .map(d => ({
       id: d.id,
-      label: `${d.name}${d.nameAr && d.nameAr !== d.name ? ` — ${d.nameAr}` : ''}`,
+      label: bilingualName(d.name, d.nameAr) || '—',
       sub: d.blocked ? '🚫 مقفولة للتسليم' : zoneLabel(d).text,
       blocked: !!d.blocked,
       cur: d.id === chosen,
@@ -4444,9 +4529,13 @@ async function dpPickChoose(key, id) {
   if (key === 'zone')     { dpPickOpen = null; dpPickZone(id); return; }
   // 🔴 المنطقة المقفولة بتتمنع في `chooseDistrict` نفسها — الحارس هناك مش هنا،
   //    عشان يغطي القايمة الكبيرة كمان.
-  const opt = dpPickOptions('district').find(o => o.id === id);
+  // 🔴 **الاسم بيتقرا من الكتالوج بالـ id — ممنوع فكّ الليبل المعروض.** كان
+  //    `label.split(' — ')[0]`، يعني الأداة بتركّب «EN — AR» وبعدين تقصّها تاني
+  //    على نفس الشرطة: أي منطقة اسمها الإنجليزي فيه ` — ` كانت بترجع **مقصوصة**،
+  //    والمسار التاني (الضغط على الصف في القايمة الكبيرة) بيبعت `d.name` الخام —
+  //    فنفس الفعل كان ليه اسمين مختلفين حسب مكان الضغط.
   dpPickOpen = null;
-  chooseDistrict(id, (opt?.label || '').split(' — ')[0]);
+  chooseDistrict(id);
 }
 
 // 🔴 اختيار زون = **قصر القايمة**، مش اختيار منطقة. الزون جواه مناطق كتير،
@@ -4465,9 +4554,14 @@ function dpPickZone(id) {
 function renderDpPickList(key) {
   const el = document.getElementById(`dpPickList-${key}`);
   if (!el) return;
-  const q = (dpPickSearch[key] || '').trim().toLowerCase();
+  // ⚠️ النص الخام بيتحفظ للعرض — الرسالة لازم تقول اللي الموظف كتبه بالظبط،
+  //    مش النص المطبَّع (اللي بيشيل التشكيل ويحوّل ة→ه).
+  const raw = (dpPickSearch[key] || '').trim();
+  const q = normSearch(raw);
   let opts = dpPickOptions(key);
-  if (q) opts = opts.filter(o => `${o.label} ${o.sub}`.toLowerCase().includes(q));
+  // 🔍 نفس تطبيع القايمة الكبيرة بالظبط — قايمتين بحث بقاعدتين مختلفتين معناها
+  //    إن الموظف يلاقي المنطقة في وحدة ومايلاقيهاش في التانية لنفس النص.
+  if (q) opts = opts.filter(o => normSearch(`${o.label} ${o.sub}`).includes(q));
 
   // «الكل» في قايمة الزون فقط — هو اللي بيشيل القصر ويرجّع كل مناطق المدينة
   const head = (key === 'zone' && !q)
@@ -4478,7 +4572,7 @@ function renderDpPickList(key) {
     : '';
 
   if (!opts.length && !head) {
-    el.innerHTML = `<div class="dp-pick-empty">لا توجد نتائج${q ? ` لـ"${esc(q)}"` : ''}</div>`;
+    el.innerHTML = `<div class="dp-pick-empty">لا توجد نتائج${raw ? ` لـ"${esc(raw)}"` : ''}</div>`;
     return;
   }
   // القايمة مقصوصة على ٤٠٠ زي القايمة الكبيرة — والبحث هو وسيلة الوصول
@@ -4541,8 +4635,9 @@ async function chooseCity(cityId) {
   if (cityId === r.cityId) {
     delete districtOverride[dpOrderId];            // رجوع للمدينة التلقائية
   } else {
-    districtOverride[dpOrderId] = { cityId, cityName: c?.cityName || '' };
-    showToast(`المحافظة بقت ${c?.cityName || cityId} — اختر المنطقة أو ارفع على المحافظة فقط`, 'warning', 5000);
+    districtOverride[dpOrderId] = { cityId, cityName: c?.cityName || '', cityNameAr: c?.cityAr || '' };
+    showToast(`المحافظة بقت ${displayName(c?.cityName, c?.cityAr) || cityId} — اختر المنطقة أو ارفع على المحافظة فقط`,
+              'warning', 5000);
   }
   applyFilters();
   await loadDpCity(cityId);
@@ -4584,7 +4679,7 @@ function dpRow(d, cls, chosen, why, badge) {
   const click = blocked ? '' : ` onclick="chooseDistrict('${jsq(d.id)}','${jsq(d.name)}')"`;
   return `<div class="dp-item ${cls}${chosen ? ' chosen' : ''}${blocked ? ' dp-blocked' : ''}"${click}>
       <span class="dp-cell"><span class="dp-zone${z.none ? ' none' : ''}">🗺️ ${esc(z.text)}</span></span>
-      <span class="dp-main"><span class="dp-name">${esc(d.name)}${d.nameAr ? ` — ${esc(d.nameAr)}` : ''}${
+      <span class="dp-main"><span class="dp-name">${esc(bilingualName(d.name, d.nameAr) || '—')}${
         blocked ? '<span class="dp-blocked-badge">🚫 مقفولة للتسليم</span>' : ''}${
         badge ? `<span class="dp-match-badge">${esc(badge)}</span>` : ''}</span>${
         why ? `<span class="dp-why">${esc(why)}</span>` : ''}</span>
@@ -4617,11 +4712,13 @@ function renderZoneNote() {
 // منها تخمين. بيظبّط المدينة ويقصّر القايمة، والموظف يختار المنطقة من ٦ بدل ٥٩٠.
 function zoneSuggestRow(z, cls) {
   const n = z.districtCount || 0;
-  const zTxt = `${z.zone}${z.zoneAr && z.zoneAr !== z.zone ? ` — ${z.zoneAr}` : ''}`;
+  // 🔤 نفس `bilingualName` بتاعة باقي النافذة — نسخة محلية هنا كانت بتفوت
+  //    حارس الاسم الإنجليزي الفاضي.
+  const zTxt = bilingualName(z.zone, z.zoneAr) || '—';
   return `<div class="dp-item ${cls}" onclick="chooseZone('${jsq(z.cityId)}','${jsq(z.cityName)}','${jsq(z.zone)}')">
       <span class="dp-cell"><span class="dp-zone">🗺️ ${esc(zTxt)}</span>
       <span class="dp-count">${fmtNum(n)} منطقة</span></span>
-      <span class="dp-main"><span class="dp-name">🗺️ ${esc(z.cityName)}</span>
+      <span class="dp-main"><span class="dp-name">🗺️ ${esc(bilingualName(z.cityName, z.cityNameAr))}</span>
       <span class="dp-why">اضغط تظبّط المدينة وتقصّر القايمة · طابق "${esc(z.matchedText)}" في ${esc(z.fieldLabel || 'العنوان')}</span></span>
     </div>`;
 }
@@ -4631,10 +4728,11 @@ function zoneSuggestRow(z, cls) {
 async function chooseZone(cityId, cityName, zone) {
   const r = allRows.find(x => x.orderId === dpOrderId);
   if (!r) return;
+  const sug = (r.crossCity || []).find(x => x.kind === 'zone' && x.cityId === cityId && x.zone === zone);
   // 🔴 المدينة بتتقارن بمدينة **الصف** مش بالمدينة المعروضة في النافذة.
   //    ربطها بـ dpCityId كان بيسيب الصف من غير تسجيل لو النافذة أصلًا واقفة
   //    على المدينة المقترحة — فالرفع كان هيمشي على مدينة الجدول الغلط في صمت.
-  if (cityId !== r.cityId) districtOverride[dpOrderId] = { cityId, cityName };
+  if (cityId !== r.cityId) districtOverride[dpOrderId] = { cityId, cityName, cityNameAr: sug?.cityNameAr || '' };
   else                     delete districtOverride[dpOrderId];
   // ⚠️ مفيش منطقة بتتحمل من اختيار سابق — اختيار زون معناه إعادة تحديد النطاق،
   //    ومنطقة من مدينة تانية مع اسم مدينة جديد = شحنة في المكان الغلط.
@@ -4644,7 +4742,8 @@ async function chooseZone(cityId, cityName, zone) {
   document.getElementById('dpSearch').value = '';
   toggleSearchActiveState(document.getElementById('dpSearch'));
   renderDistrictList();
-  showToast(`المحافظة ${cityName} · القايمة مقصورة على مدينة ${zone} — اختر المنطقة`, 'success', 5000);
+  showToast(`المحافظة ${displayName(cityName, sug?.cityNameAr)} · القايمة مقصورة على مدينة ${
+    displayName(zone, sug?.zoneAr)} — اختر المنطقة`, 'success', 5000);
 }
 function clearZoneFilter() { dpZoneFilter = null; renderDistrictList(); }
 function renderDistrictList() {
@@ -4652,7 +4751,7 @@ function renderDistrictList() {
   if (dpLoading) return;
   renderZoneNote();
   const r  = allRows.find(x => x.orderId === dpOrderId);
-  const q  = (document.getElementById('dpSearch').value || '').trim().toLowerCase();
+  const q  = normSearch(document.getElementById('dpSearch').value || '');
   const el = document.getElementById('dpList');
   const ov = districtOverride[dpOrderId];
   const chosen = ov?.districtId || (dpCityId === r?.cityId ? r?.districtId : null);
@@ -4731,7 +4830,8 @@ function renderDistrictList() {
       head += cross.map(c => c.kind === 'zone' ? zoneSuggestRow(c, 'cross') : `
         <div class="dp-item cross" onclick="chooseCrossCity('${jsq(c.cityId)}','${jsq(c.cityName)}','${jsq(c.districtId)}','${jsq(c.districtName)}')">
           <span class="dp-cell"><span class="dp-zone${c.zone ? '' : ' none'}">🗺️ ${esc(c.zone || 'بلا مدينة')}</span></span>
-          <span class="dp-main"><span class="dp-name">${esc(c.cityName)} ← ${esc(c.districtName)}${c.districtNameAr ? ` — ${esc(c.districtNameAr)}` : ''}</span>
+          <span class="dp-main"><span class="dp-name">${esc(bilingualName(c.cityName, c.cityNameAr))} ← ${
+            esc(bilingualName(c.districtName, c.districtNameAr))}</span>
           <span class="dp-why">مدينة تانية — اضغط تظبّط المدينة والمنطقة · طابق "${esc(c.matchedText)}" في ${esc(c.fieldLabel || 'العنوان')}</span></span>
         </div>`).join('');
     }
@@ -4756,8 +4856,11 @@ function renderDistrictList() {
     const zf = dpZoneFilter.toLowerCase();
     list = list.filter(d => (d.zone || '').toLowerCase() === zf || (d.zoneAr || '').toLowerCase() === zf);
   }
+  // 🔍 المقارنة **مطبَّعة على الناحيتين** — الكتالوج بيكتب «المنشية» والموظف
+  //    بيكتب «المنشيه»، والمقارنة الخام كانت بترجّع «مفيش مناطق مطابقة» على
+  //    منطقة معروضة قدامه في نفس القايمة **من غير أي خطأ**.
   if (q) list = list.filter(d =>
-    `${d.name} ${d.nameAr} ${d.zone || ''} ${d.zoneAr || ''}`.toLowerCase().includes(q));
+    normSearch(`${d.name} ${d.nameAr} ${d.zone || ''} ${d.zoneAr || ''}`).includes(q));
   // ترتيب أبجدي ثابت — الترويسة تحت بتقول كده، والقايمة اللي ترتيبها مش
   // معروف بتخلي التنقّل فيها تخمين
   list = [...list].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'en'));
@@ -4774,32 +4877,57 @@ function renderDistrictList() {
     list.slice(0, 400).map(d => dpRow(d, d.id === chosen ? 'is-match' : '', d.id === chosen, '')).join('');
 }
 
+// 🔴 **الاسم بيتقرا من `dpDistricts` بالـ id — مصدر واحد.** الـ`name` باراميتر
+//    **احتياطي بس** للنداءات اللي المنطقة مش في القايمة المحمّلة وقتها؛ ممنوع
+//    يبقى هو المصدر، لأن اللي بيتبعت للـ Worker هو الـ id والاسم للعرض، وأي
+//    اسم متفكّك من نص معروض (كان `label.split(' — ')`) بيدّي صف بيقول منطقة
+//    والشحنة على غيرها.
 function chooseDistrict(id, name) {
   const r = allRows.find(x => x.orderId === dpOrderId);
+  const d = dpDistricts.find(x => x.id === id);
   // 🔴 حارس تاني ورا شيل الـ onclick: الـ Worker بيرفض المنطقة المقفولة أصلًا
   //    (`availableDistricts` مابترجّعهاش في `list`) والرفع بيقف بخطأ صريح —
   //    فتسجيلها كتدخّل يدوي هنا معناه صف شكله متظبّط والرفع بيفشل بعدين.
-  if (dpDistricts.find(d => d.id === id)?.blocked) {
+  if (d?.blocked) {
     showToast('المنطقة دي مقفولة للتسليم عند بوسطة — مينفعش الرفع عليها', 'error', 6000);
     return;
   }
   const ov = districtOverride[dpOrderId] || {};
+  const city = dpCities.find(c => c.cityId === dpCityId);
+  const en = d?.name || name || '';
+  // 🔤 العربي بيتحفظ جنب الإنجليزي — عمود «المنطقة» بيعرض العربي، والـ payload
+  //    بيبعت الـ`districtId` (والـ Worker بيعيد استخراج الاسم الإنجليزي منه).
+  const ar = d?.nameAr || '';
   // المدينة بتتكتب مع المنطقة دايمًا — الرفع بيبعت الاتنين مع بعض، وفصلهم
   // بيخلي منطقة من مدينة تتبعت مع اسم مدينة تانية
+  // 🔴 **اسم المحافظة بالاتنين من مصدر واحد.** `city?.cityName || ov.cityName`
+  //    مع `city?.cityAr || ov.cityNameAr` كان بيخلط: محافظة في الكتالوج بلا
+  //    اسم عربي كانت هتاخد عربي محافظة تانية من الـ`override` القديم.
+  const cSrc = city ? { en: city.cityName, ar: city.cityAr || '' }
+             : ov.cityName ? { en: ov.cityName, ar: ov.cityNameAr || '' }
+             : { en: r?.cityName || '', ar: r?.cityNameAr || '' };
   districtOverride[dpOrderId] = {
-    districtId: id, districtName: name,
-    cityId: dpCityId, cityName: dpCities.find(c => c.cityId === dpCityId)?.cityName || ov.cityName || r?.cityName || '',
+    districtId: id, districtName: en, districtNameAr: ar,
+    cityId: dpCityId, cityName: cSrc.en, cityNameAr: cSrc.ar,
   };
   renderDistrictList();
   applyFilters();
-  showToast(`اتحددت المنطقة: ${name}`, 'success');
+  showToast(`اتحددت المنطقة: ${displayName(en, ar) || '—'}`, 'success');
 }
 
 async function chooseCrossCity(cityId, cityName, districtId, districtName) {
-  districtOverride[dpOrderId] = { cityId, cityName, districtId, districtName };
+  // 🔤 الاقتراح جاي من الـ Worker ومعاه الاسمين — بيتحفظوا الاتنين، والعرض
+  //    بياخد العربي. تمرير الاسم المعروض هنا كان هيخزّن «EN — AR» كاسم منطقة.
+  const c  = (allRows.find(x => x.orderId === dpOrderId)?.crossCity || [])
+               .find(x => x.cityId === cityId && x.districtId === districtId);
+  districtOverride[dpOrderId] = {
+    cityId, cityName, cityNameAr: c?.cityNameAr || '',
+    districtId, districtName, districtNameAr: c?.districtNameAr || '',
+  };
   applyFilters();
   await loadDpCity(cityId);
-  showToast(`المحافظة بقت ${cityName} والمنطقة ${districtName}`, 'success', 5000);
+  showToast(`المحافظة بقت ${displayName(cityName, c?.cityNameAr)} والمنطقة ${
+    displayName(districtName, c?.districtNameAr)}`, 'success', 5000);
 }
 
 // تثبيت صريح على المدينة من غير منطقة — بيمنع أي منطقة تتبعت حتى لو الكتالوج
@@ -4810,7 +4938,9 @@ async function chooseCrossCity(cityId, cityName, districtId, districtName) {
 //    اللي قدامه في الخانة.
 function dpEffectiveZone(r) {
   const ov = districtOverride[dpOrderId];
-  if (ov?.forceZone) return { id: ov.zoneName, zoneId: ov.zoneId, label: ov.zoneName };
+  if (ov?.forceZone) return { id: ov.zoneName, zoneId: ov.zoneId,
+                              label: bilingualName(ov.zoneName, ov.zoneNameAr) || ov.zoneName,
+                              labelAr: ov.zoneNameAr || '' };
   const chosenId = dpChosenDistrictId(r);
   const chosenD  = chosenId ? dpDistricts.find(d => d.id === chosenId) : null;
   const name = chosenD ? (chosenD.zone || chosenD.zoneAr || '')
@@ -4818,7 +4948,7 @@ function dpEffectiveZone(r) {
              || ((r.mode === 'zone' && dpCityId === r.cityId) ? r.zoneName : '');
   if (!name) return null;
   const opt = dpPickOptions('zone').find(o => o.id.toLowerCase() === String(name).toLowerCase());
-  return opt ? { id: opt.id, zoneId: opt.zoneId, label: opt.label } : null;
+  return opt ? { id: opt.id, zoneId: opt.zoneId, label: opt.label, labelAr: opt.nameAr || '' } : null;
 }
 
 // 🔴 **ارفع على الزون فقط** — درجة وسيطة يختارها الموظف (v2.6.2).
@@ -4854,10 +4984,12 @@ function pinDistrictToZone() {
                 : 'لا توجد مدينة محددة — اختر مدينة من القايمة فوق الأول', 'error', 6000);
     return;
   }
-  const cityName = dpCities.find(c => c.cityId === dpCityId)?.cityName || r.cityName;
+  const city = dpCities.find(c => c.cityId === dpCityId);
+  const cityName   = city?.cityName || r.cityName;
+  const cityNameAr = city?.cityAr   || '';
   districtOverride[dpOrderId] = {
-    forceZone: true, zoneId: z.zoneId, zoneName: z.id,
-    ...(dpCityId !== r.cityId ? { cityId: dpCityId, cityName } : {}),
+    forceZone: true, zoneId: z.zoneId, zoneName: z.id, zoneNameAr: z.labelAr || '',
+    ...(dpCityId !== r.cityId ? { cityId: dpCityId, cityName, cityNameAr } : {}),
   };
   applyFilters();
   // 🔴 (قرار أحمد 15-09-2026) التثبيت بيقفل النافذة بالاختيار مطبَّق — مفيش
@@ -4886,9 +5018,10 @@ function pinDistrictToProvince() {
   const r = allRows.find(x => x.orderId === dpOrderId);
   if (!r) return;
   if (coverageBlocksDegree(r)) return;
-  const cityName = dpCities.find(c => c.cityId === dpCityId)?.cityName || r.cityName;
+  const city = dpCities.find(c => c.cityId === dpCityId);
   districtOverride[dpOrderId] = dpCityId !== r.cityId
-    ? { forceProvince: true, cityId: dpCityId, cityName }
+    ? { forceProvince: true, cityId: dpCityId, cityName: city?.cityName || r.cityName,
+        cityNameAr: city?.cityAr || '' }
     : { forceProvince: true };
   applyFilters();
   closeDistrictPicker();
@@ -5387,9 +5520,14 @@ async function exportOrdersXLSX() {
     const ov = districtOverride[r.orderId];
     return {
       orderNumber: r.orderNumber, customer: r.customer,
-      province: r.province, cityName: effCity(r).cityName,
-      cityAuto: effCity(r).changed ? r.cityName : '',
-      district: ov?.districtName || r.districtName || '',
+      // 🔤 نفس نص الشاشة بالظبط — تصدير بأسماء إنجليزية لجدول معروض بالعربي
+      //    بيخلي الموظف يدوّر على صف شايفه قدامه ومايلاقيهوش في الملف.
+      province: r.province,
+      cityName: displayName(effCity(r).cityName, effCity(r).cityNameAr),
+      cityAuto: effCity(r).changed ? displayName(r.cityName, r.cityNameAr) : '',
+      district: ov?.districtId
+        ? displayName(ov.districtName, ov.districtNameAr)
+        : displayName(r.districtName, r.districtNameAr),
       addrMode: ADDR_MODE_LABEL[rowAddrModeGroup(r)] || rowAddrModeGroup(r),
       address: fullAddressText(r),
       cod: r.cod, goodsValue: r.goodsValue, itemsCount: r.itemsCount,

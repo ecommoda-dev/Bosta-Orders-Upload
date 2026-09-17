@@ -163,6 +163,22 @@
 //    مراجعة» كان بيعدّ القص والتعديل اليدوي معاها. الصفوف القديمة زي ما هي —
 //    فيها `warnings` بالخلط، ومن v2.7.0 القايمتين منفصلتين.
 //
+// v2.8.0 (17-09-2026) — 🔤 **الاسم العربي بيترجع جنب الإنجليزي** (طلب أحمد).
+// الصف بقى فيه `cityNameAr` · `districtNameAr` · `zoneNameAr` جنب الإنجليزية،
+// والواجهة بتعرض العربي في عمودي «محافظة بوسطة» و«المنطقة».
+// 🔴 **المصدر كتالوج بوسطة نفسه، مفيش ترجمة عندنا** — `getAllDistricts` بيرجّع
+//    لكل مستوى حقلين (`name` · `otherName`/`nameAr`)، والأداة كانت بتقرا
+//    الإنجليزي بس وبترمي العربي. جدول المحافظات المقفول (§3.5) إنجليزي بس
+//    فاسم المحافظة العربي بيتقرا من **المدينة اللي الجدول وصل لها** في الكتالوج.
+// 🔴 **والـ payload ما اتغيّرش ولا حرف**: `buildAddressObject` لسه بتبعت
+//    `city: plan.cityName` الإنجليزي و`districtId`/`districtName` الإنجليزي —
+//    بوسطة **مش فاهمة** الاسم العربي، و`districtName` عربي على العقد غير
+//    الموثّق بيرجّع 400 · `3002` على عنوان سليم ١٠٠٪. العربي **للعرض وبس**،
+//    والاختبار `tests/bilingual-names.test.cjs` ⑥ بيتأكد إن مفيش حرف عربي
+//    بيدخل الـ payload.
+// ⚠️ والحقل بيرجع **سلسلة فاضية** لو الكتالوج مالوش اسم عربي للمستوى ده —
+//    الواجهة بترجع للإنجليزي وقتها بدل ما تسيب الخانة فاضية.
+//
 // العقد المرجعي الكامل: SPEC.md في نفس الريبو.
 // ══════════════════════════════════════════════════════════════
 
@@ -178,7 +194,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.7.0';
+const WORKER_VERSION = '2.8.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -1979,7 +1995,10 @@ function findCrossCity(catalog, fields, skipCityId) {
       if (++taken > CROSS_MAX_PER_CITY) break;
       out.push({
         kind: 'district',
-        cityId: c.cityId, cityName: c.cityName,
+        // 🔤 الاسم العربي بيترجع جنب الإنجليزي **مش بدله** — الواجهة بتعرض
+        //    العربي والـ payload بيبعت الإنجليزي (`districtId` فعليًا)، فالاتنين
+        //    لازم يفضلوا موجودين في نفس الصف.
+        cityId: c.cityId, cityName: c.cityName, cityNameAr: c.cityAr || '',
         districtId: h.id, districtName: h.name, districtNameAr: h.nameAr, zone: h.zone,
         matchedText: h.matchedText, fieldLabel: h.fieldLabel,
         _rank: [h.tier, h.exact ? 0 : 1, -h.matched.length],
@@ -1997,7 +2016,7 @@ function findCrossCity(catalog, fields, skipCityId) {
       if (++takenZ > CROSS_MAX_PER_CITY) break;
       out.push({
         kind: 'zone',
-        cityId: c.cityId, cityName: c.cityName,
+        cityId: c.cityId, cityName: c.cityName, cityNameAr: c.cityAr || '',
         zone: z.zone, zoneAr: z.zoneAr, zoneId: z.zoneId || null, districtCount: z.count,
         matchedText: z.matchedText, fieldLabel: z.fieldLabel,
         // الزون بيترتّب جنب المناطق بنفس المفتاح — مافيش أفضلية لنوع على التاني،
@@ -2026,7 +2045,7 @@ function findLocalZones(city, fields) {
     .filter(z => z.matched.length >= CROSS_MIN_LEN && !z.generic)
     .slice(0, CROSS_MAX_PER_CITY)
     .map(z => ({
-      kind: 'zone', cityId: city.cityId, cityName: city.cityName,
+      kind: 'zone', cityId: city.cityId, cityName: city.cityName, cityNameAr: city.cityAr || '',
       zone: z.zone, zoneAr: z.zoneAr, zoneId: z.zoneId || null, districtCount: z.count,
       matchedText: z.matchedText, fieldLabel: z.fieldLabel,
     }));
@@ -2176,6 +2195,12 @@ function resolveAddress(order, catalog) {
     province: row.province,
     cityId: row.cityId,
     cityName: row.cityName,
+    // 🔤 اسم المحافظة بالعربي من كتالوج بوسطة نفسه (`otherName`) — **مش ترجمة
+    //    عندنا**. جدول المحافظات المقفول (§3.5) إنجليزي بس، والاسم العربي
+    //    موجود في الكتالوج الحي، فبيتقرا من المدينة اللي الجدول وصل لها.
+    //    ⚠️ بيترجع **جنب** `cityName` مش بدله: العرض بيقرا العربي والـ payload
+    //    بيبعت `city: plan.cityName` الإنجليزي — ده هو اللي بوسطة بتفهمه.
+    cityNameAr: city.cityAr || '',
     catalogWarning: fieldMissing ? 'dropOffAvailability غايب من كتالوج بوسطة — المطابقة اتعطّلت' : null,
     candidates: matches.map(m => ({
       id: m.id, name: m.name, nameAr: m.nameAr, zone: m.zone,
@@ -2191,11 +2216,13 @@ function resolveAddress(order, catalog) {
   };
 
   if (matches.length === 1) {
-    return { ...base, mode: 'district', districtId: matches[0].id, districtName: matches[0].name };
+    return { ...base, mode: 'district', districtId: matches[0].id,
+             districtName: matches[0].name, districtNameAr: matches[0].nameAr || '' };
   }
   if (matches.length === 0 && row.zoneOnly) {
     // §٥.٥ — محافظة اتلغت إداريًا، بتتبعت كزون جوه مدينة تانية
-    return { ...base, mode: 'zoneName', districtName: row.zoneOnly.en };
+    return { ...base, mode: 'zoneName', districtName: row.zoneOnly.en,
+             districtNameAr: row.zoneOnly.ar || '' };
   }
   if (matches.length === 0) {
     // 🔴 قبل أي نزول درجة: هل العنوان طابق منطقة **مقفولة للتسليم**؟
@@ -2284,6 +2311,7 @@ function resolveAddress(order, catalog) {
         ...base, mode: 'district', ambiguous: false,
         districtId: addressAnchor.districtId,
         districtName: addressAnchor.districtName,
+        districtNameAr: addressAnchor.districtNameAr || '',
         // 🔴 الواجهة بتقرا منه عشان تعرض «🔍 مرشّح تلقائي» بدل «📍 عنوان
         //    مظبوط» — مطابقة اسم كامل ومرساة كلمة واحدة **مش نفس الثقة**،
         //    وعرضهم بنفس البادج بيخلي الموظف يعدّي على تخمين وهو فاكره حقيقة.
@@ -2702,10 +2730,16 @@ function buildRow(order, catalog) {
     addressOk:   plan.ok,
     addressError: plan.ok ? null : plan.error,
     cityName:    plan.ok ? plan.cityName : '',
+    // 🔤 الأسماء العربية جاية من **كتالوج بوسطة** (`otherName` لكل مستوى) —
+    //    مفيش أي ترجمة عندنا. بتترجع **جنب** الإنجليزية مش بدلها: الواجهة
+    //    بتعرض العربي في عمودي «محافظة بوسطة» و«المنطقة»، والـ payload بيبعت
+    //    الإنجليزي (أو الـ id) لبوسطة. خلطهم = شحنة على اسم بوسطة مش فاهماه.
+    cityNameAr:  plan.ok ? (plan.cityNameAr || '') : '',
     cityId:      plan.ok ? plan.cityId : '',
     mode:        plan.ok ? plan.mode : 'blocked',
     districtId:  plan.ok ? (plan.districtId || null) : null,
     districtName: plan.ok ? (plan.districtName || null) : null,
+    districtNameAr: plan.ok ? (plan.districtNameAr || '') : '',
     ambiguous:   plan.ok ? !!plan.ambiguous : false,
     candidates:  plan.ok ? (plan.candidates || []) : [],
     // 🟠 المدينة مشكوك فيها — العنوان طابق منطقة في **مدينة تانية** غير اللي
@@ -2717,6 +2751,7 @@ function buildRow(order, catalog) {
     // 🔴 درجة الزون — الصف ده هيترفع بـ`zoneId` مش بالمحافظة (8.5 درجة ٤)
     zoneId:      plan.ok ? (plan.zoneId || null) : null,
     zoneName:    plan.ok ? (plan.zoneName || null) : null,
+    zoneNameAr:  plan.ok ? (plan.zoneNameAr || '') : '',
     zoneDistrictCount: plan.ok ? (plan.zoneDistrictCount || 0) : 0,
     // 🔍 المرساة — الكلمة اللي وصلت للمنطقة دي، والواجهة بتعرضها كسبب.
     addressAnchor: plan.ok ? (plan.addressAnchor || null) : null,
@@ -3632,10 +3667,13 @@ function buildReRow(order, catalog, job, cycleAnalysis) {
     addressOk:    plan.ok,
     addressError: plan.ok ? null : plan.error,
     cityName:     plan.ok ? plan.cityName : '',
+    // 🔤 نفس `§UPLOAD::buildRow` بالحرف — الجدول واحد للتلات أوضاع
+    cityNameAr:   plan.ok ? (plan.cityNameAr || '') : '',
     cityId:       plan.ok ? plan.cityId : '',
     mode:         plan.ok ? plan.mode : 'blocked',
     districtId:   plan.ok ? (plan.districtId || null) : null,
     districtName: plan.ok ? (plan.districtName || null) : null,
+    districtNameAr: plan.ok ? (plan.districtNameAr || '') : '',
     ambiguous:    plan.ok ? !!plan.ambiguous : false,
     candidates:   plan.ok ? (plan.candidates || []) : [],
     cityDoubt:    plan.ok ? !!plan.cityDoubt : false,
@@ -3643,6 +3681,7 @@ function buildReRow(order, catalog, job, cycleAnalysis) {
     localZones:   plan.ok ? (plan.localZones || []) : [],
     zoneId:       plan.ok ? (plan.zoneId || null) : null,
     zoneName:     plan.ok ? (plan.zoneName || null) : null,
+    zoneNameAr:   plan.ok ? (plan.zoneNameAr || '') : '',
     zoneDistrictCount: plan.ok ? (plan.zoneDistrictCount || 0) : 0,
     // 🔍 نفس `§UPLOAD::buildRow` بالحرف — النافذة واحدة للتلات أوضاع
     addressAnchor: plan.ok ? (plan.addressAnchor || null) : null,
