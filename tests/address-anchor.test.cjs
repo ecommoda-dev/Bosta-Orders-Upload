@@ -2,10 +2,14 @@
 // المرساة — نص البحث الجاهز لنافذة اختيار المنطقة
 //   node tests/address-anchor.test.cjs
 //
-// 🔴 البند اللي بيحميه: المرساة **نص بحث، مش قرار**. لو حد حوّلها لمطابقة
-//    (كتب `districtId` بتاعها في الخطة أو خلّى الصف `uploadable`) الصف بياخد
-//    علامة خضرا على منطقة **مخمّنة من كلمة واحدة** — وده بالظبط الفخ اللي
-//    جدول المحافظات المقفول وقاعدة «اقتراح مش قرار» اتكتبوا عشانه.
+// 🔴 البند اللي بيحميه (اتقلب في Worker v2.6.0 · قرار أحمد): المرساة بقت
+//    **بتترفع فعلًا**، فالحارس ماعادش «ماتتطبقش» — بقى **إنها تفضل متميّزة**:
+//    `districtFromAnchor` لازم يفضل راجع مع الصف، لأنه **الحاجة الوحيدة** اللي
+//    بتفرّق بين مطابقة اسم كامل ومنطقة مخمّنة من كلمة واحدة. لو ضاع، الصف
+//    بياخد بادج «📍 عنوان مظبوط» الخضرا وبيترفع من غير ما حد يراجعه.
+// 🔴 والبند التاني: `mode` لازم يفضل `district` — عقد العنوان بيتبني منه
+//    (`buildAddressObject` · `addressDegree` · سلّم النزول)، وقيمة جديدة
+//    كانت هتدّي 400 من بوسطة أو درجة غلط في D1 في صمت.
 // 🔴 والبند التاني: النص المرجوع لازم يبقى كلمة من الاسم **الخام** زي ما هو
 //    في الكتالوج. بحث الواجهة بيقارن على النص الخام، و`normText` بتحوّل ة→ه —
 //    فكلمة مطبَّعة كانت هترجّع «مفيش مناطق مطابقة» على منطقة موجودة فعلًا.
@@ -13,7 +17,8 @@
 const fs = require('fs');
 const src = fs.readFileSync(require('path').join(__dirname,'..','index.js'),'utf8').replace(/export default \{[\s\S]*$/,'');
 const api = new Function(src + `
- return { normText, ensureNormalized, addressFields, resolveAddress, findAddressAnchor };`)();
+ return { normText, ensureNormalized, addressFields, resolveAddress, findAddressAnchor,
+          buildAddressObject, addressDegree };`)();
 
 const D = (id,name,nameAr,zone='Z') => ({ id, name, nameAr, zone, zoneAr:'', dropOff:true });
 
@@ -47,13 +52,19 @@ console.log('── ① #55065 — الحالة اللي المرساة اتكت
 // العميل كتب «الكينج» والمنطقة «كنج» — فرق حرف واحد أسقط المطابقة الكاملة
 const sa55065 = SA('الاسكندرية','الكينج مريوط قبلي السكه فيلا وليد الحو بجوار فيلا تواضرس');
 const p55065  = plan(sa55065);
-chk('المطابقة لسه فاشلة — الدرجة ما اتغيّرتش', p55065.mode === 'province' && !p55065.ambiguous,
-    `mode=${p55065.mode}`);
 chk('والمرساة لقت «مريوط»', p55065.addressAnchor?.text === 'مريوط',
     JSON.stringify(p55065.addressAnchor));
-chk('وواصلة لمنطقة كنج مريوط (للقياس فقط)', p55065.addressAnchor?.districtId === 'a1');
-// 🔴 ده هو البند: المرساة **مش** بتحسم العنوان
-chk('🔴 ومافيش districtId في الخطة — الصف لسه محتاج قرار', !p55065.districtId);
+chk('واتطبّقت — الشحنة هتترفع على كنج مريوط', p55065.districtId === 'a1',
+    `districtId=${p55065.districtId}`);
+// 🔴 البند: العلم لازم يفضل — هو الفرق الوحيد عن مطابقة اسم كامل
+chk('🔴 والعلم districtFromAnchor راجع', p55065.districtFromAnchor === true);
+// 🔴 والبند التاني: العقد ما اتغيّرش
+chk('🔴 و`mode` فضل district — العقد بيتبني منه', p55065.mode === 'district',
+    `mode=${p55065.mode}`);
+const addrObj = api.buildAddressObject(p55065, p55065.mode, 'عنوان');
+chk('والـ payload بيبعت districtId فعلًا', addrObj.districtId === 'a1', JSON.stringify(addrObj));
+chk('ومفيش zoneId معاه (درجة واحدة بس)', !addrObj.zoneId);
+chk('ودرجة D1 district — نفس اللي اتبعت', api.addressDegree(p55065.mode) === 'district');
 
 console.log('\n── ② الفرادة هي الحارس ──');
 // «الجديدة» في منطقتين — بتسقط، والمرساة بتنزل للكلمة اللي بعدها
@@ -82,6 +93,7 @@ console.log('\n── ④ الفروع اللي مابتاخدش مرساة ─�
 const pDist = plan(SA('الاسكندرية','سيدي بشر بحري شارع خالد بن الوليد'));
 chk('مطابقة كاملة (district) بلا مرساة', pDist.mode === 'district' && !pDist.addressAnchor,
     `mode=${pDist.mode}`);
+chk('وعلمها مطفي — مطابقة اسم كامل مش مرساة', pDist.districtFromAnchor !== true);
 // غموض — المرشحين مثبّتين فوق
 const amb = plan(SA('الاسكندرية','العجمي بجوار سموحة'));
 chk('❓ الغموض بلا مرساة', !amb.addressAnchor, `mode=${amb.mode} ambiguous=${amb.ambiguous}`);

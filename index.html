@@ -462,6 +462,11 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .res-stat.on.error .res-stat-num,.res-stat.on.error .res-stat-lbl{color:var(--red-dark);}
 .res-stat.on.skip{border-color:var(--border-strong);background:var(--surface);}
 .res-stat.on.skip .res-stat-num,.res-stat.on.skip .res-stat-lbl{color:var(--text-mid);}
+/* 🔍 مربع «المرشّح التلقائي» في نافذة تأكيد الرفع — **مش أخضر**. دول صفوف
+   داخلة الدفعة فعلًا (قرار أحمد) بس منطقتها مخمّنة من كلمة واحدة، والرقم ده
+   هو آخر مكان الموظف يشوفه قبل ما يضغط «رفع». أخضر هنا بيخلّيه يعدّي عليه. */
+.res-stat.on.cand{border-color:var(--accent-border);background:var(--accent-light);}
+.res-stat.on.cand .res-stat-num,.res-stat.on.cand .res-stat-lbl{color:var(--accent-dark);}
 /* أزرار تذييل النافذة — «عرض التفاصيل» و«تصدير النتيجة» كانوا btn-ghost
    رمادي زي أي زرار تاني، والتفاصيل هي اللي فيها زرار «✕ إلغاء الشحنة». */
 .res-ftr-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:var(--radius-sm);
@@ -647,8 +652,15 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
    كله كان ضوضاء بتاكل عرض الاسم. بقى سطر تحت اسم المنطقة، بيبان فقط لما يبقى
    فيه سبب فعلًا. */
 .dp-list{max-height:42vh;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);}
+/* 🔴 الترتيب **المدينة ← المنطقة** (يمين ← شمال في RTL) عن قصد — نفس ترتيب
+   جدول السياق فوق (المحافظة │ المدينة │ المنطقة). قبل v2.17.0 كانت القايمة
+   مقلوبة (المنطقة يمين والمدينة شمال)، فالموظف بيقرا عمودين بترتيب معكوس عن
+   الجدول اللي فوقه بـ٥ سنتيمترات وهو بيقارن بينهم — وده كل الشغل في النافذة دي.
+   ⚠️ والعمود العريض هو **التاني** دلوقتي: اسم المنطقة هو الطويل
+   (`B1 Factories (10th of Ramadan) — B1 مصانع`)، فقلب الترتيب من غير قلب
+   العرض بيلفّ الاسم على تلات سطور. */
 .dp-thead,.dp-item{display:grid;
-  grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);
+  grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);
   gap:10px;padding:7px 11px;align-items:start;}
 .dp-thead{position:sticky;top:0;z-index:2;background:var(--surface-2);color:var(--text-secondary);
   font-size:11px;font-weight:800;letter-spacing:.2px;border-bottom:1px solid var(--border-strong);}
@@ -801,6 +813,9 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .dp-note-body{margin-top:4px;padding:6px 9px;background:var(--surface-2);
   border:1px solid var(--border);border-radius:var(--radius-sm);line-height:1.8;}
 .mini-btn.doubt{border-color:var(--amber);color:var(--amber);background:var(--amber-light);}
+/* 🔍 مرشّح تلقائي — قيمة **هتتبعت** بس مصدرها كلمة واحدة مش اسم منطقة كامل.
+   لون تالت عن قصد: الأخضر محجوز للمتأكَّد والأصفر للموقوف. */
+.mini-btn.cand{border-color:var(--accent);color:var(--accent-dark);background:var(--accent-light);}
 .dup-list{max-height:300px;overflow-y:auto;font-size:12.5px;line-height:1.9;}
 .loading-spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);
   border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
@@ -918,6 +933,18 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">17-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>🔍 <b>«مرشّح تلقائي» — الأداة بقت بتحدد المنطقة لوحدها لما المطابقة الكاملة تفشل</b> (طلب أحمد). لو في العنوان كلمة موجودة في اسم منطقة <b>واحدة بالظبط</b> في المحافظة، الصف بيترفع عليها بدل ما يقف على «🏙️ المحافظة فقط». مثال: <code>#55065</code> كتب «<b>الكينج</b> مريوط» والمنطقة «<b>كنج</b> مريوط» — فرق حرف واحد أسقط المطابقة، وكان لازم تفتح وتدوّر وتأكّد. <b>دلوقتي الصف جاهز.</b></span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>وبيتعرض «🔍 مرشّح تلقائي — راجعه» بلون أزرق، مش «📍 عنوان مظبوط» الأخضر.</b> ده <b>مقصود</b>: المنطقة اتحددت من <b>كلمة واحدة</b> مش من اسم المنطقة كامل، فلو الكلمة دي علامة مميزة («خلف مستشفى المعادي» لعميل في حلوان) المرشّح غلط. <b>الصف قابل للرفع وداخل «رفع الكل»</b> — واللون هو اللي بيقول لك راجعه. وفي نافذة تأكيد الرفع فيه <b>مربع بعدد الصفوف دي</b> قبل ما تضغط.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🗺️ <b>أعمدة قايمة المناطق اتقلبت: المدينة يمين والمنطقة شمال</b> (طلب أحمد) — زي ترتيب صف بوسطة في السياق فوق (المحافظة │ المدينة │ المنطقة). كانت مقلوبة، فكنت بتقارن عمودين بترتيب معكوس.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.16.1</span>
           <span class="cl-ver-date">17-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -1376,8 +1403,9 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li>🧹 <strong>عمليات القراءة مابتتسجّلش في السجل</strong> (Worker v2.4.0). ترشيح أوردرات الاسترجاع/الاستبدال كان بيكتب صف <code>scan</code> مع كل نداء (كل فتحة شاشة · كل تبديل وضع · كل «تحديث») — السجل موجود عشان <strong>الأفعال</strong> (شحنة اتعملت · حالة اتغيّرت)، والقراءة مالهاش أي أثر يستاهل صف. الصفوف القديمة ما اتمسحتش والفلتر لسه بيقراها.</li>
             <li><strong>لو الموظف اختار منطقة والـ Worker مالقهاش في المدينة المختارة، الصف بيوقف بخطأ</strong> — مش بيرجع للمطابقة التلقائية بصمت. الرفع على حاجة تانية غير اللي الموظف وافق عليه = شحنة بفلوس على عنوان مش المقصود.</li>
             <li>الرفع بيتقسّم دفعات من <code>UPLOAD_CHUNK</code> صف. لو دفعة كاملة ما وصلتش للـ Worker، صفوفها بتتعرض بحالة «فشل» مع رسالة صريحة إن حالتها <strong>مش معروفة</strong> ولازم تتراجع على بوسطة قبل إعادة المحاولة.</li>
-            <li>🔍 <strong>خانة البحث في نافذة اختيار المنطقة بتفتح مليانة لوحدها</strong> (Worker v2.5.0 · واجهة v2.16.0) لما الصف «🏙️ المحافظة فقط» والأداة تلاقي كلمة في العنوان موجودة في اسم منطقة <strong>واحدة بس</strong> في المحافظة. السبب: المطابقة بتسأل «هل العنوان فيه اسم المنطقة <strong>كاملًا</strong>؟»، فـ<code>#55065</code> كتب «الكينج مريوط» والمنطقة «كنج مريوط» — <strong>فرق حرف واحد</strong> أسقط المطابقة، والموظف كتب «مريوط» بإيده ولقى الصف من أول نتيجة. 🔴 <strong>ودي مش مطابقة ومش اقتراح منطقة</strong>: الصف بيفضل موقوف ومحتاج تأكيد يدوي زي ما هو، واللي اتغيّر إن البحث اتكتب بدل الموظف — والكلمة نفسها مكتوبة في الخانة، تمسحها وتشوف القايمة كلها.</li>
-            <li>📊 <strong>السجل بقى بيفرّق بين «المطابقة نجحت» و«الموظف صلّحها»</strong> (Worker v2.5.0): <code>district_overridden</code> · <code>degree_forced</code> · <code>address_anchor</code> · <code>anchor_hit</code>. قبل كده <code>district_sent</code> كان بيتكتب في الحالتين، يعني <strong>نسبة نجاح المطابقة مش قابلة للقراءة من السجل أصلًا</strong>.</li>
+            <li>🔍 <strong>«مرشّح تلقائي» — الأداة بتحدد المنطقة من كلمة واحدة لما المطابقة الكاملة تفشل</strong> (Worker v2.6.0 · واجهة v2.17.0). لو العنوان فيه كلمة موجودة في اسم منطقة <strong>واحدة بالظبط</strong> في المحافظة، الصف بيترفع عليها. السبب: المطابقة بتسأل «هل العنوان فيه اسم المنطقة <strong>كاملًا</strong>؟»، فـ<code>#55065</code> كتب «الكينج مريوط» والمنطقة «كنج مريوط» — <strong>فرق حرف واحد</strong> أسقط المطابقة، والصف كان محتاج ٣ ضغطات على منطقة الأداة عارفاها. 🔴 <strong>وبتتعرض «🔍 مرشّح تلقائي — راجعه» مش «📍 عنوان مظبوط»</strong>: كلمة واحدة مش اسم كامل، والتمييز البصري ده هو <strong>الحارس الوحيد</strong> — الصف قابل للرفع وداخل «رفع الكل». ⚠️ ومربع بلون تالت في نافذة تأكيد الرفع بيقول كام صف منطقته مخمّنة قبل ما تضغط.</li>
+            <li>📊 <strong>السجل بقى بيفرّق بين «المطابقة نجحت» و«الموظف صلّحها»</strong> (Worker v2.5.0 · v2.6.0): <code>district_overridden</code> · <code>degree_forced</code> · <code>address_anchor</code> · <code>anchor_applied</code> · <code>anchor_hit</code>. 🔴 و<code>anchor_hit = false</code> معناها <strong>الموظف غيّر المرشّح التلقائي</strong> — ودي إشارة الخطأ اللي بنقيس بيها الطبقة دي.</li>
+            <li>🗺️ <strong>ترتيب أعمدة قايمة المناطق = ترتيب الجدول فوقها</strong> (واجهة v2.17.0): <strong>المدينة يمين · المنطقة شمال</strong>، زي صف بوسطة في السياق (المحافظة │ المدينة │ المنطقة). كانت مقلوبة، والمقارنة بين الاتنين هي كل الشغل في النافذة دي.</li>
             <li>🔴 <strong>حارس تأكيد يدوي إضافي فوق <code>r.uploadable</code></strong> — <code>rowNeedsManualAddressConfirm</code> بتوقف ❓ أكتر من مطابقة · 🟠 المحافظة مشكوك فيها · و🏙️ المحافظة فقط (من غير تثبيت) حتى لو السيرفر رجّعها <code>uploadable: true</code>. القرار قرار الموظف، وبياخد أي فعل يغيّر <code>rowAddrMode</code> عن الحالة دي (اختيار منطقة · تثبيت على المحافظة/المدينة فقط).</li>
           </ul>
         </div>
@@ -2090,7 +2118,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.16.1';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.17.0';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2102,7 +2130,7 @@ const TOOL_VERSION       = 'v2.16.1';  // مصدر واحد لرقم نسخة ا
 //    عنده مطابقة محلية سليمة (اسم متكرر بين محافظتين زي «السادات»)، فالصف
 //    بيتوقف عن الرفع والاقتراح بيودّي للمحافظة الغلط. والواجهة **مش** بتقدر
 //    تصلّحها: الشك محسوب في `resolveAddress` جوّه الـ Worker.
-const MIN_WORKER_VERSION = '2.5.0';
+const MIN_WORKER_VERSION = '2.6.0';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -2846,6 +2874,13 @@ const UP_STATE_ITEMS = [
 ];
 const ADDR_MODE_ITEMS = [
   { value: 'district', label: '📍 عنوان مظبوط' },
+  // 🔴 **مرساة مش مطابقة** (Worker v2.6.0): المنطقة اتحددت من **كلمة واحدة**
+  //    في العنوان موجودة في اسم منطقة واحدة بس في المحافظة — مش من اسم
+  //    المنطقة كامل. الشحنة **بتترفع عليها** (الصف قابل للرفع وداخل «رفع
+  //    الكل» — قرار أحمد)، فالتفرقة البصرية هي الحاجة الوحيدة اللي بتفضل
+  //    بين تخمين وحقيقة. توحيدها مع «عنوان مظبوط» بيخلي الموظف يعدّي على
+  //    التخمين وهو فاكره مطابقة.
+  { value: 'anchor',   label: '🔍 مرشّح تلقائي — راجعه' },
   // 🔴 درجة وسيطة حقيقية بين المنطقة والمحافظة (واجهة v2.4.0) — مش تسمية
   //    تجميلية. الـ`zoneId` بيغيّر **الهب وكود الفرز** على البوليصة،
   //    و«المحافظة فقط» بتاخد هب افتراضي. لازم الموظف يفرّق بين الاتنين.
@@ -3331,6 +3366,11 @@ function rowAddrMode(r) {
   if (ov?.cityId) return 'cityFixed';     // المدينة اتعدّلت يدويًا ولسه من غير منطقة
   if (r.ambiguous) return 'ambiguous';
   if (r.cityDoubt) return 'cityDoubt';
+  // 🔴 **لازم قبل `r.mode`** — الـ Worker بيرجّع `district` للاتنين، فمن غير
+  //    السطر ده المرشّح التلقائي بياخد بادج «📍 عنوان مظبوط» الخضرا وبيتقرا
+  //    كأن الأداة طابقت اسم المنطقة كامل. ⚠️ **وبعد `ov?.districtId`**:
+  //    الموظف اللي اختار بإيده بقى صاحب القرار، والصف بقى مطابقة يدوية.
+  if (r.districtFromAnchor) return 'anchor';
   return r.mode;
 }
 // حالة العنوان **المعروضة** للموظف (بادج/فلتر/تصدير) — بقرار أحمد 15-09-2026
@@ -3431,6 +3471,16 @@ function addrModeInfo(r) {
           + 'الرفع على المحافظة **مش** بديل: الشحنة هتتشحن بفلوس وترجع بعد أيام. '
           + 'حوّل الأوردر لخدمة العملاء (عنوان بديل · كوريَر تاني · إلغاء).' };
   }
+  // 🔍 المرشّح التلقائي — **أسبق من `district`** لأن الـ Worker بيرجّع نفس
+  //    الـ`mode` للاتنين، والفرق في العلم.
+  if (r.districtFromAnchor) {
+    const a = r.addressAnchor || {};
+    return { label: `🔍 ${r.districtName}`, set: true, candidate: true,
+      hint: `مفيش مطابقة لاسم المنطقة كامل، لكن كلمة "${a.text || '—'}" في ${a.fieldLabel || 'العنوان'} `
+          + `موجودة في اسم **منطقة واحدة بس** في ${r.cityName} — فالشحنة هتترفع عليها. `
+          + 'دي **كلمة واحدة مش اسم كامل**، فلو الكلمة دي علامة مميزة (مستشفى · مسجد · سنتر) '
+          + 'مش عنوان العميل، افتح وغيّر المنطقة.' };
+  }
   if (r.mode === 'district') return { label: `📍 ${r.districtName}`, set: true,
     hint: 'المطابقة التلقائية لقت منطقة واحدة في كتالوج بوسطة — الشحنة هتترفع بالمنطقة دي' };
   // 🗺️ درجة الزون — بين المنطقة والمحافظة. `set: true` لأن الشحنة **بتترفع
@@ -3480,7 +3530,11 @@ function districtCell(r) {
   // منهم يبان كأنه ما اتعملش.
   // 🔴 `rowNeedsManualAddressConfirm` بتاخد 'doubt' (أصفر) — نفس تلوين
   //    «محتاج مراجعة»، بدل ما تفضل بلا لون لحد ما الموظف يفتح النافذة بالصدفة.
+  // 🔴 **تالت لون مقصود**: أخضر = قيمة متأكَّدة هتتبعت · أصفر = محتاج قرار ·
+  //    **أزرق = هتتبعت بس مصدرها تخمين كلمة واحدة**. توحيده مع الأخضر بيخلي
+  //    الصف يتقرا كأن الأداة طابقت اسم المنطقة كامل، وهي مطابقتش.
   const cls = mode === 'coverageBlocked' ? ' doubt'
+            : info.candidate ? ' cand'
             : (info.set || info.pinned) ? ' set'
             : ((rowNeedsManualAddressConfirm(r) || mode === 'cityFixed') ? ' doubt' : '');
   return `<button class="mini-btn${cls}" title="${esc(info.hint)}"
@@ -3495,6 +3549,9 @@ function addrModeCell(r) {
   //    بيشمل الأكتر من مطابقة والمحافظة مشكوك فيها ودلوقتي المحافظة فقط لسه
   //    من غير تثبيت. المحافظة **بعد** التثبيت بتاخد أخضر زي أي مطابقة كاملة.
   const cls  = rowNeedsManualAddressConfirm(r) ? 'badge-warn'
+             // 🔍 مرشّح تلقائي — **مش أخضر ومش رمادي**: أخضر بيقرا «متأكَّد»،
+             //    ورمادي بيقرا «مالوش لازمة» وهو صف **هيترفع**.
+             : mode === 'anchor' ? 'badge-info'
              : (mode === 'district' || mode === 'zone' || mode === 'province') ? 'badge-success'
              : (mode === 'blocked' || mode === 'coverageBlocked') ? 'badge-danger' : 'badge-muted';
   return `<span class="badge ${cls}" title="${esc(addrModeInfo(r).hint)}">${esc(ADDR_MODE_LABEL[mode] || mode)}</span>`;
@@ -3740,6 +3797,9 @@ function bulkAddrModeStats(rows) {
 
 const BULK_STAT_CLS = {
   district: 'success', zone: 'success',
+  // 🔍 داخل الدفعة، بس بلون تاني — الرقم ده هو «كام صف منطقته مخمّنة» وهو
+  //    آخر معلومة قدام الموظف قبل شحنات بفلوس.
+  anchor: 'cand',
   ambiguous: 'warn', cityDoubt: 'warn', cityFixed: 'warn', province: 'skip',
   coverageBlocked: 'error', blocked: 'error',
 };
@@ -4144,32 +4204,14 @@ async function loadDpCity(cityId) {
   } else if (r && r.mode === 'zoneName' && r.districtName && cityId === r.cityId
       && !districtOverride[dpOrderId]?.districtId) {
     dpZoneFilter = r.districtName;
-  } else {
-    // 🔍 **المرساة** — خانة البحث بتفتح مليانة (v2.16.0). مفيش زون يتقصر عليه
-    //    هنا (الصف «المحافظة فقط»)، فالبديل الوحيد قايمة كاملة بـ٢٢١ منطقة
-    //    (الإسكندرية) أو ٥٩٠ (القاهرة) والموظف يدوّر فيها بإيده.
-    // 🔴 **مانعة تعارض مقصودة مع قصر الزون**: البحث **بيلغي** القصر (v2.6.1)،
-    //    فلو الاتنين اشتغلوا مع بعض كان البحث الجاهز هيفكّ القصر لوحده أول ما
-    //    النافذة تفتح — الـ `else` هنا هو اللي بيمنع ده، مش ترتيب صدفة.
-    //    والـ Worker أصلًا مابيرجّعش مرساة إلا في فرع «المحافظة فقط».
-    searchBox.value = dpAnchorText(r, cityId);
   }
+  // 🔴 **مفيش بحث جاهز في الخانة** — اتشال في v2.17.0 لما المرساة بقت
+  //    **بتتطبّق** (Worker v2.6.0). المنطقة بقت `r.districtId` فعلًا، فبتتثبّت
+  //    أول القايمة بشريط ملوّن وسبب مكتوب — وده أوضح من بحث مكتوب في خانة.
+  //    ⚠️ **والاتنين مايشتغلوش مع بعض أصلًا**: البحث بيخفي كل المثبّت فوق
+  //    (`if (!q && chosen)`)، فبحث جاهز كان هيدفن المنطقة اللي هتترفع فعلًا.
   toggleSearchActiveState(searchBox);
   renderDistrictList();
-}
-
-// نص البحث اللي النافذة بتفتح بيه — أو '' يعني تفضل فاضية.
-// 🔴 دالة منفصلة عن `loadDpCity` عشان تتفحص من غير شبكة — الشرط اللي بيقرر
-//    امتى البحث بيتكتب لوحده لازم يبقى مقروء ومغطّى باختبار، مش مدفون وسط
-//    نداء `get_districts`.
-function dpAnchorText(r, cityId) {
-  if (!r || !r.addressAnchor?.text) return '';
-  // ⚠️ المرساة محسوبة على **محافظة الصف**. الموظف اللي بدّل المحافظة بقى في
-  //    كتالوج تاني خالص، وكلمة من المحافظة الأولى هناك ضوضاء.
-  if (cityId !== r.cityId) return '';
-  // اختار منطقة خلاص — المثبّتة فوق القايمة هي اللي تتشاف، والبحث بيخفيها
-  if (districtOverride[dpOrderId]?.districtId) return '';
-  return r.addressAnchor.text;
 }
 
 // ─── مصادر الخيارات — كل واحدة بترجّع صفوف موحّدة الشكل ───
@@ -4517,16 +4559,18 @@ function dpRow(d, cls, chosen, why, badge) {
   const blocked = !!d.blocked;
   const click = blocked ? '' : ` onclick="chooseDistrict('${jsq(d.id)}','${jsq(d.name)}')"`;
   return `<div class="dp-item ${cls}${chosen ? ' chosen' : ''}${blocked ? ' dp-blocked' : ''}"${click}>
+      <span class="dp-cell"><span class="dp-zone${z.none ? ' none' : ''}">🗺️ ${esc(z.text)}</span></span>
       <span class="dp-main"><span class="dp-name">${esc(d.name)}${d.nameAr ? ` — ${esc(d.nameAr)}` : ''}${
         blocked ? '<span class="dp-blocked-badge">🚫 مقفولة للتسليم</span>' : ''}${
         badge ? `<span class="dp-match-badge">${esc(badge)}</span>` : ''}</span>${
         why ? `<span class="dp-why">${esc(why)}</span>` : ''}</span>
-      <span class="dp-cell"><span class="dp-zone${z.none ? ' none' : ''}">🗺️ ${esc(z.text)}</span></span>
     </div>`;
 }
 // ترويسة أعمدة القايمة — ملزوقة فوق، عشان الأعمدة تفضل معروفة وسط ٤٠٠ صف
 function dpTableHead() {
-  return `<div class="dp-thead"><span>المنطقة</span><span>المدينة</span></div>`;
+  // ⚠️ الترتيب هنا لازم يطابق ترتيب الخانات جوّه `dpRow` وصفوف الاقتراحات —
+  //    الترويسة ملزوقة فوق، فأي اختلاف بيسمّي العمود بالاسم الغلط في صمت.
+  return `<div class="dp-thead"><span>المدينة</span><span>المنطقة</span></div>`;
 }
 
 // عدّاد تغطية الزون للمدينة المعروضة. الرقم ده هو اللي بيفرّق بين
@@ -4551,10 +4595,10 @@ function zoneSuggestRow(z, cls) {
   const n = z.districtCount || 0;
   const zTxt = `${z.zone}${z.zoneAr && z.zoneAr !== z.zone ? ` — ${z.zoneAr}` : ''}`;
   return `<div class="dp-item ${cls}" onclick="chooseZone('${jsq(z.cityId)}','${jsq(z.cityName)}','${jsq(z.zone)}')">
-      <span class="dp-main"><span class="dp-name">🗺️ ${esc(z.cityName)}</span>
-      <span class="dp-why">اضغط تظبّط المدينة وتقصّر القايمة · طابق "${esc(z.matchedText)}" في ${esc(z.fieldLabel || 'العنوان')}</span></span>
       <span class="dp-cell"><span class="dp-zone">🗺️ ${esc(zTxt)}</span>
       <span class="dp-count">${fmtNum(n)} منطقة</span></span>
+      <span class="dp-main"><span class="dp-name">🗺️ ${esc(z.cityName)}</span>
+      <span class="dp-why">اضغط تظبّط المدينة وتقصّر القايمة · طابق "${esc(z.matchedText)}" في ${esc(z.fieldLabel || 'العنوان')}</span></span>
     </div>`;
 }
 
@@ -4622,11 +4666,19 @@ function renderDistrictList() {
     if (md) {
       const manual = !!ov?.districtId;
       const cand = (r?.candidates || []).find(c => c.id === chosen);
-      head += `<div class="dp-group-hdr match">✅ ${manual ? 'المنطقة اللي اخترتها' : 'المطابقة التلقائية'} — دي اللي الشحنة هتترفع عليها</div>`;
-      head += dpRow(md, 'is-match', true,
-        manual ? 'اختيار يدوي — اختيار منطقة تانية من القايمة بيغيّره'
-               : (cand?.matchedText ? `طابق "${cand.matchedText}" في ${cand.fieldLabel || 'العنوان'}` : ''),
-        manual ? '✅ اختيارك' : '✅ المطابقة الحالية');
+      // 🔍 المرشّح التلقائي **مش مطابقة** — والفرق لازم يتقال هنا بالذات، لأن
+      //    دي الشاشة اللي الموظف بيراجع فيها. توحيد النص كان هيخلي «كلمة
+      //    واحدة من الاسم» تتقرا زي «الاسم كامل» على نفس الشريط الأخضر.
+      const anchored = !manual && !!r?.districtFromAnchor;
+      const aTxt = r?.addressAnchor?.text || '';
+      head += `<div class="dp-group-hdr ${anchored ? 'pick' : 'match'}">${
+        anchored ? `🔍 مرشّح تلقائي — دي اللي الشحنة هتترفع عليها. <b>راجعها</b>`
+                 : `✅ ${manual ? 'المنطقة اللي اخترتها' : 'المطابقة التلقائية'} — دي اللي الشحنة هتترفع عليها`}</div>`;
+      head += dpRow(md, anchored ? 'suggested' : 'is-match', true,
+        anchored ? `كلمة «${aTxt}» في العنوان موجودة في اسم المنطقة دي وبس — مش مطابقة لاسم المنطقة كامل`
+                 : (manual ? 'اختيار يدوي — اختيار منطقة تانية من القايمة بيغيّره'
+                           : (cand?.matchedText ? `طابق "${cand.matchedText}" في ${cand.fieldLabel || 'العنوان'}` : '')),
+        anchored ? '🔍 مرشّح' : (manual ? '✅ اختيارك' : '✅ المطابقة الحالية'));
     }
   }
   // 🔴 **بانر التغطية اتشال من هنا (v2.8.0) — والمنع فضل.** الحالة لسه
@@ -4654,9 +4706,9 @@ function renderDistrictList() {
       head += `<div class="dp-group-hdr cross">🟠 العنوان طابق في مدن تانية — ضغطة واحدة تظبّط المدينة</div>`;
       head += cross.map(c => c.kind === 'zone' ? zoneSuggestRow(c, 'cross') : `
         <div class="dp-item cross" onclick="chooseCrossCity('${jsq(c.cityId)}','${jsq(c.cityName)}','${jsq(c.districtId)}','${jsq(c.districtName)}')">
+          <span class="dp-cell"><span class="dp-zone${c.zone ? '' : ' none'}">🗺️ ${esc(c.zone || 'بلا مدينة')}</span></span>
           <span class="dp-main"><span class="dp-name">${esc(c.cityName)} ← ${esc(c.districtName)}${c.districtNameAr ? ` — ${esc(c.districtNameAr)}` : ''}</span>
           <span class="dp-why">مدينة تانية — اضغط تظبّط المدينة والمنطقة · طابق "${esc(c.matchedText)}" في ${esc(c.fieldLabel || 'العنوان')}</span></span>
-          <span class="dp-cell"><span class="dp-zone${c.zone ? '' : ' none'}">🗺️ ${esc(c.zone || 'بلا مدينة')}</span></span>
         </div>`).join('');
     }
     // 🔴 **مفيش أي صف أو بانر للزون جوّه المدينة هنا** (واجهة v2.6.0) — عن قصد.

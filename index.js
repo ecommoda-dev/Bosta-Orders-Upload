@@ -118,6 +118,26 @@
 //    `anchor_hit` تحديدًا هو اللي هيقول لو المرساة تستاهل تبقى اقتراح قابل
 //    للضغط بعدين (بند ١٩ المفتوح) — مش قرار يتاخد دلوقتي بالتخمين.
 //
+// v2.6.0 (17-09-2026) — **المرساة بقت بتتطبّق** (قرار أحمد).
+// 🔴 الصف اللي المطابقة فشلت فيه ولقيناله مرساة **بيترفع على منطقتها**: كان
+//    بينزل «المحافظة فقط» وموقوف لحد تأكيد يدوي، وبقى `mode: 'district'`
+//    ومعاه `districtId` وقابل للرفع **وداخل «رفع الكل»** (طلب أحمد صراحةً).
+//    السبب: الصف كان محتاج ٣ ضغطات (افتح · اختر · أكّد) على منطقة الأداة
+//    عارفاها أصلًا.
+// 🔴 **و`mode` فضل `district` عن قصد، والفرق في علم منفصل** —
+//    `districtFromAnchor`. قيمة رابعة للـ`mode` كانت هتطلب فرع جديد في
+//    `buildAddressObject` و`addressDegree` و`nextAddressDegree` وسلّم النزول،
+//    وأي واحدة تنساها = 400 من بوسطة أو درجة غلط في D1 **في صمت**. اللي
+//    اتغيّر مصدر الـ`districtId` وعرضه، مش عقد العنوان.
+// 🔴 **والواجهة بتعرضها «🔍 مرشّح تلقائي» مش «📍 عنوان مظبوط»** — مطابقة اسم
+//    كامل ومرساة كلمة واحدة مش نفس الثقة، وتوحيد البادج بيخلي الموظف يعدّي
+//    على تخمين وهو فاكره حقيقة.
+// 📊 و`anchor_applied` اتضاف للسجل، و**معنى `anchor_hit` اتقلب**: بقى
+//    `false` = الموظف صحّح المرساة (خطأ اتمسك)، و`null` = ما لمسش (موافق
+//    ضمنيًا). النسبة دي هي معدّل الخطأ الفعلي — بند ١٩.
+// ⚠️ **والمرساة لسه بتتلغي لو المدينة مشكوك فيها** (`cityDoubt`) — اقتراح
+//    المحافظة التانية إشارة أقوى، وتطبيق منطقة فوق شك بيثبّت الشك.
+//
 // العقد المرجعي الكامل: SPEC.md في نفس الريبو.
 // ══════════════════════════════════════════════════════════════
 
@@ -133,7 +153,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.5.0';
+const WORKER_VERSION = '2.6.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2139,8 +2159,10 @@ function resolveAddress(order, catalog) {
     crossCity: [],
     localZones: [],
     blockedDistricts: [],
-    // 🔍 نص بحث للنافذة فقط — بيتحسب في فرع «المحافظة فقط» لوحده (تحت)
+    // 🔍 المرساة — بتتحسب في فرع «مفيش مطابقة» لوحده (تحت)
     addressAnchor: null,
+    // 🔴 الـ`districtId` جه من المرساة (كلمة واحدة) مش من مطابقة اسم كامل؟
+    districtFromAnchor: false,
   };
 
   if (matches.length === 1) {
@@ -2217,13 +2239,34 @@ function resolveAddress(order, catalog) {
       };
     }
 
-    // 🔍 المرساة — نص بحث للنافذة، **مش** قرار عنوان (§BOSTA::findAddressAnchor).
-    //    بتتحسب هنا بالظبط وبس: ده الفرع الوحيد اللي بيفتح النافذة على قايمة
-    //    كاملة من غير أي شيء مثبّت فوقها، فهو الوحيد اللي بحث جاهز بيفيد فيه.
-    // 🔴 و**بتتلغي لو المدينة مشكوك فيها**: اقتراحات المدن التانية بتتعرض
-    //    مثبّتة أول القايمة، والنافذة بتخفيها أول ما خانة البحث تتملا
-    //    (`renderDistrictList`) — فبحث جاهز هنا كان هيدفن الإشارة الأقوى.
+    // 🔍 المرساة — **بقت بتتطبّق فعلًا** (v2.6.0 · قرار أحمد 17-09-2026).
+    //    لحد v2.5.0 كانت نص بحث بس والصف بينزل «المحافظة فقط» موقوف؛ دلوقتي
+    //    الـ`districtId` بتاعها **بيترفع** والصف قابل للرفع وداخل «رفع الكل».
+    // 🔴 و**بتتلغي لو المدينة مشكوك فيها** — اقتراح المحافظة التانية إشارة
+    //    أقوى، وتطبيق منطقة جوّه محافظة مشكوك فيها بيثبّت الشك بدل ما يراجعه.
     const addressAnchor = cityDoubt ? null : findAddressAnchor(city, fields);
+
+    if (addressAnchor) {
+      // 🔴 **`mode` بيفضل `district` عن قصد — مش قيمة جديدة.** كل اللي تحت
+      //    (`buildAddressObject` · `addressDegree` · `nextAddressDegree` ·
+      //    سلّم النزول) بيقرا `mode`، وقيمة رابعة كانت معناها فرع جديد في
+      //    **أربع** دوال، وأي واحدة تنساها بتدّي 400 من بوسطة أو درجة غلط في
+      //    D1 **في صمت**. اللي بيتغيّر هو **مصدر** الـ`districtId` وعرضه —
+      //    مش عقد العنوان. والعلم `districtFromAnchor` هو اللي بيحمل الفرق.
+      // ⚠️ والـ`localZones` بتتبعت زي ما هي: لو بوسطة رفضت المنطقة بـ`3003`،
+      //    سلّم النزول بيروح للمدينة ثم المحافظة زي أي صف منطقة بالظبط.
+      return {
+        ...base, mode: 'district', ambiguous: false,
+        districtId: addressAnchor.districtId,
+        districtName: addressAnchor.districtName,
+        // 🔴 الواجهة بتقرا منه عشان تعرض «🔍 مرشّح تلقائي» بدل «📍 عنوان
+        //    مظبوط» — مطابقة اسم كامل ومرساة كلمة واحدة **مش نفس الثقة**،
+        //    وعرضهم بنفس البادج بيخلي الموظف يعدّي على تخمين وهو فاكره حقيقة.
+        districtFromAnchor: true,
+        addressAnchor,
+        localZones, crossCity, cityDoubt,
+      };
+    }
 
     return {
       ...base, mode: 'province', ambiguous: false,
@@ -2650,9 +2693,11 @@ function buildRow(order, catalog) {
     zoneId:      plan.ok ? (plan.zoneId || null) : null,
     zoneName:    plan.ok ? (plan.zoneName || null) : null,
     zoneDistrictCount: plan.ok ? (plan.zoneDistrictCount || 0) : 0,
-    // 🔍 نص بحث جاهز لنافذة اختيار المنطقة — **مش** درجة عنوان ومش اقتراح
-    //    منطقة (§BOSTA::findAddressAnchor). بيتعرض في خانة البحث وبس.
+    // 🔍 المرساة — الكلمة اللي وصلت للمنطقة دي، والواجهة بتعرضها كسبب.
     addressAnchor: plan.ok ? (plan.addressAnchor || null) : null,
+    // 🔴 `mode` بيقول `district` في الحالتين — العلم ده هو **الفرق الوحيد**
+    //    بين مطابقة اسم كامل ومرساة كلمة واحدة، والواجهة بتلوّن وتسمّي منه.
+    districtFromAnchor: plan.ok ? !!plan.districtFromAnchor : false,
     // 🔴 العنوان طابق منطقة **مقفولة للتسليم** — برّه تغطية بوسطة (8.11).
     //    بتترجع بالاسم عشان الموظف يشوف السبب، مش «مفيش مطابقة» صامتة.
     blockedDistricts: plan.ok ? (plan.blockedDistricts || []) : [],
@@ -2699,10 +2744,18 @@ async function uploadOne(env, token, order, catalog, override) {
     districtOverridden: false,  // الموظف اختار المنطقة بإيده؟
     degreeForced: null,         // 'zone' · 'province' — تثبيت يدوي على درجة أقل
     addressAnchor: null,        // نص المرساة اللي النافذة فتحت بيه (لو فيه)
-    // 🎯 اختار اللي المرساة وصلت له بالظبط؟ **ده الرقم اللي بيقرر** لو الطبقة
-    //    دي تستاهل بعدين تبقى اقتراح قابل للضغط (بند ١٩ المفتوح).
-    //    `null` = مفيش مرساة أصلًا، أو الموظف ما اختارش منطقة.
+    // 🎯 المعنى **اتقلب في v2.6.0** — المرساة بقت بتتطبّق لوحدها، فالموظف
+    //    اللي موافق عليها **مابيلمسش حاجة**:
+    //      `null`  = ما اختارش منطقة بإيده (موافق ضمنيًا · أو مفيش مرساة)
+    //      `true`  = اختار بإيده **نفس** منطقة المرساة (تأكيد صريح)
+    //      `false` = اختار **غيرها** ← 🔴 **المرساة كانت غلط والموظف مسكها**
+    //    `false` هو **إشارة الخطأ الوحيدة** دلوقتي، ونسبته لإجمالي الصفوف
+    //    اللي فيها مرساة هي معدّل الخطأ الفعلي (بند ١٩).
     anchorHit: null,
+    // 🎯 الشحنة اتعملت على منطقة المرساة فعلًا؟ بيتحسب في `applyDegree` من
+    //    **الدرجة اللي اتبعتت فعلًا** مش من النيّة — لو بوسطة رفضت المنطقة
+    //    ونزلنا للمدينة، المرساة ما اتطبقتش على الشحنة اللي موجودة دلوقتي.
+    anchorApplied: false,
     error: null,
     warnings: [],
     logged: true,
@@ -2799,12 +2852,17 @@ async function uploadOne(env, token, order, catalog, override) {
     ? null
     : (planUsed.zoneId || planUsed.localZones?.[0]?.zoneId || null);
 
+  // 🔴 المرساة اتطبّقت **على الشحنة** ولا لأ — الاختيار اليدوي بيلغيها،
+  //    وسلّم النزول بيلغيها كمان (الشحنة بقت على المدينة/المحافظة مش عليها).
+  const anchorPlanned = !!plan.districtFromAnchor && !override?.districtId;
+
   const applyDegree = (m) => {
     const doc = m === 'district' || m === 'zoneName';
     row.contractUsed   = doc ? 'documented' : 'undocumented';
     row.addressDegree  = addressDegree(m);
     row.districtSent   = (m === 'district' || m === 'zoneName') ? planUsed.districtName : null;
     row.zoneSent       = m === 'zone' ? (planUsed.zoneName || null) : null;
+    row.anchorApplied  = anchorPlanned && m === 'district';
     return doc;
   };
 
@@ -2903,6 +2961,9 @@ async function logRow(env, row, employee, job = S1_JOB) {
         district_overridden: !!row.districtOverridden,
         degree_forced:   row.degreeForced,
         address_anchor:  row.addressAnchor,
+        // 🎯 اتبعتت على منطقة المرساة فعلًا · و`anchor_hit = false` معناها
+        //    الموظف صحّحها — ودي إشارة الخطأ اللي بند ١٩ بيتقاس بيها.
+        anchor_applied:  !!row.anchorApplied,
         anchor_hit:      row.anchorHit,
         actions:         row.actions,
         warnings:        row.warnings,
@@ -3196,6 +3257,7 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     degreeForced: null,
     addressAnchor: null,
     anchorHit: null,
+    anchorApplied: false,
     codSent: null,
     codClipped: false,
     codRemainder: 0,
@@ -3288,12 +3350,16 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     ? null
     : (planUsed.zoneId || planUsed.localZones?.[0]?.zoneId || null);
 
+  // نفس قاعدة §UPLOAD بالحرف — الدرجة اللي اتبعتت فعلًا هي اللي بتتسجّل
+  const anchorPlanned = !!plan.districtFromAnchor && !override?.districtId;
+
   const applyDegree = (m) => {
     const doc = m === 'district' || m === 'zoneName';
     row.contractUsed  = doc ? 'documented' : 'undocumented';
     row.addressDegree = addressDegree(m);
     row.districtSent  = (m === 'district' || m === 'zoneName') ? planUsed.districtName : null;
     row.zoneSent      = m === 'zone' ? (planUsed.zoneName || null) : null;
+    row.anchorApplied = anchorPlanned && m === 'district';
     return doc;
   };
 
@@ -3511,6 +3577,7 @@ function buildReRow(order, catalog, job, cycleAnalysis) {
     zoneDistrictCount: plan.ok ? (plan.zoneDistrictCount || 0) : 0,
     // 🔍 نفس `§UPLOAD::buildRow` بالحرف — النافذة واحدة للتلات أوضاع
     addressAnchor: plan.ok ? (plan.addressAnchor || null) : null,
+    districtFromAnchor: plan.ok ? !!plan.districtFromAnchor : false,
     blockedDistricts:  plan.ok ? (plan.blockedDistricts || []) : [],
     catalogWarning: plan.ok ? plan.catalogWarning : null,
     problems,
@@ -4185,6 +4252,7 @@ export default {
               district_overridden: !!r.districtOverridden,
               degree_forced: r.degreeForced,
               address_anchor: r.addressAnchor,
+              anchor_applied: !!r.anchorApplied,
               anchor_hit: r.anchorHit,
               district_sent: r.districtSent,
               zone_sent: r.zoneSent || null,
