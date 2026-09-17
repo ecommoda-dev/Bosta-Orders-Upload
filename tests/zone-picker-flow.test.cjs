@@ -26,7 +26,7 @@ const api=new Function('document','window','localStorage','Chart','ExcelJS', src
     renderDpControls, confirmDistrictPick, el(id){ return document.getElementById(id); },
     orderId(){ return dpOrderId; },
     rowAddrMode, addrModeInfo, ADDR_MODE_LABEL,
-    dpAnchorText, clearDpSearch, listHTML(){ return null; },
+    dpAnchorText, listHTML(){ return null; },
     zf(){ return dpZoneFilter; }, ov(){ return districtOverride; },
     setZf(z){ dpZoneFilter = z; }, open(){ return dpPickOpen; } };`
 )(doc,win,{getItem:()=>null,setItem(){},removeItem(){}});
@@ -561,20 +561,21 @@ console.log('\n── ⑰ المرساة ──');
   chk('وصف بلا مرساة بيفضل بخانة فاضية',
       api.dpAnchorText({...arow, addressAnchor:null},'alx') === '');
 
-  // البانر — القايمة المقصوصة من غير ما حد يقول ليه هي نفس فخ قصر الزون
+  // 🔴 **مفيش بانر فوق القايمة** (v2.16.1 · طلب أحمد). الفرق عن قصر الزون:
+  //    القصر مالوش أثر مرئي فمحتاج بانر يقول إنه قايم، لكن البحث **مكتوب في
+  //    الخانة قدام الموظف** — فالبانر بيشرح حاجة ظاهرة، وفوق كده كان بيتقسّم
+  //    على عمودين جوّه `.dp-tbl` ويتقرا مبعثر.
   api.setSearch('مريوط');
   api.renderDistrictList();
-  chk('والبانر بيقول إن البحث اتكتب لوحده', /البحث اتكتب لوحده/.test(listHTML));
-  chk('وفيه زرار يفضّي الخانة', /clearDpSearch\(\)/.test(listHTML));
+  chk('🔴 مفيش أي بانر فوق القايمة', !/البحث اتكتب لوحده/.test(listHTML), listHTML.slice(0,120));
   chk('والمنطقة بانت في القايمة', /King Maryout/.test(listHTML));
-  // أول ما الموظف يكتب حاجة تانية، البحث بقى بحثه هو
-  api.setSearch('سيدي');
+  chk('والقايمة اتقصرت عليها فعلًا', !/Sidi Bishr/.test(listHTML));
+  // والخانة نفسها هي الإعلان — الكلمة مكتوبة فيها وقابلة للمسح
+  chk('والكلمة لسه مكتوبة في الخانة', api.el('dpSearch').value === 'مريوط');
+  api.setSearch('');
   api.renderDistrictList();
-  chk('والبانر بيختفي لما الموظف يغيّر الكلمة', !/البحث اتكتب لوحده/.test(listHTML));
-  api.setSearch('مريوط');
-  api.clearDpSearch();
-  chk('و«شيل البحث» بيفضّي الخانة ويعيد الرسم',
-      api.el('dpSearch').value === '' && !/البحث اتكتب لوحده/.test(listHTML));
+  chk('وتفضيتها بترجّع القايمة كلها',
+      /King Maryout/.test(listHTML) && /Sidi Bishr/.test(listHTML));
 
   // 🔴 الضابط الهيكلي: المرساة في `else` بتاعة قصر الزون — مش فرع مستقل
   const page = fs.readFileSync('/home/user/Bosta-Orders-Upload/index.html','utf8');
