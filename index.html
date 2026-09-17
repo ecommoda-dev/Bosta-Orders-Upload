@@ -918,6 +918,19 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">17-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>🔍 <b>خانة البحث في نافذة اختيار المنطقة بقت بتفتح مليانة</b> لما الصف «🏙️ المحافظة فقط» والأداة تلاقي كلمة في العنوان موجودة في اسم منطقة <b>واحدة بس</b> في المحافظة. مثال حقيقي: <code>#55065</code> كتب «<b>الكينج</b> مريوط» والمنطقة عند بوسطة «<b>كنج</b> مريوط» — <b>فرق حرف واحد</b> خلّى المطابقة تفشل والصف ينزل «المحافظة فقط»، والموظف اضطر يفتح النافذة ويكتب «مريوط» بإيده وسط <b>٢٢١ منطقة</b>. دلوقتي الكلمة دي بتكون مكتوبة في خانة البحث والصف قدامه من أول لحظة.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>ودي مش مطابقة تلقائية.</b> الصف بيفضل «🏙️ المحافظة فقط» و<b>موقوف</b> لحد ما تختار منطقة أو تضغط «ارفع على المحافظة/المدينة فقط» — زي ما هو بالظبط. اللي اتغيّر إن <b>البحث اتكتب بدلك</b>، والقرار لسه قرارك. وفوق القايمة بانر بيقول إن البحث اتكتب لوحده ومعاه زرار <b>«✕ شيل البحث»</b> يفضّيه ويوريك القايمة كلها.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>⚠️ <b>الكلمة لازم تكون في اسم منطقة واحدة بالظبط.</b> كلمة متكررة (<code>كفر</code> · <code>ميت</code> · <code>مدينة</code>) مابتتكتبش خالص — بحث بيرجّع ٣٠ منطقة مش مساعدة. ومابتشتغلش كمان على الصفوف اللي فيها اقتراح أقوى معروض فوق القايمة (❓ أكتر من مطابقة · 🟠 المحافظة مشكوك فيها) عشان مايغطّيش عليه.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>📊 <b>السجل بقى بيسجّل التدخّل اليدوي على المنطقة</b> — عشان نقيس كام صف المطابقة فشلت فيه فعلًا. قبل كده السجل كان بيكتب المنطقة المرفوعة وبس، من غير ما يقول لو المطابقة هي اللي لقتها ولا الموظف صلّحها بإيده. مالوش أي أثر على الشاشة.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.15.0</span>
           <span class="cl-ver-date">15-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -1353,6 +1366,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
             <li>🧹 <strong>عمليات القراءة مابتتسجّلش في السجل</strong> (Worker v2.4.0). ترشيح أوردرات الاسترجاع/الاستبدال كان بيكتب صف <code>scan</code> مع كل نداء (كل فتحة شاشة · كل تبديل وضع · كل «تحديث») — السجل موجود عشان <strong>الأفعال</strong> (شحنة اتعملت · حالة اتغيّرت)، والقراءة مالهاش أي أثر يستاهل صف. الصفوف القديمة ما اتمسحتش والفلتر لسه بيقراها.</li>
             <li><strong>لو الموظف اختار منطقة والـ Worker مالقهاش في المدينة المختارة، الصف بيوقف بخطأ</strong> — مش بيرجع للمطابقة التلقائية بصمت. الرفع على حاجة تانية غير اللي الموظف وافق عليه = شحنة بفلوس على عنوان مش المقصود.</li>
             <li>الرفع بيتقسّم دفعات من <code>UPLOAD_CHUNK</code> صف. لو دفعة كاملة ما وصلتش للـ Worker، صفوفها بتتعرض بحالة «فشل» مع رسالة صريحة إن حالتها <strong>مش معروفة</strong> ولازم تتراجع على بوسطة قبل إعادة المحاولة.</li>
+            <li>🔍 <strong>خانة البحث في نافذة اختيار المنطقة بتفتح مليانة لوحدها</strong> (Worker v2.5.0 · واجهة v2.16.0) لما الصف «🏙️ المحافظة فقط» والأداة تلاقي كلمة في العنوان موجودة في اسم منطقة <strong>واحدة بس</strong> في المحافظة. السبب: المطابقة بتسأل «هل العنوان فيه اسم المنطقة <strong>كاملًا</strong>؟»، فـ<code>#55065</code> كتب «الكينج مريوط» والمنطقة «كنج مريوط» — <strong>فرق حرف واحد</strong> أسقط المطابقة، والموظف كتب «مريوط» بإيده ولقى الصف من أول نتيجة. 🔴 <strong>ودي مش مطابقة ومش اقتراح منطقة</strong>: الصف بيفضل موقوف ومحتاج تأكيد يدوي زي ما هو، واللي اتغيّر إن البحث اتكتب بدل الموظف. والبانر فوق القايمة بيقول إن البحث اتكتب لوحده ومعاه زرار يفضّيه.</li>
+            <li>📊 <strong>السجل بقى بيفرّق بين «المطابقة نجحت» و«الموظف صلّحها»</strong> (Worker v2.5.0): <code>district_overridden</code> · <code>degree_forced</code> · <code>address_anchor</code> · <code>anchor_hit</code>. قبل كده <code>district_sent</code> كان بيتكتب في الحالتين، يعني <strong>نسبة نجاح المطابقة مش قابلة للقراءة من السجل أصلًا</strong>.</li>
             <li>🔴 <strong>حارس تأكيد يدوي إضافي فوق <code>r.uploadable</code></strong> — <code>rowNeedsManualAddressConfirm</code> بتوقف ❓ أكتر من مطابقة · 🟠 المحافظة مشكوك فيها · و🏙️ المحافظة فقط (من غير تثبيت) حتى لو السيرفر رجّعها <code>uploadable: true</code>. القرار قرار الموظف، وبياخد أي فعل يغيّر <code>rowAddrMode</code> عن الحالة دي (اختيار منطقة · تثبيت على المحافظة/المدينة فقط).</li>
           </ul>
         </div>
@@ -2065,7 +2080,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.15.0';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.16.0';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2077,7 +2092,7 @@ const TOOL_VERSION       = 'v2.15.0';  // مصدر واحد لرقم نسخة ا
 //    عنده مطابقة محلية سليمة (اسم متكرر بين محافظتين زي «السادات»)، فالصف
 //    بيتوقف عن الرفع والاقتراح بيودّي للمحافظة الغلط. والواجهة **مش** بتقدر
 //    تصلّحها: الشك محسوب في `resolveAddress` جوّه الـ Worker.
-const MIN_WORKER_VERSION = '2.4.0';
+const MIN_WORKER_VERSION = '2.5.0';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -4105,14 +4120,46 @@ async function loadDpCity(cityId) {
   //    `r.districtName` نفسه (`row.zoneOnly.en` من الـ Worker). من غيرها
   //    خانة «المدينة» بتفتح على «الكل» والموظف بيدوّر يدويًا على حاجة
   //    الأداة عارفاها أصلًا وقت الرفع.
+  // 🔴 **خانة البحث بتتفضّى مع كل تحميل محافظة.** نص فاضل من محافظة قبلها
+  //    بيدّي «مفيش مناطق مطابقة» على قايمة مليانة من غير أي سبب ظاهر — والحالة
+  //    دي بقت واردة فعلًا من v2.16.0 لأن الخانة بقت بتتملا **لوحدها**، فالموظف
+  //    اللي بدّل المحافظة مش عارف أصلًا إن فيه بحث شغّال. (نفس اللي `chooseZone`
+  //    بتعمله بالظبط عند قصر الزون.)
+  const searchBox = document.getElementById('dpSearch');
+  searchBox.value = '';
+
   if (r && r.mode === 'zone' && r.zoneName && cityId === r.cityId
       && !districtOverride[dpOrderId]?.districtId) {
     dpZoneFilter = r.zoneName;
   } else if (r && r.mode === 'zoneName' && r.districtName && cityId === r.cityId
       && !districtOverride[dpOrderId]?.districtId) {
     dpZoneFilter = r.districtName;
+  } else {
+    // 🔍 **المرساة** — خانة البحث بتفتح مليانة (v2.16.0). مفيش زون يتقصر عليه
+    //    هنا (الصف «المحافظة فقط»)، فالبديل الوحيد قايمة كاملة بـ٢٢١ منطقة
+    //    (الإسكندرية) أو ٥٩٠ (القاهرة) والموظف يدوّر فيها بإيده.
+    // 🔴 **مانعة تعارض مقصودة مع قصر الزون**: البحث **بيلغي** القصر (v2.6.1)،
+    //    فلو الاتنين اشتغلوا مع بعض كان البحث الجاهز هيفكّ القصر لوحده أول ما
+    //    النافذة تفتح — الـ `else` هنا هو اللي بيمنع ده، مش ترتيب صدفة.
+    //    والـ Worker أصلًا مابيرجّعش مرساة إلا في فرع «المحافظة فقط».
+    searchBox.value = dpAnchorText(r, cityId);
   }
+  toggleSearchActiveState(searchBox);
   renderDistrictList();
+}
+
+// نص البحث اللي النافذة بتفتح بيه — أو '' يعني تفضل فاضية.
+// 🔴 دالة منفصلة عن `loadDpCity` عشان تتفحص من غير شبكة — الشرط اللي بيقرر
+//    امتى البحث بيتكتب لوحده لازم يبقى مقروء ومغطّى باختبار، مش مدفون وسط
+//    نداء `get_districts`.
+function dpAnchorText(r, cityId) {
+  if (!r || !r.addressAnchor?.text) return '';
+  // ⚠️ المرساة محسوبة على **محافظة الصف**. الموظف اللي بدّل المحافظة بقى في
+  //    كتالوج تاني خالص، وكلمة من المحافظة الأولى هناك ضوضاء.
+  if (cityId !== r.cityId) return '';
+  // اختار منطقة خلاص — المثبّتة فوق القايمة هي اللي تتشاف، والبحث بيخفيها
+  if (districtOverride[dpOrderId]?.districtId) return '';
+  return r.addressAnchor.text;
 }
 
 // ─── مصادر الخيارات — كل واحدة بترجّع صفوف موحّدة الشكل ───
@@ -4522,6 +4569,14 @@ async function chooseZone(cityId, cityName, zone) {
   showToast(`المحافظة ${cityName} · القايمة مقصورة على مدينة ${zone} — اختر المنطقة`, 'success', 5000);
 }
 function clearZoneFilter() { dpZoneFilter = null; renderDistrictList(); }
+// ⚠️ بيفضّي الخانة **وبيعيد الرسم** — تفضية الـ DOM لوحدها بتسيب القايمة
+//    مقصوصة على بحث مش موجود في الخانة.
+function clearDpSearch() {
+  const box = document.getElementById('dpSearch');
+  box.value = '';
+  toggleSearchActiveState(box);
+  renderDistrictList();
+}
 
 function renderDistrictList() {
   renderDistrictState();
@@ -4545,6 +4600,19 @@ function renderDistrictList() {
           <button class="dp-clear-zone" onclick="event.stopPropagation();clearZoneFilter()">✕ شيل القصر</button></div>`
       : `<div class="dp-group-hdr pick">🗺️ مقصورة على مدينة <b>${esc(dpZoneFilter)}</b>
           <button class="dp-clear-zone" onclick="event.stopPropagation();clearZoneFilter()">✕ شيل القصر</button></div>`;
+  }
+  // 🔍 **خانة البحث اتملت لوحدها — ولازم تتقال** (v2.16.0). نفس قاعدة بانر
+  //    قصر الزون بالظبط: قايمة مقصوصة من غير ما حد يقول ليه بتخلّي الموظف
+  //    يقرا «مفيش مناطق مطابقة» على منطقة موجودة فعلًا ويفتكرها مش في
+  //    الكتالوج. والزرار بيفضّي الخانة فورًا بدل ما يمسح بإيده.
+  // ⚠️ المقارنة على النص المعروض نفسه — البانر بيختفي أول ما الموظف يغيّر
+  //    الكلمة، لأنه ساعتها بقى بحثه هو مش بحث الأداة.
+  const anchorText = (r?.addressAnchor?.text || '').trim().toLowerCase();
+  if (q && sameCity && anchorText && q === anchorText) {
+    head += `<div class="dp-group-hdr pick">🔍 البحث اتكتب لوحده بـ<b>${esc(r.addressAnchor.text)}</b> —
+      أقرب كلمة في العنوان لقيناها في اسم منطقة <b>واحدة بس</b> في ${esc(r.cityName)}.
+      راجعها، ولو مش هي فضّي الخانة وشوف القايمة كلها.
+      <button class="dp-clear-zone" onclick="event.stopPropagation();clearDpSearch()">✕ شيل البحث</button></div>`;
   }
   // 🔴 المنطقة اللي المطابقة وصلت لها (أو اللي الموظف اختارها) بتتثبّت **أول
   //    القايمة** بعلامة بصرية صريحة. قبل كده كانت مجرد صف أزرق مكانه أبجدي

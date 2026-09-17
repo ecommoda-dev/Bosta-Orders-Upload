@@ -26,6 +26,7 @@ const api=new Function('document','window','localStorage','Chart','ExcelJS', src
     renderDpControls, confirmDistrictPick, el(id){ return document.getElementById(id); },
     orderId(){ return dpOrderId; },
     rowAddrMode, addrModeInfo, ADDR_MODE_LABEL,
+    dpAnchorText, clearDpSearch, listHTML(){ return null; },
     zf(){ return dpZoneFilter; }, ov(){ return districtOverride; },
     setZf(z){ dpZoneFilter = z; }, open(){ return dpPickOpen; } };`
 )(doc,win,{getItem:()=>null,setItem(){},removeItem(){}});
@@ -524,6 +525,66 @@ console.log('\n── ⑯ تأكيد العنوان مظبوط ──');
   chk('وفيه CSS بيوضّح حالة المقفول',
       /\.btn-green:disabled[^{]*\{[^}]*opacity/.test(page)
       && /btn-ghost:disabled/.test(page));
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⑰ 🔍 المرساة — خانة البحث بتفتح مليانة (v2.16.0)
+//
+// 🔴 البند: المرساة **نص بحث بس**. والخطر التاني إنها تشتغل جنب قصر الزون —
+//    البحث **بيلغي** القصر (v2.6.1)، فبحث جاهز جنب زون مقصور كان هيفكّ القصر
+//    لوحده أول ما النافذة تفتح، والموظف يقرا بانر «البحث بيلف على كل مناطق
+//    المحافظة» من غير ما يكون كتب حرف.
+// ══════════════════════════════════════════════════════════════
+console.log('\n── ⑰ المرساة ──');
+{
+  const alx = [
+    D('k1','King Maryout','كنج مريوط','King Maryout','كنج مريوط'),
+    D('s1','Sidi Bishr','سيدي بشر','Sidi Bishr','سيدي بشر'),
+  ];
+  const arow = { orderId:'A', orderNumber:'#55065', uploadable:false, addressOk:true,
+    mode:'province', cityName:'Alexandria', cityId:'alx', province:'Alexandria',
+    ambiguous:false, cityDoubt:false, candidates:[], localZones:[], crossCity:[],
+    address1:'الكينج مريوط قبلي السكه فيلا وليد الحو', address2:'', addressCity:'الاسكندرية',
+    addressAnchor:{ text:'مريوط', token:'مريوط', fieldLabel:'العنوان',
+                    districtId:'k1', districtName:'King Maryout', districtNameAr:'كنج مريوط' } };
+  const acities = [{cityId:'alx',cityName:'Alexandria',cityAr:'الاسكندريه'},
+                   {cityId:'c',cityName:'Cairo',cityAr:'القاهره'}];
+
+  api.setup([arow],alx,acities,'A','alx');
+  delete api.ov()['A'];
+  chk('بتتكتب في خانة البحث', api.dpAnchorText(arow,'alx') === 'مريوط');
+  // ⚠️ المرساة محسوبة على محافظة الصف — في كتالوج تاني هي ضوضاء
+  chk('ومابتتكتبش لو الموظف بدّل المحافظة', api.dpAnchorText(arow,'c') === '');
+  api.ov()['A'] = { districtId:'s1' };
+  chk('ومابتتكتبش بعد اختيار منطقة', api.dpAnchorText(arow,'alx') === '');
+  delete api.ov()['A'];
+  chk('وصف بلا مرساة بيفضل بخانة فاضية',
+      api.dpAnchorText({...arow, addressAnchor:null},'alx') === '');
+
+  // البانر — القايمة المقصوصة من غير ما حد يقول ليه هي نفس فخ قصر الزون
+  api.setSearch('مريوط');
+  api.renderDistrictList();
+  chk('والبانر بيقول إن البحث اتكتب لوحده', /البحث اتكتب لوحده/.test(listHTML));
+  chk('وفيه زرار يفضّي الخانة', /clearDpSearch\(\)/.test(listHTML));
+  chk('والمنطقة بانت في القايمة', /King Maryout/.test(listHTML));
+  // أول ما الموظف يكتب حاجة تانية، البحث بقى بحثه هو
+  api.setSearch('سيدي');
+  api.renderDistrictList();
+  chk('والبانر بيختفي لما الموظف يغيّر الكلمة', !/البحث اتكتب لوحده/.test(listHTML));
+  api.setSearch('مريوط');
+  api.clearDpSearch();
+  chk('و«شيل البحث» بيفضّي الخانة ويعيد الرسم',
+      api.el('dpSearch').value === '' && !/البحث اتكتب لوحده/.test(listHTML));
+
+  // 🔴 الضابط الهيكلي: المرساة في `else` بتاعة قصر الزون — مش فرع مستقل
+  const page = fs.readFileSync('/home/user/Bosta-Orders-Upload/index.html','utf8');
+  // 🔴 وخانة البحث بتتفضّى مع كل تحميل محافظة — من غير ده نص المحافظة اللي
+  //    فاتت بيفضل شغّال على قايمة المحافظة الجديدة ويدّي «مفيش مناطق مطابقة»
+  //    من غير أي سبب ظاهر، والموظف مش عارف أصلًا إن فيه بحث مكتوب.
+  chk('🔴 والخانة بتتفضّى مع كل تحميل محافظة',
+      /const searchBox = document\.getElementById\('dpSearch'\);\s*\n\s*searchBox\.value = '';/.test(page));
+  chk('🔴 ومستحيل تشتغل جنب قصر الزون (في الـ else بتاعته)',
+      /dpZoneFilter = r\.districtName;\s*\n\s*\} else \{[\s\S]{0,1200}?dpAnchorText\(r, cityId\)/.test(page));
 }
 
 console.log(`\n${p}/${n} نجحت`);
