@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>رفع أوردرات بوسطة — EcomModa</title>
-<!-- skills: html-builder v7.2.0 · constants v1.10.0 · order-lifecycle v1.3.0 · bosta-api-helper v1.1.0 — 17-09-2026 -->
+<!-- skills: html-builder v7.2.0 · constants v1.10.0 · order-lifecycle v1.3.0 · bosta-api-helper v1.1.0 — 19-09-2026 -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 </head>
@@ -940,6 +940,16 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">19-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>القايمة المنسدلة «المنطقة» بقت بتفتح مقصورة على مدينة الصف من أول ضغطة.</b> لما الأداة تلاقي مطابقة تلقائية (اسم كامل أو مرساة)، القايمة كانت بتفتح على <b>كل مناطق المحافظة</b> (ممكن ٤٠٠+ منطقة) بدل مدينة الأوردر — والموظف مضطر يفتح قايمة «المدينة» ويختارها بإيده الأول عشان يشوف نفس النتيجة اللي الأداة عارفاها أصلًا وقت الرفع. دلوقتي القصر بيتطبّق تلقائيًا زي ما لو الموظف اختار المدينة بنفسه.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>⌨️ <b>زرار Esc بقى بيقفل أي قايمة منسدلة مفتوحة</b> (المحافظة · المدينة · المنطقة) <b>من غير اختيار</b> — زي الضغط برّه القايمة بالظبط، بس من الكيبورد.</span></li>
+        </ul>
+      </div>
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge">v2.19.0</span>
           <span class="cl-ver-date">17-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -2147,7 +2157,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.19.0';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.19.1';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -4309,6 +4319,16 @@ async function loadDpCity(cityId) {
   } else if (r && r.mode === 'zoneName' && r.districtName && cityId === r.cityId
       && !districtOverride[dpOrderId]?.districtId) {
     dpZoneFilter = r.districtName;
+  } else if (r && r.mode === 'district' && r.districtId && cityId === r.cityId
+      && !districtOverride[dpOrderId]?.districtId) {
+    // 🔴 مطابقة منطقة كاملة (أو مرساة) بتحسم المدينة (zone) تبعتها ضمنيًا —
+    //    القايمة تحت لازم تفتح مقصورة عليها زي ما لو الموظف اختارها بنفسه،
+    //    وإلا القايمة الكبيرة والقايمة المنسدلة بتعرضوا كل مناطق المحافظة
+    //    (ممكن يكونوا ٤٠٠+ منطقة) بدل المدينة الصح، والموظف مضطر يفتح المدينة
+    //    يدويًا عشان يشوف نفس النتيجة.
+    const matchedD = dpDistricts.find(x => x.id === r.districtId);
+    const mz = matchedD && ((matchedD.zone || '').trim() || (matchedD.zoneAr || '').trim());
+    if (mz) dpZoneFilter = matchedD.zone || matchedD.zoneAr;
   }
   // 🔴 **مفيش بحث جاهز في الخانة** — اتشال في v2.17.0 لما المرساة بقت
   //    **بتتطبّق** (Worker v2.6.0). المنطقة بقت `r.districtId` فعلًا، فبتتثبّت
@@ -4646,6 +4666,13 @@ async function chooseCity(cityId) {
 // الضغط في أي مكان تاني بيقفل اللوحة المفتوحة — الزراير نفسها بتعمل
 // `stopPropagation` فالضغط عليها مابيقفلهاش قبل ما تشتغل.
 document.addEventListener('click', () => { if (dpPickOpen) dpPickClose(); });
+
+// Esc بيقفل أي قايمة منسدلة مفتوحة (المحافظة/المدينة/المنطقة) من غير اختيار —
+// زي الضغط برّه اللوحة بالظبط، بس من الكيبورد. لازم `stopPropagation` عشان
+// Esc ما يقفلش نافذة اختيار المنطقة نفسها (`districtOverlay`) كمان في نفس الضغطة.
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && dpPickOpen) { e.stopPropagation(); dpPickClose(); }
+});
 
 function renderDistrictState() {
   const r = allRows.find(x => x.orderId === dpOrderId);
