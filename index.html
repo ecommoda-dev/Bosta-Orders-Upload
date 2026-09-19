@@ -516,7 +516,12 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .big-btn.clear{background:var(--surface);border-color:var(--border-strong);color:var(--text-mid);font-weight:700;}
 .big-btn.clear:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
 .big-btn:disabled{opacity:.5;cursor:not-allowed;}
-.tbl-body-wrap{max-height:4000px;overflow:hidden;transition:max-height .3s ease;
+/* 🔴 السقف ده لازم يفضل أكبر من أي جدول حقيقي بكتير — هو بس بوابة أنيميشن
+   الطي، مش سقف عرض. كان 4000px وبيتقص عنده بـ overflow:hidden (مش سكرول):
+   عمود «العنوان كامل» (v2.14.0) بيطلّع صفوف طويلة، وأكتر من ~60 صف كانوا
+   كافيين يعدّوا 4000px ويختفوا خالص من غير أي تنبيه — العدّاد فوق كان لسه
+   بيقول العدد الصح لأنه محسوب من `filtered.length` قبل أي قص. */
+.tbl-body-wrap{max-height:999999px;overflow:hidden;transition:max-height .3s ease;
   border-radius:0 0 var(--radius) var(--radius);}
 .tbl-body-wrap.collapsed{max-height:0;}
 .tbl-scroll{overflow-x:auto;border-radius:0 0 var(--radius) var(--radius);}
@@ -2157,7 +2162,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.19.1';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.19.2';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
