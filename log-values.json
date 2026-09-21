@@ -1,0 +1,35 @@
+{
+  "tool": "bosta_orders_upload",
+  "since": null,
+  "types": {
+    "login": {
+      "result": null,
+      "stage": null,
+      "desc": "دخول موظف"
+    },
+    "logout": {
+      "result": null,
+      "stage": null,
+      "desc": "خروج موظف"
+    },
+    "cycle_block": {
+      "result": null,
+      "stage": null,
+      "desc": "الرفع اتمنع — الأوردر في دورة حياة مابتسمحش بالرفع"
+    },
+    "re_cancelled": {
+      "result": null,
+      "stage": null,
+      "desc": "إلغاء شحنة بوسطة قديمة قبل رفع شحنة استرجاع/استبدال"
+    },
+    "update": {
+      "result": null,
+      "stage": null,
+      "desc": "تحديث ميتافيلد الحالة بعد رفع الشحنة على بوسطة"
+    }
+  },
+  "dynamicTypes": [
+    "job.confirmType",
+    "job.exportType"
+  ]
+}
