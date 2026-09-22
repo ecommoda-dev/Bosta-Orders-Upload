@@ -262,9 +262,11 @@ console.log('\n⑥ب الصف الموقوف — الرسالة اتشالت و�
 //    `districtId` بتاعه. من غير الاستثناء ده الصف بيفضل ⛔ موقوف للأبد:
 //    البادج بيخضرّ («عنوان مظبوط») والرفع مايعدّيش، والموظف مالوش أي طريق
 //    يكمّل بيه غير إنه يسيب الأوردر.
-// ⚠️ والضابط أهم من الحالة نفسها: الدرجة الأقل (زون/محافظة) **مابتحرّرش**،
-//    لأنها بتغيّر درجة العنوان مش العنوان — الشحنة بتفضل رايحة نفس المكان.
-console.log('\n⑥د التعديل اليدوي — المنطقة بتحرّر الوقف، الدرجة الأقل لأ');
+// ⚠️ (v2.19.3 · طلب أحمد 22-09-2026) الدرجة الأقل (زون/محافظة) بقت **بتحرّر**
+//    الوقف برضه — الموظف بياخد تأكيد صريح في الواجهة (`coverageBlocksDegree`)
+//    قبل ما يوصل هنا، فالسيرفر مابيمنعش تاني فوق تأكيد الموظف. تعديل المدينة
+//    من غير `forceProvince`/`forceZone` صريح لسه مابيحرّرش — مفيش قرار اتاخد.
+console.log('\n⑥د التعديل اليدوي — المنطقة أو الدرجة الأقل بتحرّر الوقف بعد تأكيد صريح');
 {
   const blocked = order({ city: 'طابا', province: 'South Sinai', provinceCode: 'JS' });
   const plan = api.resolveAddress(blocked, CAT);
@@ -273,12 +275,12 @@ console.log('\n⑥د التعديل اليدوي — المنطقة بتحرّر
   eq('من غير تعديل: الوقف قايم', api.coverageProblems(plan).length, 1);
   eq('منطقة مختارة يدويًا بتحرّر الوقف',
      api.coverageProblems(plan, { districtId: 'd-dahab', cityId: 'nG_c44vHQht' }).length, 0);
-  // 🔴 الضابط — دول بيغيّروا الدرجة مش العنوان
-  eq('«ارفع على الزون بس» مابيحرّرش',
-     api.coverageProblems(plan, { forceZone: true, zoneId: 'z-dahab' }).length, 1);
-  eq('و«ارفع على المحافظة بس» مابيحرّرش',
-     api.coverageProblems(plan, { forceProvince: true }).length, 1);
-  eq('وتعديل المدينة لوحده من غير منطقة مابيحرّرش',
+  // 🔴 (v2.19.3) «ارفع على الزون بس»/«ارفع على المحافظة بس» بقوا استثناء برضه
+  eq('«ارفع على الزون بس» بقت بتحرّر (بعد تأكيد صريح)',
+     api.coverageProblems(plan, { forceZone: true, zoneId: 'z-dahab' }).length, 0);
+  eq('و«ارفع على المحافظة بس» بقت بتحرّر (بعد تأكيد صريح)',
+     api.coverageProblems(plan, { forceProvince: true }).length, 0);
+  eq('وتعديل المدينة لوحده من غير منطقة أو تثبيت صريح مابيحرّرش',
      api.coverageProblems(plan, { cityId: '0064Qb0OgcA' }).length, 1);
 
   // نفس القاعدة من فوق — `validateOrder` هي الباب اللي `uploadOne` بيعدّي منه
@@ -428,11 +430,12 @@ console.log('\n⑦ terminate — الإلغاء المكرر نجاح مش فش�
     eq('منطقة مقفولة مختارة يدويًا: صفر نداء', taba.bosta.length, 0);
     ok('وبتقف برسالة صريحة', /مش موجودة|مش متاحة للتسليم/.test(taba.row.error || ''), taba.row.error);
 
-    // 🔴 والضابط التالت — الدرجة الأقل مابتفتحش الطريق
+    // 🔴 (v2.19.3) والضابط التالت — الدرجة الأقل بقت بتفتح الطريق بعد تأكيد
+    //    صريح من الموظف في الواجهة (`coverageBlocksDegree`)
     const prov = await run({ forceProvince: true });
-    eq('«ارفع على المحافظة بس»: صفر نداء', prov.bosta.length, 0);
+    eq('«ارفع على المحافظة بس»: نداء واحد بعد التأكيد', prov.bosta.length, 1);
     const zone = await run({ forceZone: true, zoneId: 'z-dahab' });
-    eq('و«ارفع على الزون بس»: صفر نداء', zone.bosta.length, 0);
+    eq('و«ارفع على الزون بس»: نداء واحد بعد التأكيد', zone.bosta.length, 1);
   }
 
   // ─── ⑨ قياس التدخّل اليدوي — السجل لازم يفرّق (v2.5.0) ─────

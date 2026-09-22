@@ -16,7 +16,12 @@ const els={};
 const doc={getElementById:id=>(els[id]||(els[id]=mk(id))),querySelector:()=>mk(),querySelectorAll:()=>[],
   addEventListener(){},body:mk(),contains(){return false},createElement:()=>mk()};
 const win={addEventListener(){},matchMedia:()=>({matches:false,addEventListener(){}}),scrollY:0,innerWidth:1400,devicePixelRatio:1};
-const api=new Function('document','window','localStorage','Chart','ExcelJS', src +
+// 🔴 `coverageBlocksDegree` (v2.19.3) بتنادي `confirm()` — الأداة الحية بتاخده
+// من `window` تلقائيًا؛ هنا لازم يتحقن كباراميتر. `confirmReturn` قابلة
+// للتغيير من الاختبار عشان نجرّب الموافقة والرفض الاتنين.
+let confirmReturn = true;
+const confirmStub = () => confirmReturn;
+const api=new Function('document','window','localStorage','Chart','ExcelJS','confirm', src +
  `\nreturn { renderDistrictList, chooseZone, clearZoneFilter, addrModeInfo,
     setup(rows,districts,cities,orderId,cityId){ allRows=rows; dpDistricts=districts; dpCities=cities;
       dpOrderId=orderId; dpCityId=cityId; dpLoading=false; },
@@ -30,7 +35,7 @@ const api=new Function('document','window','localStorage','Chart','ExcelJS', src
     dpTableHead, listHTML(){ return null; },
     zf(){ return dpZoneFilter; }, ov(){ return districtOverride; },
     setZf(z){ dpZoneFilter = z; }, open(){ return dpPickOpen; } };`
-)(doc,win,{getItem:()=>null,setItem(){},removeItem(){}});
+)(doc,win,{getItem:()=>null,setItem(){},removeItem(){}},undefined,undefined,confirmStub);
 
 const D=(id,name,nameAr,zone,zoneAr)=>({id,name,nameAr,zone,zoneAr});
 const cairo=[
@@ -428,36 +433,53 @@ console.log('\n── ⑭ بانر التغطية اتشال والمنع فضل
 }
 
 // ══════════════════════════════════════════════════════════════
-// ⑮ زرارين الدرجة الأقل بيترفضوا على صف خارج التغطية — **بصوت**
+// ⑮ زرارين الدرجة الأقل بيوقفوا على تأكيد صريح على صف خارج التغطية
+//    (v2.19.3 · طلب أحمد 22-09-2026 — كان رفض مطلق، بقى تأكيد `confirm()`)
 //
-// 🔴 المنطقة بتحرّر الصف، والزون والمحافظة لأ (دول بيغيّروا درجة العنوان مش
-//    العنوان — الشحنة بتفضل رايحة نفس المكان اللي بوسطة مش بتسلّم فيه).
-//    بس تسجيل الاختيار وسيبان الصف موقوف بيدّي **بالظبط** نفس الحيرة اللي
-//    v2.10.0 اتعملت عشانها: توست أخضر «اتثبّت» · بادج أخضر · وصف ⛔ موقوف
-//    من غير أي سبب ظاهر. فالرفض لازم يبقى رفض معلن، والـ override مايتكتبش.
+// 🔴 المنطقة بتحرّر الصف بلا تأكيد إضافي؛ الزون والمحافظة (بيغيّروا درجة
+//    العنوان مش العنوان) بقوا بيسألوا الموظف تأكيد صريح ويمشوا بموافقته —
+//    مش رفض تلقائي ومش تثبيت صامت من غير تحذير.
 // ══════════════════════════════════════════════════════════════
-console.log('\n── ⑮ الدرجة الأقل بترفض على صف خارج التغطية ──');
+console.log('\n── ⑮ الدرجة الأقل بتتأكد قبل ما تتثبّت على صف خارج التغطية ──');
 {
   const blockedRow = { ...row, mode: 'coverageBlocked', coverageOnly: true,
                        blockedDistricts: [{ id: 'tb', name: 'Taba', nameAr: 'طابا' }] };
-  api.setup([blockedRow],cairo,cities,'B','c');
+  const zcat = cairo.map(d => ({ ...d, zoneId: `z-${d.zone}` }));   // الكتالوج بيدّي zoneId
+  api.setup([blockedRow],zcat,cities,'B','c');
   delete api.ov()['B'];
 
+  confirmReturn = false;
   api.pinDistrictToProvince();
-  chk('«ارفع على المحافظة بس» مابيسجّلش تثبيت', !api.ov()['B'], JSON.stringify(api.ov()['B']));
+  chk('رفض التأكيد → «ارفع على المحافظة بس» مابيسجّلش تثبيت', !api.ov()['B'], JSON.stringify(api.ov()['B']));
   api.pinDistrictToZone();
-  chk('و«ارفع على الزون بس» مابيسجّلش تثبيت', !api.ov()['B'], JSON.stringify(api.ov()['B']));
+  chk('ورفض التأكيد → «ارفع على الزون بس» مابيسجّلش تثبيت', !api.ov()['B'], JSON.stringify(api.ov()['B']));
 
-  // ✅ والمسار الشغّال لسه مفتوح — المنطقة بتتسجّل عادي
+  confirmReturn = true;
+  api.pinDistrictToProvince();
+  chk('موافقة على التأكيد → «ارفع على المحافظة بس» بتتثبّت', api.ov()['B']?.forceProvince === true, JSON.stringify(api.ov()['B']));
+  delete api.ov()['B'];
+  // 🔴 التثبيت الناجح بيقفل النافذة (`closeDistrictPicker` بيمسح `dpOrderId`) —
+  //    زي الأداة الحية بالظبط، فلازم نفتحها تاني قبل كل فعل بعد النجاح
+  api.setup([blockedRow],zcat,cities,'B','c');
+  api.setZf('Obour');   // زون العبور موجود في مدينة القاهرة (cairo)
+  api.pinDistrictToZone();
+  chk('وموافقة على التأكيد → «ارفع على الزون بس» بتتثبّت', api.ov()['B']?.forceZone === true, JSON.stringify(api.ov()['B']));
+  delete api.ov()['B'];
+  api.setZf(null);
+
+  // ✅ والمسار الشغّال لسه مفتوح — المنطقة بتتسجّل عادي بلا أي تأكيد
+  api.setup([blockedRow],zcat,cities,'B','c');
   api.chooseDistrict('c1', 'Nasr City');
   chk('واختيار المنطقة لسه بيعدّي', api.ov()['B']?.districtId === 'c1', JSON.stringify(api.ov()['B']));
   delete api.ov()['B'];
 
-  // ⚠️ الضابط — الزرارين لسه شغّالين على الصفوف العادية
+  // ⚠️ الضابط — الزرارين لسه شغّالين على الصفوف العادية من غير تأكيد
+  confirmReturn = false;   // لو الرفض بيأثّر برضه على صف عادي يبقى في باج
   api.setup([row],cairo,cities,'B','c');
   api.pinDistrictToProvince();
-  chk('والصف العادي لسه بيتثبّت على المحافظة', api.ov()['B']?.forceProvince === true);
+  chk('والصف العادي لسه بيتثبّت على المحافظة من غير أي تأكيد', api.ov()['B']?.forceProvince === true);
   delete api.ov()['B'];
+  confirmReturn = true;
 }
 
 // ══════════════════════════════════════════════════════════════
