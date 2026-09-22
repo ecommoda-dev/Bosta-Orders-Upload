@@ -1,6 +1,12 @@
 {
   "tool": "bosta_orders_upload",
   "since": null,
+  "dynamicTypes": [
+    "row.skipped ?",
+    "r.status === 'error' ?",
+    "job.exportType",
+    "job.confirmType"
+  ],
   "types": {
     "login": {
       "tool": ["bosta_orders_upload", "bosta_exchange_export"],
