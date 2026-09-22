@@ -124,11 +124,12 @@ chk('والقرار لسه متعلّم',          api.rowCoverageOverridden(cov
 chk('والتلميح بيقول إنه كان خارج التغطية',
     /كان خارج التغطية/.test(api.addrModeInfo(cov).hint), true);
 
-// 🔴 الضابط — الدرجة الأقل مابتحرّرش: بتغيّر درجة العنوان مش العنوان نفسه
+// 🔴 (v2.19.3 · طلب أحمد 22-09-2026) الدرجة الأقل بقت بتحرّر كمان — الموظف
+//    بياخد تأكيد صريح في `coverageBlocksDegree` قبل التثبيت
 api.ov['E'] = { forceProvince: true };
-chk('«ارفع على المحافظة بس» مابيحرّرش', api.rowUploadable(cov),   false);
+chk('«ارفع على المحافظة بس» بقت بتحرّر (بعد تأكيد صريح)', api.rowUploadable(cov),   true);
 api.ov['E'] = { forceZone: true, zoneId:'z-dahab', zoneName:'Dahab' };
-chk('و«ارفع على الزون بس» مابيحرّرش',   api.rowUploadable(cov),   false);
+chk('و«ارفع على الزون بس» بقت بتحرّر (بعد تأكيد صريح)',   api.rowUploadable(cov),   true);
 
 // ⚠️ وصف موقوف لسبب تاني (مش التغطية) مابيتحرّرش بالتعديل — `coverageOnly`
 //    بتيجي `false` من الـ Worker لما يكون فيه مانع تاني، فالتعديل مالوش أثر.

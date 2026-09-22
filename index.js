@@ -199,7 +199,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.8.1';
+const WORKER_VERSION = '2.8.2';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2624,18 +2624,21 @@ function goodsProblems(goods) {
 //    مش تشدّد: النزول لمسار المحافظة بيشتري شحنة بفلوس ترجع بعد أيام بـ
 //    *outside Bosta's delivery coverage area*. المسار الصح تحويل لخدمة العملاء.
 //
-// 🔴 **استثناء واحد فقط: منطقة اختارها الموظف بإيده** (`override.districtId`).
+// 🔴 **استثناءات: منطقة اختارها الموظف بإيده** (`override.districtId`) —
 //    الوقف قايم على إن **المطابقة التلقائية** وصلت لمنطقة مقفولة؛ الموظف اللي
 //    فتح النافذة وحدد منطقة تانية بدّل نتيجة المطابقة دي بالكامل، والـ payload
 //    بيبعت `districtId` بتاعه هو. والمنطقة المختارة بتتحقق بعد كده من
 //    `availableDistricts` — اللي **مابترجّعش المقفولة أصلًا** — فمفيش طريق
 //    لمنطقة مقفولة تعدّي من هنا: اختيارها بيوقف الصف برسالة صريحة.
-//    ⚠️ **و`forceZone`/`forceProvince` مش استثناء**: دول بيغيّروا **درجة**
-//    العنوان مش العنوان نفسه، وبوسطة بتفضل بتوصّل على نص العنوان اللي طابق
-//    المنطقة المقفولة — يعني نفس الشحنة اللي بترجع، وده اللي الوقف موجود عشانه.
+//    ⚠️ **و`forceZone`/`forceProvince` كانوا ممنوعين هنا لحد v2.19.3** — دول
+//    بيغيّروا **درجة** العنوان مش العنوان نفسه، وبوسطة ممكن تفضل بتوصّل على نص
+//    العنوان اللي طابق المنطقة المقفولة (نفس الشحنة اللي بترجع). قرار أحمد
+//    22-09-2026: البديل ده مش ممنوع — الموظف قدّام تأكيد صريح في الواجهة
+//    (`coverageBlocksDegree`) قبل ما الاختيار ده يوصل هنا، فمفيش داعي لمنع
+//    تاني سيرفر-سايد فوق التأكيد اللي الموظف اداه بإيده.
 function coverageProblems(plan, override) {
   if (!plan.ok || plan.mode !== 'coverageBlocked') return [];
-  if (override?.districtId) return [];
+  if (override?.districtId || override?.forceZone || override?.forceProvince) return [];
   const names = (plan.blockedDistricts || []).map(d => d.name || d.nameAr).filter(Boolean);
   return [`العنوان طابق منطقة بوسطة **مش بتسلّم فيها** (${names.join(' · ') || '—'}) — `
         + `العنوان خارج التغطية. الرفع على المحافظة مش بديل: الشحنة هتتشحن وترجع. `
