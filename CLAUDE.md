@@ -8,7 +8,7 @@
 (25) و**استبدال** (30). بتعرض الأوردرات المؤهَّلة لكل نوع، والموظف بيرفعها جماعيًا،
 والأداة بتكتب النتيجة على شوبيفاي وبتسجّلها في D1.
 **مين بيستخدمها:** العمليات · المخزن
-**الإصدار:** Worker `v2.8.0` · الواجهة `v2.19.2`
+**الإصدار:** Worker `v2.8.1` · الواجهة `v2.19.2`
 
 > **v2.0.0 = الدمج.** `Bosta-Return-Exchange-Exporter` v6.0.0 اتنقلت هنا بالكامل.
 > التكليف الأصلي في `MERGE-BRIEF.md`، وخطة تصفية الأداة القديمة في §«التصفية» تحت.
@@ -1135,14 +1135,26 @@ git show <sha>:index.js
 
 | المهارة | الإصدار وقت آخر تعديل |
 |---|---|
-| ecommoda-worker-builder | v3.3.0 |
+| ecommoda-worker-builder | v3.6.0 |
 | ecommoda-html-builder | v7.1.0 |
-| ecommoda-constants | v2.5.0 |
+| ecommoda-constants | v3.1.0 |
 | bosta-api-helper | v5.0.0 |
 | shopify-graphql-helper | v2.2.0 |
 | ecommoda-order-lifecycle | v1.6.0 |
 
-آخر مطابقة: 19-09-2026 · `index.js` v2.8.0 · `index.html` v2.19.2
+آخر مطابقة: 22-09-2026 · `index.js` v2.8.1 · `index.html` v2.19.2
+> ✅ **v2.8.1 (22-09-2026) — `worker-builder` Step 7 و7-ج بس (الحارس
+> الديناميكي لقيم اللوج، الطبقة ٥) و`constants` §2/§7.1.** `log-values.json`
+> كان فيه ٥ قيم مسجّلة بس من ١٧ مستخدمة فعليًا في الكود — الـ ١٢ الباقية
+> (`uploaded` · `upload_failed` · `shopify_write_failed` · `skipped` ·
+> `upload_re_return` · `upload_re_exchange` · `re_upload_failed` ·
+> `re_shopify_write_failed` · `export_return` · `export_exchange` ·
+> `confirm_return` · `confirm_exchange`) فاتت `check-log-values.mjs` لأنها
+> بتتبعت بصيغة shorthand (`type,`) مش `type: '...'`، والتحقق الساكن عمره ما
+> شافها. اتسجّلت الآن صراحةً (زوج `tool`/`type`) بعد رجوع لتعريف كل ثابت
+> بيحسبها (`LOG_TYPE_BY_JOB` وأخواتها · `job.exportType` · `job.confirmType`)،
+> و`LOG_REGISTRY` في `index.js` مبني منها بالحرف. باقي بنود Step 7 و7-ج ما
+> اتراجعوش بندًا بندًا هنا — داخلين في نفس `skills-sweep` المفتوح (بند ٧).
 > ⚠️ **v2.3.0 (نقلة حالة الاسترجاع وقت الرفع) اتعملت من غير مراجعة مهارات
 > جديدة** — البند المتأثر هو `ecommoda-order-lifecycle` Rule 15، وهو مسجّل
 > كبند مفتوح (١٨) مش كامتثال متحقَّق.
@@ -1288,5 +1300,5 @@ git show <sha>:index.js
    ومربع العدّاد في نافذة تأكيد الرفع. أي توحيد لهم مع «📍 عنوان مظبوط» بيشيل
    آخر فرصة للموظف إنه يفرّق.
 
-آخر تحديث: 19-09-2026 (Worker v2.8.0 · واجهة v2.19.2)
+آخر تحديث: 22-09-2026 (Worker v2.8.1 · واجهة v2.19.2)
 </div>

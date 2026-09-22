@@ -3,33 +3,102 @@
   "since": null,
   "types": {
     "login": {
+      "tool": ["bosta_orders_upload", "bosta_exchange_export"],
       "result": null,
       "stage": null,
-      "desc": "دخول موظف"
+      "desc": "دخول موظف — appId (resolveAuthTool) بيحدد تحت أنهي tool الصف بيتكتب"
     },
     "logout": {
+      "tool": ["bosta_orders_upload", "bosta_exchange_export"],
       "result": null,
       "stage": null,
-      "desc": "خروج موظف"
+      "desc": "خروج موظف — appId (resolveAuthTool) بيحدد تحت أنهي tool الصف بيتكتب"
+    },
+    "uploaded": {
+      "result": ["success", "warning"],
+      "stage": "write",
+      "desc": "شحن عادي (type 10) اترفع على بوسطة — warning = تم جزئيًا (حاجة بعد الشحنة ما اتأكدتش)"
+    },
+    "upload_failed": {
+      "result": "error",
+      "stage": ["preflight", "write"],
+      "desc": "شحن عادي: مفيش شحنة اتعملت عند بوسطة — إما فحص قبل الرفع فشل (preflight) أو بوسطة رفضت إنشاء الشحنة (write). إعادة المحاولة آمنة"
+    },
+    "shopify_write_failed": {
+      "result": "warning",
+      "stage": "write",
+      "desc": "شحن عادي: الشحنة اترفعت فعلًا عند بوسطة (بفلوس) بس الكتابة الرجعية على شوبيفاي فشلت — ممنوع تتكرر"
+    },
+    "skipped": {
+      "result": null,
+      "stage": "preflight",
+      "desc": "شحن عادي: رفع مكرر اتمنع (تاج/ميتافيلد قديم موجود) من غير تأكيد صريح من الموظف. ⚠️ extra.result بيتكتب 'skipped' حرفيًا من row.status — قيمة خارج مفردات ecommoda-constants §12 المقفولة، سلوك قائم قبل الطبقة ٥ ومش من ضمن نطاق التعديل ده"
+    },
+    "upload_re_return": {
+      "tool": "bosta_exchange_export",
+      "result": ["success", "warning"],
+      "stage": "write",
+      "desc": "شحنة استرجاع (type 25) اترفعت على بوسطة — warning = تم جزئيًا"
+    },
+    "upload_re_exchange": {
+      "tool": "bosta_exchange_export",
+      "result": ["success", "warning"],
+      "stage": "write",
+      "desc": "شحنة استبدال (type 30) اترفعت على بوسطة — warning = تم جزئيًا"
+    },
+    "re_upload_failed": {
+      "tool": "bosta_exchange_export",
+      "result": "error",
+      "stage": ["preflight", "write"],
+      "desc": "استرجاع/استبدال: مفيش شحنة اتعملت عند بوسطة — إما فحص قبل الرفع فشل (preflight) أو بوسطة رفضت إنشاء الشحنة (write). إعادة المحاولة آمنة"
+    },
+    "re_shopify_write_failed": {
+      "tool": "bosta_exchange_export",
+      "result": "warning",
+      "stage": "write",
+      "desc": "استرجاع/استبدال: الشحنة اترفعت فعلًا عند بوسطة (بفلوس) بس الكتابة الرجعية (تتبع/تاج/حالة) فشلت — ممنوع تتكرر"
     },
     "cycle_block": {
+      "tool": "bosta_exchange_export",
       "result": null,
       "stage": null,
-      "desc": "الرفع اتمنع — الأوردر في دورة حياة مابتسمحش بالرفع"
+      "desc": "الرفع أو تحديث الحالة اتمنع — الأوردر في دورة حياة (استرجاع/استبدال) مابتسمحش بالتحديث"
     },
     "re_cancelled": {
+      "tool": "bosta_exchange_export",
+      "result": ["success", "already", "error"],
+      "stage": null,
+      "desc": "إلغاء شحنة بوسطة استرجاع/استبدال قبل رفع شحنة تانية — already لو كانت ملغية عند بوسطة خلاص"
+    },
+    "export_return": {
+      "tool": "bosta_exchange_export",
       "result": null,
       "stage": null,
-      "desc": "إلغاء شحنة بوسطة قديمة قبل رفع شحنة استرجاع/استبدال"
+      "desc": "تسجيل تصدير ملف بوسطة (استرجاع) — مسار الإكسيل البديل، مفيش نداء لبوسطة في الخطوة دي"
+    },
+    "export_exchange": {
+      "tool": "bosta_exchange_export",
+      "result": null,
+      "stage": null,
+      "desc": "تسجيل تصدير ملف بوسطة (استبدال) — مسار الإكسيل البديل، مفيش نداء لبوسطة في الخطوة دي"
+    },
+    "confirm_return": {
+      "tool": "bosta_exchange_export",
+      "result": null,
+      "stage": null,
+      "desc": "تأكيد رفع الإكسيل (استرجاع) وتحديث custom.status_2_r_e إلى In-Return يدويًا من الموظف"
+    },
+    "confirm_exchange": {
+      "tool": "bosta_exchange_export",
+      "result": null,
+      "stage": null,
+      "desc": "تأكيد رفع الإكسيل (استبدال) + إرسال فواتير، وتحديث custom.status_2_r_e إلى Ready يدويًا من الموظف"
     },
     "update": {
+      "tool": "metafields_change",
       "result": null,
       "stage": null,
-      "desc": "تحديث ميتافيلد الحالة بعد رفع الشحنة على بوسطة"
+      "desc": "تحديث custom.status_2_r_e بعد رفع مباشر ناجح (استرجاع) أو تأكيد إكسيل — سجل مشترك بين ٦ أدوات في الستاك"
     }
-  },
-  "dynamicTypes": [
-    "job.confirmType",
-    "job.exportType"
-  ]
+  }
 }
