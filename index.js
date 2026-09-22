@@ -1,10 +1,15 @@
 // ══════════════════════════════════════════════════════════════
 // EcomModa — Bosta-Orders-Upload (v2.0.0)
-// skills: worker-builder v3.3.0 · html-builder v7.2.0 · constants v2.5.0 ·
+// skills: worker-builder v3.6.0 · html-builder v7.2.0 · constants v3.1.0 ·
 //         bosta-api-helper v5.0.0 · shopify-graphql-helper v2.2.0 ·
-//         order-lifecycle v1.6.0 — 17-09-2026
+//         order-lifecycle v1.6.0 — 22-09-2026
 // ⚠️ اللي اتراجع بندًا بندًا في v2.7.0: `worker-builder` 5A ④ (حالات النتيجة)
 //    و⑭ (`type` بالأثر الخارجي) و`html-builder` Step 3C. الباقي متوارث.
+// ⚠️ وv2.8.1: `worker-builder` Step 7-ج بس (الحارس الديناميكي لقيم اللوج —
+//    الطبقة ٥) — `LOG_REGISTRY` مبني من `log-values.json` بعد تحديثه بكل
+//    قيم `type` الفعلية (كان فيه ٥ بس مسجّلة من ١٧ مستخدمة فعليًا في الكود؛
+//    الـ ١٢ الباقية فاتت `check-log-values.mjs` لأنها بتتبعت بصيغة
+//    shorthand `type,` مش `type: '...'`، والتحقق الساكن عمره ما شافها).
 //
 // v2.0.0 — **الدمج**: الأداة بقت بترفع كل شحنات بوسطة، مش الشحن العادي فقط.
 // `Bosta-Return-Exchange-Exporter` v6.0.0 اتنقلت هنا بالكامل (MERGE-BRIEF.md).
@@ -194,7 +199,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.8.0';
+const WORKER_VERSION = '2.8.1';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -612,7 +617,79 @@ async function registerPin(db, username, pin) {
   return true;
 }
 
+// ════════════════════════════════════════════════════════════
+// §LOG-REG — الحارس الديناميكي لقيم اللوج (الطبقة ٥)
+// ════════════════════════════════════════════════════════════
+// من `log-values.json` جنب الملف ده — بيتحدّث معاه في نفس الـ commit.
+// مفتاحه الزوج (tool, type) مش `type` لوحده: الأداة دي بتكتب تحت تلات
+// أسماء `tool` (نفسها · `bosta_exchange_export` التاريخية · السجل المشترك
+// `metafields_change`)، وقيمة صح تحت `tool` غلط بتولّد تنبيه كاذب.
+// ⛔ مفيش رفض كتابة أبدًا هنا — قيمة مش مسجّلة بتتكتب عادي + تعليم
+// `extra._unregistered = true` + تنبيه في `log_value_alerts` بعد الكتابة.
+const LOG_REGISTRY = {
+  [TOOL_NAME]: new Set([
+    'login', 'logout', 'uploaded', 'upload_failed', 'shopify_write_failed', 'skipped',
+  ]),
+  [TOOL_NAME_RE]: new Set([
+    'login', 'logout', 'cycle_block', 're_cancelled',
+    'upload_re_return', 'upload_re_exchange', 're_upload_failed', 're_shopify_write_failed',
+    'export_return', 'export_exchange', 'confirm_return', 'confirm_exchange',
+  ]),
+  metafields_change: new Set(['update']),
+};
+
+const isRegisteredLogValue = (tool, type) => !!LOG_REGISTRY[tool]?.has(type);
+
+// UPSERT على (source_tool, tool, type) — صف واحد لكل قيمة، hits بيعدّ.
+// الحدث الكامل مش بيضيع: الصف الأصلي موجود في logs وعليه _unregistered،
+// والجدول ده فهرس مش سجل تاني — عشان كده dedupe مش صف لكل حدث.
+const LOG_ALERT_SQL = `
+  INSERT INTO log_value_alerts
+    (source_tool, tool, type, first_seen, last_seen, hits,
+     worker_version, sample_order_name, sample_employee, sample_notes)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT(source_tool, tool, type) DO UPDATE SET
+    last_seen         = excluded.last_seen,
+    hits              = log_value_alerts.hits + excluded.hits,
+    worker_version    = excluded.worker_version,
+    sample_order_name = excluded.sample_order_name,
+    sample_employee   = excluded.sample_employee,
+    sample_notes      = excluded.sample_notes,
+    status            = CASE WHEN log_value_alerts.status = 'ignored'
+                             THEN 'ignored' ELSE 'open' END
+`;
+
+// فشل التنبيه ممنوع يأثر على أي حاجة — try/catch صامت. بتجمّع التكرار
+// جوّه نفس الدفعة في صف واحد (hits) قبل ما تكتب.
+async function noteUnregisteredLogValues(db, entries) {
+  const byPair = new Map();
+  for (const e of entries) {
+    const key = `${e.tool}\u0000${e.type}`;
+    const acc = byPair.get(key);
+    if (acc) { acc.hits++; continue; }
+    byPair.set(key, { entry: e, hits: 1 });
+  }
+  const now = new Date().toISOString();
+  for (const { entry, hits } of byPair.values()) {
+    try {
+      await db.prepare(LOG_ALERT_SQL).bind(
+        TOOL_NAME, entry.tool ?? '(بدون tool)', entry.type ?? '(بدون type)',
+        now, now, hits, WORKER_VERSION ?? null,
+        entry.orderName ?? null, entry.employee ?? null,
+        entry.notes ? String(entry.notes).slice(0, 200) : null,
+      ).run();
+    } catch (e) { /* متعمّد: التنبيه فهرس، وفشله أهون من تعطيل الأداة */ }
+  }
+}
+
+// ⚠️ `writeLog` أصلها من §SHARED — الحارس ده الاستثناء الوحيد المتعمّد على
+// «copy verbatim» (`worker-builder` Step 7-ج بيتطلب الحقن هنا بالحرف).
 async function writeLog(db, entry) {
+  const unregistered = !isRegisteredLogValue(entry.tool, entry.type);
+  const extra = unregistered
+    ? { ...(entry.extra || {}), _unregistered: true }
+    : entry.extra;
+
   await db.prepare(`
     INSERT INTO logs
       (timestamp, tool, type, employee, order_id, order_name,
@@ -631,37 +708,50 @@ async function writeLog(db, entry) {
     entry.valueBefore  ?? null,
     entry.valueAfter   ?? null,
     entry.notes        ?? null,
-    entry.extra ? JSON.stringify(entry.extra) : null
+    extra ? JSON.stringify(extra) : null
   ).run();
+
+  if (unregistered) await noteUnregisteredLogValues(db, [entry]);
 }
 
 // إضافة خاصة بالأداة دي (مش من §SHARED) — بتلمّ صفوف بشكل `writeLog` في نداء
 // `batch()` واحد. الرفع بيكتب صف لكل أوردر، و٢٥ نداء منفصل على D1 جوّه نفس
 // الطلب بيقرّب من سقف الـ subrequests بتاع Cloudflare.
+// 🔴 تنبيه القيم الغير مسجّلة (Step 7-ج) بيتبعت **مرة واحدة بعد اللوب كله**
+//    بقايمة الصفوف المعلّمة عبر كل الـ chunks — مش جوّه اللوب، ومش تنبيه لكل صف.
 async function writeLogsBatch(db, entries) {
   if (!Array.isArray(entries) || !entries.length) return;
+  const unregisteredEntries = [];
   for (const group of chunks(entries, 40)) {
-    await db.batch(group.map((entry) => db.prepare(`
-      INSERT INTO logs
-        (timestamp, tool, type, employee, order_id, order_name,
-         sku, product_title, delta, value_before, value_after, notes, extra)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      entry.timestamp    ?? new Date().toISOString(),
-      entry.tool,
-      entry.type,
-      entry.employee     ?? null,
-      entry.orderId      ?? null,
-      entry.orderName    ?? null,
-      entry.sku          ?? null,
-      entry.productTitle ?? null,
-      entry.delta        ?? null,
-      entry.valueBefore  ?? null,
-      entry.valueAfter   ?? null,
-      entry.notes        ?? null,
-      entry.extra ? JSON.stringify(entry.extra) : null,
-    )));
+    await db.batch(group.map((entry) => {
+      const unregistered = !isRegisteredLogValue(entry.tool, entry.type);
+      if (unregistered) unregisteredEntries.push(entry);
+      const extra = unregistered
+        ? { ...(entry.extra || {}), _unregistered: true }
+        : entry.extra;
+      return db.prepare(`
+        INSERT INTO logs
+          (timestamp, tool, type, employee, order_id, order_name,
+           sku, product_title, delta, value_before, value_after, notes, extra)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        entry.timestamp    ?? new Date().toISOString(),
+        entry.tool,
+        entry.type,
+        entry.employee     ?? null,
+        entry.orderId      ?? null,
+        entry.orderName    ?? null,
+        entry.sku          ?? null,
+        entry.productTitle ?? null,
+        entry.delta        ?? null,
+        entry.valueBefore  ?? null,
+        entry.valueAfter   ?? null,
+        entry.notes        ?? null,
+        extra ? JSON.stringify(extra) : null,
+      );
+    }));
   }
+  if (unregisteredEntries.length) await noteUnregisteredLogValues(db, unregisteredEntries);
 }
 
 const LOG_EXPORT_MAX = 2000;   // سقف التصدير — بيرجع للواجهة كـ `cap`
