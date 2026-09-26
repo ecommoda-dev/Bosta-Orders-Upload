@@ -838,6 +838,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
    لون تالت عن قصد: الأخضر محجوز للمتأكَّد والأصفر للموقوف. */
 .mini-btn.cand{border-color:var(--accent);color:var(--accent-dark);background:var(--accent-light);}
 .dup-list{max-height:300px;overflow-y:auto;font-size:12.5px;line-height:1.9;}
+.dup-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:4px 0;}
 .loading-spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);
   border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
 @keyframes spin{to{transform:rotate(360deg);}}
@@ -954,6 +955,16 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">26-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>🔴 <b>زرار «✕ إلغاء الشحنة» بقى شغّال في الشحن العادي كمان</b>، مش بس الاسترجاع/الاستبدال — بيلغي عند بوسطة فعلًا (<code>terminate</code>) مش مجرد إخفاء الصف، وبيحرّر <code>uniqueBusinessReference</code> فإعادة الرفع بعد التصحيح بتعدّي. باين في تفاصيل نافذة النتيجة على أي صف عليه رقم تتبع.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>🗑️ <b>«احذف الشحنة من بوسطة» في نافذة «أوردرات مرفوعة على بوسطة قبل كده»</b> — بدل ما الموظف يروح داشبورد بوسطة يلغي الشحنة القديمة بإيده قبل ما يقرر «أكّد وارفعهم كلهم»، بقى يقدر يلغيها من هنا على طول. ⚠️ الإلغاء مابيمسحش تاج/ميتافيلد الرفع القديم — «أكّد وارفعهم كلهم» لسه الخطوة المطلوبة بعده.</span></li>
+        </ul>
+      </div>
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge">v2.20.1</span>
           <span class="cl-ver-date">26-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -2204,7 +2215,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.20.1';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.21.0';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2222,7 +2233,7 @@ const TOOL_VERSION       = 'v2.20.1';  // مصدر واحد لرقم نسخة ا
 //    الخانة) لكن الموظف بيقرا شاشة غير اللي اتدرّب عليها ومفيش أي رسالة
 //    تقول السبب — والاسم العربي **مش قابل للاشتقاق في الواجهة** أصلًا:
 //    مصدره الكتالوج، والكتالوج بيتقرا في الـ Worker.
-const MIN_WORKER_VERSION = '2.9.0';
+const MIN_WORKER_VERSION = '2.10.0';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -3040,14 +3051,18 @@ const ADDR_MODE_ITEMS = [
 // المنطقة بيقروا منه التلاتة — اسم واحد للمفهوم في كل الشاشات
 const ADDR_MODE_LABEL = Object.fromEntries(ADDR_MODE_ITEMS.map(it => [it.value, it.label]));
 // 🔴 القيم دي لازم تطابق اللي الـ Worker بيكتبه **حرفيًا** — قيمة مكتوبة غلط
-//    هنا بتدّي فلتر بيرجّع صفر صف من غير أي خطأ. التلاتة الأولانية بتاعة الشحن
+//    هنا بتدّي فلتر بيرجّع صفر صف من غير أي خطأ. الأربعة الأولانية بتاعة الشحن
 //    العادي، والباقي بتاع الاسترجاع/الاستبدال (بيتكتبوا تحت `tool` تانية،
-//    والـ Worker بيقرا الاتنين — MERGE-BRIEF §٥).
+//    والـ Worker بيقرا الاتنين — MERGE-BRIEF §٥) — ما عدا `s1_cancelled` اللي
+//    عايشة جنب الشحن بس بتتكتب تحت `tool` بتاعته.
 const LOG_TYPE_ITEMS = [
   { value: 'uploaded',                label: '🚚 اترفع (شحن)' },
   { value: 'upload_failed',           label: '🚚 فشل الرفع (شحن)' },
   { value: 'shopify_write_failed',    label: '🚚 فشل الكتابة على شوبيفاي (شحن)' },
   { value: 'skipped',                 label: '⏭️ اتخطّى' },
+  // 🔴 (v2.10.0) الإلغاء بقى شامل الشحن العادي — نوع منفصل عن `re_cancelled`
+  //    لأنه بيتكتب تحت `tool = bosta_orders_upload` مش `bosta_exchange_export`.
+  { value: 's1_cancelled',            label: '✕ إلغاء شحنة (شحن)' },
   { value: 'upload_re_return',        label: '↩️ اترفع (استرجاع)' },
   { value: 'upload_re_exchange',      label: '🔄 اترفع (استبدال)' },
   { value: 're_upload_failed',        label: '↩️ فشل الرفع (استرجاع/استبدال)' },
@@ -5198,10 +5213,18 @@ function startUpload() {
   if (dups.length) {
     pendingUpload = { ready: ok.filter(r => !r.alreadyUploaded), dups };
     document.getElementById('dupList').innerHTML = dups.map(r =>
-      `<div>• ${orderLink(r.orderNumber, r.orderId)} — ` +
+      `<div class="dup-row">• ${orderLink(r.orderNumber, r.orderId)} — ` +
       // الرقم لينك لداشبورد بوسطة — النافذة دي بالظبط هي لحظة «راجع الشحنة
       // الموجودة قبل ما تعمل واحدة تانية بفلوس»
-      `${r.previousTracking ? `رقم تتبع حالي <b>${trackingLink(r.previousTracking)}</b>` : 'عليه تاج رفع'}</div>`
+      `${r.previousTracking ? `رقم تتبع حالي <b>${trackingLink(r.previousTracking)}</b>` : 'عليه تاج رفع'}` +
+      // 🔴 الحذف هنا **بيلغي عند بوسطة فعلًا** (`terminateDelivery`) — مش
+      // مجرد إخفاء الصف. لو مفيش رقم تتبع (تاج رفع بس من غير شحنة) مفيش
+      // حاجة تتلغى عند بوسطة، فالزرار مابيبانش. بعد الإلغاء لازم الموظف
+      // يضغط «أكّد وارفعهم كلهم» برضه — التاج/الميتافيلد القديم لسه موجود.
+      (r.previousTracking
+        ? ` <button class="mini-btn doubt" onclick="cancelShipment('${jsq(r.previousTracking)}','${jsq(r.orderId)}','${jsq(r.orderNumber)}',this)">🗑️ احذف الشحنة من بوسطة</button>`
+        : '') +
+      `</div>`
     ).join('');
     document.getElementById('dupOverlay').classList.add('open');
     playBeep('warn');
@@ -5588,12 +5611,13 @@ function renderResultVerdict(s) {
     s.error ? `✗ نتيجة الرفع — فيه فشل` : s.warning ? `⚠️ نتيجة الرفع — فيه تحذير` : `✅ نتيجة الرفع`;
 }
 
-// 🔴 زرار الإلغاء بيبان **فقط** لما تكون فيه شحنة فعلًا (رقم تتبع) في وضع R/E.
-//    ده أهم زرار في الصفحة على الصف الأصفر: «تم جزئيًا» معناها الشحنة موجودة
-//    وبتكلّف فلوس، والحل مش إعادة الرفع — الحل إلغاء وإعادة رفع مصححة، والإلغاء
-//    هو اللي بيحرّر `uniqueBusinessReference` عشان الرفع التاني يعدّي أصلًا.
+// 🔴 زرار الإلغاء بيبان لما تكون فيه شحنة فعلًا (رقم تتبع) — التلات أوضاع
+//    (v2.10.0 · كان مقصور على R/E). ده أهم زرار في الصفحة على الصف الأصفر:
+//    «تم جزئيًا» معناها الشحنة موجودة وبتكلّف فلوس، والحل مش إعادة الرفع —
+//    الحل إلغاء وإعادة رفع مصححة، والإلغاء هو اللي بيحرّر `uniqueBusinessReference`
+//    عشان الرفع التاني يعدّي أصلًا. نفس المنطق في s1 بالظبط.
 function resultAction(r) {
-  if (!isRE() || !r.trackingNumber) return '—';
+  if (!r.trackingNumber) return '—';
   if (r.cancelled) return '<span class="badge badge-muted">اتلغت</span>';
   return `<button class="mini-btn doubt" onclick="cancelShipment('${jsq(r.trackingNumber)}','${jsq(r.orderId)}','${jsq(r.orderNumber)}',this)">✕ إلغاء الشحنة</button>`;
 }

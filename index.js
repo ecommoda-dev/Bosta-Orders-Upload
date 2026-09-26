@@ -199,7 +199,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.9.0';
+const WORKER_VERSION = '2.10.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -308,7 +308,15 @@ const WRITE_FAILED_BY_JOB = {
   [JOB_EXCHANGE]: 're_shopify_write_failed',
 };
 const CYCLE_BLOCK_TYPE = 'cycle_block';
-const CANCEL_TYPE      = 're_cancelled';
+// 🔴 الإلغاء بقى شامل s1 كمان (v2.10.0) — لسه بمصدر واحد لكل الأنواع
+// (`§BOSTA::terminateDelivery`)، بس قيمة `type` لازم تتفرّق زي باقي خرائط
+// النوع فوق: `re_cancelled` القديمة فضلت زي ما هي (كانت مسجّلة كبند مفتوح
+// قبل ما s1 تتضاف)، و`s1_cancelled` جديدة تحت `tool = bosta_orders_upload`.
+const CANCEL_TYPE_BY_JOB = {
+  [JOB_S1]:       's1_cancelled',
+  [JOB_RETURN]:   're_cancelled',
+  [JOB_EXCHANGE]: 're_cancelled',
+};
 const EXPORT_TYPES     = ['export_return', 'export_exchange'];
 
 // ─── §CONSTANTS::cycles ───
@@ -4558,8 +4566,11 @@ export default {
         }, 200, request);
       }
 
-      // الرجوع. الإلغاء **بيحرّر** `uniqueBusinessReference` فإعادة الرفع بعد
-      // التصحيح بتعدّي — الإقران ده هو سبب وجود الـ endpoint بدل زيارة الداشبورد.
+      // 🔴 الإلغاء بقى شامل الأنواع التلاتة (v2.10.0) — كان مقصور على R/E
+      //    (`allow: RE_JOBS`)، وده كان بيسيب شحنة s1 مكررة/غلط من غير طريق
+      //    غير داشبورد بوسطة اليدوي. الإلغاء **بيحرّر** `uniqueBusinessReference`
+      //    فإعادة الرفع بعد التصحيح بتعدّي — الإقران ده هو سبب وجود الـ endpoint
+      //    بدل زيارة الداشبورد، وهو نفسه سبب s1 محتاجاه زي R/E بالظبط.
       if (action === 'cancel_re') {
         if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
         assertEnv(env, 'bosta');
@@ -4569,7 +4580,7 @@ export default {
         const orderId  = cleanText(body.orderId)   || null;
         const orderName = cleanText(body.orderName) || null;
         const reason   = cleanText(body.reason)    || null;
-        const job = getJob(body.jobType || JOB_RETURN, { allow: RE_JOBS });
+        const job = getJob(body.jobType, { allow: ALL_JOBS });
 
         if (!employee)       return json({ ok: false, error: 'employee مطلوب' }, 400, request);
         if (!trackingNumber) return json({ ok: false, error: 'trackingNumber مطلوب' }, 400, request);
@@ -4579,7 +4590,7 @@ export default {
         let logged = true, logError = null;
         try {
           await writeLog(env.DB, {
-            tool: job.tool, type: CANCEL_TYPE, employee, orderId, orderName,
+            tool: job.tool, type: CANCEL_TYPE_BY_JOB[job.jobType], employee, orderId, orderName,
             notes: res.ok
               ? (res.alreadyGone
                   ? `الشحنة ${trackingNumber} كانت ملغية عند بوسطة خلاص${reason ? ` — ${reason}` : ''}`
@@ -4605,10 +4616,11 @@ export default {
           //    بيقرا «فشل الإلغاء» على شحنة اتلغت فعلًا، ويروح داشبورد بوسطة
           //    يدوّر على حاجة مش موجودة.
           alreadyGone: !!res.alreadyGone,
-          // 🔴 حالة S2 **مابترجعش** هنا عن قصد. إرجاع نقلة حالة قرار تاني غير
+          // 🔴 حالة الأوردر على شوبيفاي (`manual_status`/`status_2_r_e`) **مابترجعش**
+          //    هنا عن قصد — نفس المنطق في التلات أوضاع. إرجاعها قرار تاني غير
           //    إلغاء شحنة، وتخمين اللي الموظف قصده بيعيد كتابة حالة حية.
-          //    وكمان رقم التتبع في `custom.bosta_tracking_number_s2` بيفضل —
-          //    امسحه بالإيد لو الشحنة مش هتترفع تاني.
+          //    وكمان رقم التتبع في الميتافيلد (`_s1`/`_s2`) والتاج (`Bosta_Uploaded_S1`/
+          //    `_S2`) بيفضلوا زي ما هم — امسحهم بالإيد لو الشحنة مش هتترفع تاني.
           note: (res.alreadyGone
             ? 'الشحنة دي كانت ملغية عند بوسطة خلاص — مفيش حاجة اتعملت دلوقتي. '
             : 'الشحنة اتلغت عند بوسطة. ')
