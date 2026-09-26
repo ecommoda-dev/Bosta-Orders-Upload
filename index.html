@@ -551,11 +551,15 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .data-table tbody td.cell-wrap{white-space:normal;text-align:right;overflow-wrap:anywhere;word-break:break-word;}
 .data-table tbody td.cell-name{width:170px;}
 .data-table tbody td.cell-addr{width:360px;font-size:13.5px;font-weight:600;color:var(--text-primary);line-height:1.5;}
+/* 🔴 التلات عواميد بتوع بوسطة (محافظة · مدينة · منطقة) بعرض ثابت متساوي —
+   قبل كده كل عمود ياخد عرض محتواه فيطلعوا متفاوتين جنب بعض. */
+.data-table tbody td.cell-bosta-col{width:130px;}
 /* 🔴 دمج «العنوان كامل» + «المحافظة (شوبيفاي)» (واجهة v2.20.0) — سطر أول
    المحافظة ◀ المدينة (بارز، نفس وزن العمود القديم)، وسطر تاني باقي العنوان
-   (أفتح وأصغر شوية — تفصيلة مش عنوان الصف). */
+   (أصغر شوية بس بنفس لون النص الأساسي الصريح — مش Bold ومش باهت، عشان يفضل
+   مقروء بوضوح). */
 .addr-head{font-weight:700;color:var(--text-primary);}
-.addr-rest{margin-top:2px;font-size:12.5px;font-weight:400;color:var(--text-secondary);}
+.addr-rest{margin-top:2px;font-size:12.5px;font-weight:400;color:var(--text-primary);}
 .empty-row td{padding:40px;text-align:center;color:var(--text-muted);font-size:13px;}
 .row-cb{width:16px;height:16px;cursor:pointer;accent-color:var(--accent);}
 
@@ -950,6 +954,18 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">26-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <b>سطر «المحافظة ◀ المدينة» في عمود «العنوان بالكامل (شوبيفاي)» كان بيتقلب بصريًا لما المحافظة أو المدينة تتكتب إنجليزي</b> — قطعتين نص LTR جنب بعض جوّه سطر أساسه RTL بتتقلب خوارزمية الـ Unicode Bidi ترتيبهم (يعني «Cairo ◀ 6 October» كانت بتتعرض «6 October ◀ Cairo»). كل قطعة بقت ملفوفة بـ <code>&lt;bdi&gt;</code> فترتيبها المنطقي بيفضل ثابت بصريًا — الصفوف العربية شكلها ما اتأثرش.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>سطر باقي العنوان (<code>address1</code>/<code>address2</code>) تحت سطر المحافظة/المدينة بقى بلون النص الأساسي الصريح (<code>--text-primary</code>) بدل الباهت (<code>--text-secondary</code>) — من غير ما يبقى Bold.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>التلات عواميد بتوع بوسطة (محافظة · مدينة · منطقة) بقى عرضهم ثابت ومتساوي — كانوا بياخدوا عرض محتواهم فيطلعوا متفاوتين جنب بعض.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>عمود «حالة الرفع»: القيمة «لسه ما اترفعش» بقت <b>«لم يتم الرفع»</b> — نفس المعنى، صياغة أوضح (طلب أحمد).</span></li>
+        </ul>
+      </div>
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge">v2.20.0</span>
           <span class="cl-ver-date">26-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -2188,7 +2204,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.20.0';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.20.1';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2994,7 +3010,7 @@ function updateLoginSettingsBtn() {
 //    حرف** — لسه عايش في `rowUploadable` (الصف الأحمر · الشيك بوكس المقفول ·
 //    الاستبعاد من «رفع الكل») ومش في العمود ده.
 const UP_STATE_ITEMS = [
-  { value: 'notUploaded', label: '⬜ لسه ما اترفعش' },
+  { value: 'notUploaded', label: '⬜ لم يتم الرفع' },
   { value: 'uploaded',    label: '🔁 مرفوع قبل كده' },
 ];
 const ADDR_MODE_ITEMS = [
@@ -3537,7 +3553,7 @@ function rowNeedsManualAddressConfirm(r) {
 function rowNeedsCityDecision(r) { return rowAddrMode(r) === 'cityDoubt'; }
 function isAutoSelectable(r)     { return rowUploadable(r); }
 function rowUpLabel(r) {
-  return { uploaded: 'مرفوع قبل كده', notUploaded: 'لسه ما اترفعش' }[rowUpState(r)];
+  return { uploaded: 'مرفوع قبل كده', notUploaded: 'لم يتم الرفع' }[rowUpState(r)];
 }
 // نفس النص في التصدير ونافذة اختيار المنطقة (`dpContextHTML`) — مصدر واحد.
 // ⚠️ **مش عمود الجدول** من واجهة v2.20.0 — ده بقى `shopifyAddressCell` (تحت)،
@@ -3552,9 +3568,15 @@ function fullAddressText(r) {
 //    نفس ترتيب الجدول اللي في نافذة اختيار المنطقة (`§«الأعمدة التلاتة بتقابل
 //    بعضها عمود بعمود»` في CLAUDE.md) — وسطر تاني باقي العنوان (`address1`/`address2`).
 function shopifyAddressCell(r) {
-  const head = [r.province, r.addressCity].filter(Boolean).join(' ◀ ');
+  // 🔤 كل قطعة ملفوفة بـ <bdi> عشان لما المحافظة أو المدينة تتكتب إنجليزي
+  //    (RTL جوّاها LTR) خوارزمية الـ Unicode Bidi ماتقلبش ترتيب القطعتين
+  //    على بعض — من غير العزل دي "Cairo ◀ 6 October" كانت بتتقلب بصريًا
+  //    لـ"6 October ◀ Cairo" رغم إن الكود بعت المحافظة الأول. الصفوف
+  //    العربية شكلها ما بيتأثرش (bdi عليها no-op بصريًا).
+  const head = [r.province, r.addressCity].filter(Boolean)
+    .map(x => `<bdi>${esc(x)}</bdi>`).join(' ◀ ');
   const rest = [r.address1, r.address2].filter(Boolean).join(' — ');
-  return `<div class="addr-head">${esc(head || '—')}</div>`
+  return `<div class="addr-head">${head || '—'}</div>`
        + (rest ? `<div class="addr-rest">${esc(rest)}</div>` : '');
 }
 // 🔴 زون بوسطة («مدينة بوسطة» في التسمية عندنا) اللي الدرجة الحالية تابعة
@@ -3770,9 +3792,12 @@ function tableColumns() {
       cls: 'cell-wrap cell-addr', cell: shopifyAddressCell },
     // 🔴 بوسطة بقت تلات عواميد بدل اتنين (واجهة v2.20.0): محافظة · مدينة ·
     //    منطقة — نفس التلاتة اللي نافذة اختيار المنطقة بتعرضهم في صف واحد.
-    { key: 'cityName',     label: 'محافظة بوسطة', sort: 'cityName', cell: cityCell },
-    { key: 'districtZone', label: 'مدينة بوسطة', sort: 'districtZone', cell: districtZoneCell },
-    { key: 'district',     label: 'منطقة بوسطة', cell: districtCell },
+    // 🔴 عرض ثابت متساوي للتلاتة (`cell-bosta-col`) — كانوا بياخدوا عرض المحتوى
+    //    تلقائيًا فكانت تلاتة أعمدة بعروض مختلفة جنب بعض تعمل تعرّج بصري
+    //    (طلب أحمد 26-09-2026).
+    { key: 'cityName',     label: 'محافظة بوسطة', sort: 'cityName', cls: 'cell-wrap cell-bosta-col', cell: cityCell },
+    { key: 'districtZone', label: 'مدينة بوسطة', sort: 'districtZone', cls: 'cell-wrap cell-bosta-col', cell: districtZoneCell },
+    { key: 'district',     label: 'منطقة بوسطة', cls: 'cell-wrap cell-bosta-col', cell: districtCell },
     { key: 'addrMode',     label: 'حالة العنوان', sort: 'addrMode', cell: addrModeCell },
   ];
 
@@ -3893,7 +3918,7 @@ function upCell(r) {
   //    كان جاهز أو موقوف — البادج ده بقى بيجاوب سؤال واحد بس (اترفع ولا لأ)،
   //    ومنع الرفع نفسه باين في لون الصف والشيك بوكس المقفول (`rowUploadable`
   //    في `renderTable`) مش هنا. توحيد اللون هنا **مقصود**، مش رجوع.
-  return `<span class="badge badge-muted">⬜ لسه ما اترفعش</span>`;
+  return `<span class="badge badge-muted">⬜ لم يتم الرفع</span>`;
 }
 
 function renderTable(rows) {
