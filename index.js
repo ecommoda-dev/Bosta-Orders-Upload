@@ -199,7 +199,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.10.0';
+const WORKER_VERSION = '2.11.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -316,6 +316,16 @@ const CANCEL_TYPE_BY_JOB = {
   [JOB_S1]:       's1_cancelled',
   [JOB_RETURN]:   're_cancelled',
   [JOB_EXCHANGE]: 're_cancelled',
+};
+// 🔴 مسح العلامات (v2.11.0) — أكشن منفصل عن الإلغاء نفسه، مش خطوة تلقائية
+// بعده. بتشيل التاج والميتافيلد اللي بيحددوا «الأوردر ده مرفوع خلاص»؛
+// مقصود يتستخدم **بعد** التأكد إن الشحنة القديمة اتلغت أو مش موجودة أصلًا —
+// مسحها من غير كده بيسيب الباب مفتوح لرفع مكرر بفلوس (حارس الرفع المكرر
+// بيقرا التاج ورقم التتبع، مش وجود الشحنة عند بوسطة).
+const CLEAR_TYPE_BY_JOB = {
+  [JOB_S1]:       's1_marks_cleared',
+  [JOB_RETURN]:   're_marks_cleared',
+  [JOB_EXCHANGE]: 're_marks_cleared',
 };
 const EXPORT_TYPES     = ['export_return', 'export_exchange'];
 
@@ -637,9 +647,10 @@ async function registerPin(db, username, pin) {
 const LOG_REGISTRY = {
   [TOOL_NAME]: new Set([
     'login', 'logout', 'uploaded', 'upload_failed', 'shopify_write_failed', 'skipped',
+    's1_cancelled', 's1_marks_cleared',
   ]),
   [TOOL_NAME_RE]: new Set([
-    'login', 'logout', 'cycle_block', 're_cancelled',
+    'login', 'logout', 'cycle_block', 're_cancelled', 're_marks_cleared',
     'upload_re_return', 'upload_re_exchange', 're_upload_failed', 're_shopify_write_failed',
     'export_return', 'export_exchange', 'confirm_return', 'confirm_exchange',
   ]),
@@ -4625,6 +4636,101 @@ export default {
             ? 'الشحنة دي كانت ملغية عند بوسطة خلاص — مفيش حاجة اتعملت دلوقتي. '
             : 'الشحنة اتلغت عند بوسطة. ')
             + 'حالة الأوردر على شوبيفاي ما اتغيّرتش — غيّرها يدويًا لو محتاج.',
+          logged, logError,
+        }, 200, request);
+      }
+
+      // 🔴 أكشن منفصل عن الإلغاء (v2.11.0 · طلب أحمد) — الإلغاء بيلغي الشحنة
+      // عند بوسطة بس، وده اللي بيمسح **علامة الرفع على شوبيفاي** (التاج +
+      // الميتافيلد) اللي حارس الرفع المكرر بيقرا منها. مقصود يتستخدم **بعد**
+      // التأكد إن الشحنة القديمة اتلغت أو مش موجودة أصلًا — مسحها من غير كده
+      // بيسيب الباب مفتوح لرفع مكرر بفلوس، فالتأكيد على الواجهة (`confirm()`)
+      // بيقول كده صراحةً. مفيش نداء لبوسطة هنا خالص.
+      if (action === 'clear_upload_marks') {
+        if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
+        assertEnv(env, 'shopify');
+        const body = await request.json().catch(() => ({}));
+        const employee  = cleanText(body.employee);
+        const orderId   = cleanText(body.orderId);
+        const orderName = cleanText(body.orderName) || null;
+        const reason    = cleanText(body.reason) || null;
+        const job = getJob(body.jobType, { allow: ALL_JOBS });
+
+        if (!employee) return json({ ok: false, error: 'employee مطلوب' }, 400, request);
+        if (!orderId)  return json({ ok: false, error: 'orderId مطلوب' }, 400, request);
+
+        // 🔴 `orderId` رقمي جاي من `legacyResourceId` بتاع صف الأداة نفسها —
+        // مش بحث بالاسم (`shopify-graphql-helper` §3.1 مابينطبقش هنا: مفيش
+        // `orders(query:)` في النداء ده خالص)، فبناء الـ GID مباشرة آمن.
+        const gid = orderId.startsWith('gid://') ? orderId : `gid://shopify/Order/${orderId}`;
+        const token = await getAccessToken(env);
+
+        let tagCleared = false, tagError = null;
+        try {
+          const MUT_TAG = `
+            mutation RemoveTag($id: ID!, $tags: [String!]!) {
+              tagsRemove(id: $id, tags: $tags) { node { id } userErrors { field message } }
+            }
+          `;
+          const tagData = await shopifyGQL(env, token, MUT_TAG, { id: gid, tags: [job.tag] }, 'tagsRemove');
+          const tagRes  = tagData.data?.tagsRemove;
+          const tagErrs = tagRes?.userErrors || [];
+          if (tagErrs.length) throw new Error(tagErrs.map(e => e.message).join(' | '));
+          if (!tagRes?.node?.id) throw new Error('شوبيفاي ما أكدتش مسح التاج');
+          tagCleared = true;
+        } catch (e) { tagError = e.message; }
+
+        // ⚠️ ميوتيشن منفصلة عمدًا عن أي `metafieldsSet` — مسح ممنوع يتحط
+        // `value: ''` جوّه نداء بيكتب قيم حقيقية (`shopify-graphql-helper`
+        // Step 6): بند مرفوض واحد بيسقّط النداء كله.
+        let mfCleared = false, mfError = null;
+        try {
+          const MUT_MF = `
+            mutation DeleteMf($metafields: [MetafieldIdentifierInput!]!) {
+              metafieldsDelete(metafields: $metafields) {
+                deletedMetafields { key namespace ownerId }
+                userErrors { field message }
+              }
+            }
+          `;
+          const mfData = await shopifyGQL(env, token, MUT_MF, {
+            metafields: [{ ownerId: gid, namespace: 'custom', key: job.trackingMf.key }],
+          }, 'metafieldsDelete');
+          const mfRes  = mfData.data?.metafieldsDelete;
+          const mfErrs = mfRes?.userErrors || [];
+          if (mfErrs.length) throw new Error(mfErrs.map(e => e.message).join(' | '));
+          const deleted = mfRes?.deletedMetafields || [];
+          const confirmed = deleted.some(d => d.key === job.trackingMf.key && d.ownerId === gid);
+          if (!confirmed) throw new Error(`شوبيفاي ما أكدتش مسح custom.${job.trackingMf.key}`);
+          mfCleared = true;
+        } catch (e) { mfError = e.message; }
+
+        let logged = true, logError = null;
+        try {
+          await writeLog(env.DB, {
+            tool: job.tool, type: CLEAR_TYPE_BY_JOB[job.jobType], employee, orderId, orderName,
+            notes: `مسح علامة رفع ${job.label} — التاج ${job.tag} ${tagCleared ? '✓' : `✗ (${tagError})`}`
+                 + ` · custom.${job.trackingMf.key} ${mfCleared ? '✓' : `✗ (${mfError})`}`
+                 + (reason ? ` — ${reason}` : ''),
+            extra: {
+              jobType: job.jobType, tag: job.tag, trackingKey: job.trackingMf.key,
+              tagCleared, mfCleared, tagError, mfError,
+            },
+          });
+        } catch (e) { logged = false; logError = e.message; }
+
+        if (!tagCleared && !mfCleared) {
+          return json({
+            ok: false,
+            error: `فشل مسح العلامتين — التاج: ${tagError} · الميتافيلد: ${mfError}`,
+            tagCleared, mfCleared, logged, logError,
+          }, 502, request);
+        }
+        return json({
+          ok: true, tagCleared, mfCleared, tagError, mfError,
+          note: (tagCleared && mfCleared)
+            ? 'اتمسح التاج والميتافيلد — الأوردر بقى قابل لرفع جديد من غير تحذير تكرار.'
+            : `اتمسح جزء بس (${tagCleared ? 'التاج ✓ · الميتافيلد ✗' : 'الميتافيلد ✓ · التاج ✗'}) — راجع التفاصيل قبل إعادة الرفع.`,
           logged, logError,
         }, 200, request);
       }
