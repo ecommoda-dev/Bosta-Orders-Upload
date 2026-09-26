@@ -2,13 +2,13 @@
 
 # رفع بوسطة (`Bosta-Orders-Upload`)
 
-![version](https://img.shields.io/badge/version-v2.20.1-blue)
+![version](https://img.shields.io/badge/version-v2.21.0-blue)
 
 **بتعمل إيه:** كل شحنات بوسطة من أداة واحدة — **شحن عادي** (type 10) و**استرجاع**
 (25) و**استبدال** (30). بتعرض الأوردرات المؤهَّلة لكل نوع، والموظف بيرفعها جماعيًا،
 والأداة بتكتب النتيجة على شوبيفاي وبتسجّلها في D1.
 **مين بيستخدمها:** العمليات · المخزن
-**الإصدار:** Worker `v2.9.0` · الواجهة `v2.20.1`
+**الإصدار:** Worker `v2.10.0` · الواجهة `v2.21.0`
 
 > **v2.0.0 = الدمج.** `Bosta-Return-Exchange-Exporter` v6.0.0 اتنقلت هنا بالكامل.
 > التكليف الأصلي في `MERGE-BRIEF.md`، وخطة تصفية الأداة القديمة في §«التصفية» تحت.
@@ -48,7 +48,7 @@
 | `get_districts` | من غير `cityId`: كل مدن بوسطة · مع `cityId`: مناطقها (`dropOffAvailability === true` فقط) |
 | `upload` | رفع دفعة شحن عادي (٢٥ أوردر كحد أقصى) + الكتابة على شوبيفاي + السجل |
 | `upload_re` | 🔴 **بينشئ شحنات حقيقية بفلوس.** حارس الدورات والكوريَر → إعادة قراءة كاملة من شوبيفاي → الشحنة → رقم التتبع والتاج (**+ `status_2_r_e = In-Return` في الاسترجاع بس**) → السجل. الاستبدال **مابيحركش الحالة** (v2.0.1) |
-| `cancel_re` | إلغاء شحنة R/E بالـ `trackingNumber`. الإلغاء **بيحرّر** المرجع الفريد فإعادة الرفع شغّالة. **مابيرجّعش S2 ولا بيمسح رقم التتبع** |
+| `cancel_re` | 🔴 **بقت شاملة الشحن العادي كمان من v2.10.0** — إلغاء شحنة بالـ `trackingNumber` في **التلات أوضاع** (اسم الـ endpoint متوارث، مش مقصور على R/E). الإلغاء **بيحرّر** المرجع الفريد فإعادة الرفع شغّالة. **مابيرجّعش الحالة على شوبيفاي ولا بيمسح التاج/الميتافيلد** — دول بإيد الموظف |
 | `check_export_duplicates` · `record_export` · `confirm_upload` | مسار الإكسيل (الخطة البديلة) |
 | `diag` · `get_config` | الفحص الذاتي · نسخة الـ Worker |
 | `get_logs` · `get_logs_count` · `get_logs_export` | سجل العمليات — بيقرا **قيمتي `tool`** |
@@ -59,7 +59,8 @@
 tool  : bosta_orders_upload     ← الشحن العادي
         bosta_exchange_export   ← الاسترجاع/الاستبدال (القيمة التاريخية)
 
-type (شحن)  : uploaded · upload_failed · shopify_write_failed · skipped · login · logout
+type (شحن)  : uploaded · upload_failed · shopify_write_failed · skipped · login · logout ·
+              s1_cancelled ← 🆕 v2.10.0 (إلغاء شحنة شحن عادي)
 type (R/E)  : upload_re_return · upload_re_exchange · re_upload_failed ·
               re_shopify_write_failed · re_cancelled · cycle_block ·
               export_return · export_exchange · confirm_return · confirm_exchange
@@ -1149,6 +1150,17 @@ git show <sha>:index.js
 | ecommoda-order-lifecycle | v1.6.0 |
 
 آخر مطابقة: 22-09-2026 · `index.js` v2.8.2 · `index.html` v2.19.3
+> ⚠️ **وv2.21.0 / Worker v2.10.0 (26-09-2026 — طلب أحمد، سؤال «نضيف خيار
+> حذف الشحنة؟») اتعملت من غير مراجعة مهارات جديدة.** الإلغاء الحقيقي عند
+> بوسطة (`terminateDelivery` · `§BOSTA::terminateDelivery`) كان موجود
+> ومستخدم أصلًا للاسترجاع/الاستبدال — التعديل وسّع `action=cancel_re` ليقبل
+> `s1` كمان (`allow: ALL_JOBS` بدل `RE_JOBS`) وضاف زرار الإلغاء في نتيجة
+> الشحن العادي وفي نافذة «أوردرات مرفوعة على بوسطة قبل كده». مغطّى بمبدأ
+> قايم في `bosta-api-helper` 8.7 (الإلغاء المكرر · 404 مقابل 400) —
+> الدالة نفسها معاد استخدامها حرفيًا، مفيهاش منطق إلغاء جديد. القيمة الجديدة
+> `s1_cancelled` (بدل إعادة استخدام `re_cancelled` تحت `tool` تاني) محتاجة
+> تسجيل في `ecommoda-constants` §7 زي `re_cancelled` بالظبط — اتضافت لبند
+> ١ تحت. داخلة في نفس `skills-sweep` المفتوح (بند ٧).
 > ⚠️ **وv2.20.1 (26-09-2026 — طلب أحمد) اتعملت من غير مراجعة مهارات جديدة.**
 > أربع تعديلات عرض بس، مفيهاش أثر على الـ payload ولا الـ Worker: ① عزل
 > «المحافظة ◀ المدينة» بـ`<bdi>` عشان قطعتين نص LTR جنب بعض جوّه سطر RTL
@@ -1233,6 +1245,9 @@ git show <sha>:index.js
    `upload_re_exchange` · `re_upload_failed` · `re_shopify_write_failed` ·
    `re_cancelled` · `cycle_block` — **ومعاهم استثناء «أداة واحدة، قيمتين
    `tool`»**. القاعدة بتقول التسجيل قبل أول `writeLog`؛ ده استثناء واعي متوارث.
+   🔴 **ومعاهم من v2.10.0: `s1_cancelled`** تحت `tool = bosta_orders_upload` —
+   قيمة جديدة اتضافت لما الإلغاء بقى شامل الشحن العادي (شوف §«الإلغاء بقى
+   شامل الأنواع التلاتة» فوق)، ولسه ما اشتغلتش حي (صفر صف في D1 وقت الكتابة).
 2. 🔴 **أنهي أدوات تانية في الستاك بتقرا `custom.bosta_tracking_number`؟**
    الأداة دي وقفت الكتابة عليه وبقت تكتب `_s1`/`_s2`. المرشحين للفحص:
    `bosta-order-lookup-worker` · `order-printer-worker` · `mass-awb` · أي داشبورد
@@ -1329,5 +1344,5 @@ git show <sha>:index.js
    ومربع العدّاد في نافذة تأكيد الرفع. أي توحيد لهم مع «📍 عنوان مظبوط» بيشيل
    آخر فرصة للموظف إنه يفرّق.
 
-آخر تحديث: 26-09-2026 (Worker v2.9.0 · واجهة v2.20.1)
+آخر تحديث: 26-09-2026 (Worker v2.10.0 · واجهة v2.21.0)
 </div>
