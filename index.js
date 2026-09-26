@@ -199,7 +199,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.8.2';
+const WORKER_VERSION = '2.9.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2033,6 +2033,10 @@ function matchDistrictsIn(city, fields, zoneOnly, sourceList) {
         if (!n || n.length < 3 || !ftext.includes(n)) continue;
         const hit = {
           id: d.id, name: d.name, nameAr: d.nameAr, zone: d.zone,
+          // 🔴 مضافة (عمود «مدينة بوسطة» الجديد في الجدول) — الزون كان موجود
+          //    جوّه `d` من `availableDistricts` أصلًا وبيتشال هنا؛ إعادة نقله
+          //    مش حساب جديد، والمطابقة والـ payload ما اتغيّروش حرف.
+          zoneAr: d.zoneAr, zoneId: d.zoneId || null,
           tier: f.tier, field: f.key, fieldLabel: f.label,
           matched: n, matchedText: n === d.nameArN ? d.nameAr : d.name,
           exact: ftext === n, generic: !!d.generic,
@@ -2089,7 +2093,8 @@ function findCrossCity(catalog, fields, skipCityId) {
         //    العربي والـ payload بيبعت الإنجليزي (`districtId` فعليًا)، فالاتنين
         //    لازم يفضلوا موجودين في نفس الصف.
         cityId: c.cityId, cityName: c.cityName, cityNameAr: c.cityAr || '',
-        districtId: h.id, districtName: h.name, districtNameAr: h.nameAr, zone: h.zone,
+        districtId: h.id, districtName: h.name, districtNameAr: h.nameAr,
+        zone: h.zone, zoneAr: h.zoneAr || '',
         matchedText: h.matchedText, fieldLabel: h.fieldLabel,
         _rank: [h.tier, h.exact ? 0 : 1, -h.matched.length],
       });
@@ -2223,6 +2228,11 @@ function findAddressAnchor(city, fields) {
         districtId: hit.id,
         districtName: hit.name,
         districtNameAr: hit.nameAr,
+        // 🔴 مضافة لعمود «مدينة بوسطة» — نفس الزون المخزّن على المنطقة في
+        //    الكتالوج، مش تخمين جديد.
+        zoneId: hit.zoneId || null,
+        zoneName: hit.zone || '',
+        zoneNameAr: hit.zoneAr || '',
       };
     }
   }
@@ -2306,8 +2316,16 @@ function resolveAddress(order, catalog) {
   };
 
   if (matches.length === 1) {
+    // 🔴 **`districtZoneId`/`districtZoneName`/`districtZoneNameAr`** — مش
+    //    `zoneId`/`zoneName`. دول للعرض بس (عمود «مدينة بوسطة» في الجدول):
+    //    الزون اللي المنطقة المطابقة تابعة له في الكتالوج. `plan.zoneId`/
+    //    `zoneName` اسم محجوز لدرجة الرفع بالزون (`mode: 'zone'`) وسلّم
+    //    النزول (`fallbackZoneId` بيقرا `planUsed.zoneId`) — استخدامه هنا كان
+    //    هيخلّي أي صف منطقة عادي يبان وكأنه ليه زون احتياطي للنزول عليه.
     return { ...base, mode: 'district', districtId: matches[0].id,
-             districtName: matches[0].name, districtNameAr: matches[0].nameAr || '' };
+             districtName: matches[0].name, districtNameAr: matches[0].nameAr || '',
+             districtZoneId: matches[0].zoneId || null, districtZoneName: matches[0].zone || '',
+             districtZoneNameAr: matches[0].zoneAr || '' };
   }
   if (matches.length === 0 && row.zoneOnly) {
     // §٥.٥ — محافظة اتلغت إداريًا، بتتبعت كزون جوه مدينة تانية
@@ -2402,6 +2420,12 @@ function resolveAddress(order, catalog) {
         districtId: addressAnchor.districtId,
         districtName: addressAnchor.districtName,
         districtNameAr: addressAnchor.districtNameAr || '',
+        // 🔴 `districtZone*` للعرض بس — زون المنطقة اللي المرساة وصلت لها.
+        //    نفس سبب تسمية فرع المطابقة الكاملة فوق: `zoneId`/`zoneName` اسم
+        //    محجوز لدرجة الرفع بالزون وسلّم النزول.
+        districtZoneId: addressAnchor.zoneId || null,
+        districtZoneName: addressAnchor.zoneName || '',
+        districtZoneNameAr: addressAnchor.zoneNameAr || '',
         // 🔴 الواجهة بتقرا منه عشان تعرض «🔍 مرشّح تلقائي» بدل «📍 عنوان
         //    مظبوط» — مطابقة اسم كامل ومرساة كلمة واحدة **مش نفس الثقة**،
         //    وعرضهم بنفس البادج بيخلي الموظف يعدّي على تخمين وهو فاكره حقيقة.
@@ -2846,6 +2870,12 @@ function buildRow(order, catalog) {
     zoneName:    plan.ok ? (plan.zoneName || null) : null,
     zoneNameAr:  plan.ok ? (plan.zoneNameAr || '') : '',
     zoneDistrictCount: plan.ok ? (plan.zoneDistrictCount || 0) : 0,
+    // 🔴 زون المنطقة **المطابقة** (`mode: 'district'`) — للعرض بس (عمود
+    //    «مدينة بوسطة»). مش `zoneId`/`zoneName` فوق: دول درجة الرفع الفعلية،
+    //    وده مجرد معلومة عن المنطقة اللي `districtId` بيشاور عليها.
+    districtZoneId:     plan.ok ? (plan.districtZoneId || null) : null,
+    districtZoneName:   plan.ok ? (plan.districtZoneName || null) : null,
+    districtZoneNameAr: plan.ok ? (plan.districtZoneNameAr || '') : '',
     // 🔍 المرساة — الكلمة اللي وصلت للمنطقة دي، والواجهة بتعرضها كسبب.
     addressAnchor: plan.ok ? (plan.addressAnchor || null) : null,
     // 🔴 `mode` بيقول `district` في الحالتين — العلم ده هو **الفرق الوحيد**
@@ -3776,6 +3806,10 @@ function buildReRow(order, catalog, job, cycleAnalysis) {
     zoneName:     plan.ok ? (plan.zoneName || null) : null,
     zoneNameAr:   plan.ok ? (plan.zoneNameAr || '') : '',
     zoneDistrictCount: plan.ok ? (plan.zoneDistrictCount || 0) : 0,
+    // 🔴 نفس `§UPLOAD::buildRow` بالحرف — زون المنطقة المطابقة، للعرض بس
+    districtZoneId:     plan.ok ? (plan.districtZoneId || null) : null,
+    districtZoneName:   plan.ok ? (plan.districtZoneName || null) : null,
+    districtZoneNameAr: plan.ok ? (plan.districtZoneNameAr || '') : '',
     // 🔍 نفس `§UPLOAD::buildRow` بالحرف — النافذة واحدة للتلات أوضاع
     addressAnchor: plan.ok ? (plan.addressAnchor || null) : null,
     districtFromAnchor: plan.ok ? !!plan.districtFromAnchor : false,

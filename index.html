@@ -551,6 +551,11 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 .data-table tbody td.cell-wrap{white-space:normal;text-align:right;overflow-wrap:anywhere;word-break:break-word;}
 .data-table tbody td.cell-name{width:170px;}
 .data-table tbody td.cell-addr{width:360px;font-size:13.5px;font-weight:600;color:var(--text-primary);line-height:1.5;}
+/* 🔴 دمج «العنوان كامل» + «المحافظة (شوبيفاي)» (واجهة v2.20.0) — سطر أول
+   المحافظة ◀ المدينة (بارز، نفس وزن العمود القديم)، وسطر تاني باقي العنوان
+   (أفتح وأصغر شوية — تفصيلة مش عنوان الصف). */
+.addr-head{font-weight:700;color:var(--text-primary);}
+.addr-rest{margin-top:2px;font-size:12.5px;font-weight:400;color:var(--text-secondary);}
 .empty-row td{padding:40px;text-align:center;color:var(--text-muted);font-size:13px;}
 .row-cb{width:16px;height:16px;cursor:pointer;accent-color:var(--accent);}
 
@@ -945,6 +950,17 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
       <div class="cl-version-block">
         <div class="cl-version-row">
           <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+          <span class="cl-ver-date">26-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>🔴 <b>عمود «حالة الرفع» بقى بيقول حاجة واحدة بس: الأوردر اترفع قبل كده ولا لأ</b> (طلب أحمد) — قيمة «⛔ موقوف» اتشالت من العمود/الفلتر ده. كانت بتخلط «هل ده اترفع؟» مع «هل فيه مشكلة عنوان/بيانات بتمنع رفعه؟» في نفس الخانة. المنع نفسه <b>ما اتغيّرش حرف</b>: الصف اللي فيه مشكلة لسه بيظهر بلون أحمر ومربع التحديد بتاعه لسه مقفول — بس دلوقتي واضح إنهم سؤالين مختلفين.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>🔴 <b>عمودي «العنوان كامل» و«المحافظة (شوبيفاي)» اندمجوا في عمود واحد</b> «العنوان بالكامل (شوبيفاي)»: سطر أول <b>المحافظة ◀ المدينة</b> (نفس حقلي شوبيفاي <code>province</code>/<code>city</code>)، وسطر تاني باقي العنوان. وعواميد بوسطة بقوا <b>تلاتة</b> بدل اتنين — محافظة بوسطة · <b>مدينة بوسطة (جديد)</b> · منطقة بوسطة — نفس التلاتة اللي نافذة اختيار المنطقة بتعرضهم في صف واحد.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>الـ Worker بقى بيرجّع زون المنطقة المطابقة (<code>districtZoneName</code>) للحالة الأشيع — مطابقة اسم منطقة كامل — مش بس لدرجة الزون التلقائية؛ من غيرها عمود «مدينة بوسطة» الجديد كان هيفضل فاضي في أغلب الصفوف. للعرض بس — الـ <code>payload</code> ما اتغيّرش حرف.</span></li>
+        </ul>
+      </div>
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge">v2.19.3</span>
           <span class="cl-ver-date">22-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -2172,7 +2188,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.19.3';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.20.0';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2190,7 +2206,7 @@ const TOOL_VERSION       = 'v2.19.3';  // مصدر واحد لرقم نسخة ا
 //    الخانة) لكن الموظف بيقرا شاشة غير اللي اتدرّب عليها ومفيش أي رسالة
 //    تقول السبب — والاسم العربي **مش قابل للاشتقاق في الواجهة** أصلًا:
 //    مصدره الكتالوج، والكتالوج بيتقرا في الـ Worker.
-const MIN_WORKER_VERSION = '2.8.2';
+const MIN_WORKER_VERSION = '2.9.0';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -2970,10 +2986,16 @@ function updateLoginSettingsBtn() {
 // ─── §TOOL-JS::filters ───
 // سجل multi-select واحد للجدولين. كل مفتاح بيحمل `owner` — التغيير بيتوجّه
 // للجدول الصح، فمفيش نسختين من نفس المنطق تتعتّق واحدة منهم.
+// 🔴 (قرار أحمد 26-09-2026) قيمتين بس — «حالة الرفع» بتقول **هل الأوردر
+//    اترفع قبل كده ولا لأ** فقط. مكانش فيها قيمة `blocked` قبل كده بتقول
+//    «فيه مشكلة بتمنع الرفع»، وده كان بيخلط سؤالين مختلفين في عمود واحد:
+//    الموظف كان بيشوف «⛔ موقوف» ويقرا «الأوردر ده مش مرفوع أصلًا» بدل «الأوردر
+//    ده فيه مشكلة عنوان/بيانات محتاجة تتصلّح». منع الرفع نفسه **ما اتغيّرش
+//    حرف** — لسه عايش في `rowUploadable` (الصف الأحمر · الشيك بوكس المقفول ·
+//    الاستبعاد من «رفع الكل») ومش في العمود ده.
 const UP_STATE_ITEMS = [
-  { value: 'ready',    label: '🟢 جاهز للرفع' },
-  { value: 'uploaded', label: '🔁 مرفوع قبل كده' },
-  { value: 'blocked',  label: '⛔ موقوف' },
+  { value: 'notUploaded', label: '⬜ لسه ما اترفعش' },
+  { value: 'uploaded',    label: '🔁 مرفوع قبل كده' },
 ];
 const ADDR_MODE_ITEMS = [
   { value: 'district', label: '📍 عنوان مظبوط' },
@@ -3382,12 +3404,16 @@ function clearAllFilters() {
 const sortConfig = {
   orderNumber: { type: 'string' }, customer: { type: 'string' }, phone: { type: 'string' },
   secondPhone: { type: 'string' },
-  address: { type: 'string', get: r => fullAddressText(r) },
-  province: { type: 'string' },
+  // 🔴 عمود «العنوان بالكامل (شوبيفاي)» المدموج (v2.20.0) — نفس ترتيب العرض:
+  //    المحافظة ← المدينة ← باقي العنوان.
+  shopifyAddr: { type: 'string', get: r => [r.province, r.addressCity, r.address1, r.address2].filter(Boolean).join(' ') },
   // 🔴 العمود بيعرض العربي من v2.19.0 — فالترتيب لازم يقرا **نفس** النص.
   //    الترتيب على `r.cityName` الإنجليزي مع عمود عربي بيدّي عمود «مرتّب»
   //    شكله عشوائي على الشاشة من غير أي خطأ.
   cityName: { type: 'string', get: r => displayName(effCity(r).cityName, effCity(r).cityNameAr) },
+  // 🔴 عمود «مدينة بوسطة» الجديد (v2.20.0) — نفس منطق `rowBostaZone` اللي
+  //    بيبني العمود، مش قراءة حقل خام.
+  districtZone: { type: 'string', get: r => displayName(rowBostaZone(r).en, rowBostaZone(r).ar) },
   s1: { type: 'string' },
   addrMode: { type: 'string', get: r => ADDR_MODE_LABEL[rowAddrModeGroup(r)] || rowAddrModeGroup(r) },
   upLabel: { type: 'string', get: r => rowUpLabel(r) },
@@ -3450,19 +3476,21 @@ function rowCoverageOverridden(r) {
   const ov = districtOverride[r.orderId];
   return !!(r.coverageOnly && (ov?.districtId || ov?.forceZone || ov?.forceProvince));
 }
-// 🔴 **«مرفوع» أسبق من «موقوف»** — والترتيب ده أمان مش تفصيلة عرض.
-//    «مرفوع» **حقيقة** عن شحنة موجودة عند بوسطة واتصرفت عليها فلوس؛ «موقوف»
-//    **توقع** عن رفع لسه ما حصلش. لما التاني كان بيكسب، الصف المرفوع اللي
-//    عنوانه موقوف كان بيقرا «⛔ موقوف» و**رقم التتبع يختفي من الشاشة خالص** —
-//    يعني الصف يبان «لسه ما اترفعش ومحتاج تصليح» وهو مرفوع فعلًا، والموظف
-//    يروح داشبورد بوسطة يتأكد بنفسه. وبادج «🔁 مرفوع» هو **الحارس المرئي
-//    الوحيد** ضد إعادة الرفع (اللي بتطلّع شحنة تانية بفلوس).
-//    ⚠️ **والمنع مابيضعفش**: هو عايش في `rowUploadable` — الصف الوردي والشيك
-//    بوكس المقفول والاستبعاد من «رفع الكل» — مش في البادج ده.
+// 🔴 (قرار أحمد 26-09-2026) **«حالة الرفع» بقت سؤال واحد بس: اترفع قبل كده
+//    ولا لأ.** لحد v2.19.3 كانت 3 قيم (`ready`/`uploaded`/`blocked`) بتخلط
+//    «هل الأوردر ده اترفع؟» مع «هل فيه مشكلة بتمنع رفعه؟» — والموظف كان بيشوف
+//    «⛔ موقوف» في عمود اسمه «حالة الرفع» ويقرا «الأداة رفضت ترفعه» مش «الأوردر
+//    ده لسه مش مرفوع، وبرضه فيه مشكلة بيانات لازم تتصلّح». السبب والمنع نفسه
+//    باينين في مكان تاني خالص أصلًا: الصف الأحمر (`row-blocked`) والشيك بوكس
+//    المقفول وسبب المنع تحت اسم العميل/بادج «حالة العنوان».
+//    «مرفوع» **حقيقة** عن شحنة موجودة عند بوسطة واتصرفت عليها فلوس، فلازم
+//    تفضل أسبق من أي حساب تاني — صف اترفع وبرضه موقوف عن رفع تاني لسه
+//    بيقول «مرفوع» (مش «لسه ما اترفعش»)، وإلا رقم التتبع يختفي من قراية
+//    الموظف والصف يبان محتاج رفع وهو مرفوع فعلًا بفلوس.
+//    ⚠️ **والمنع نفسه ما اتغيّرش حرف** — لسه عايش في `rowUploadable` (الصف
+//    الأحمر · الشيك بوكس المقفول · الاستبعاد من «رفع الكل») مش في العمود ده.
 function rowUpState(r) {
-  if (r.alreadyUploaded) return 'uploaded';
-  if (!rowUploadable(r)) return 'blocked';
-  return 'ready';
+  return r.alreadyUploaded ? 'uploaded' : 'notUploaded';
 }
 function rowAddrMode(r) {
   if (!r.addressOk) return 'blocked';
@@ -3509,11 +3537,43 @@ function rowNeedsManualAddressConfirm(r) {
 function rowNeedsCityDecision(r) { return rowAddrMode(r) === 'cityDoubt'; }
 function isAutoSelectable(r)     { return rowUploadable(r); }
 function rowUpLabel(r) {
-  return { ready: 'جاهز', uploaded: 'مرفوع قبل كده', blocked: 'موقوف' }[rowUpState(r)];
+  return { uploaded: 'مرفوع قبل كده', notUploaded: 'لسه ما اترفعش' }[rowUpState(r)];
 }
-// نفس النص في الجدول والتصدير ونافذة اختيار المنطقة — مصدر واحد
+// نفس النص في التصدير ونافذة اختيار المنطقة (`dpContextHTML`) — مصدر واحد.
+// ⚠️ **مش عمود الجدول** من واجهة v2.20.0 — ده بقى `shopifyAddressCell` (تحت)،
+// اللي بيدمج نفس الحقول في سطرين بدل نص واحد طويل. `fullAddressText` فضلت
+// عشان الاتنين لازم يفضلوا **متطابقين حرف بحرف** برّه الجدول.
 function fullAddressText(r) {
   return [r.address1, r.address2, r.addressCity].filter(Boolean).join(' — ');
+}
+// 🔴 دمج عمودي «العنوان كامل» و«المحافظة (شوبيفاي)» في عمود واحد (واجهة
+//    v2.20.0 · طلب أحمد 26-09-2026): سطر أول المحافظة ◀ المدينة (نفس حقلي
+//    شوبيفاي `province`/`addressCity`) — بيقابل عواميد بوسطة التلاتة جنبه
+//    نفس ترتيب الجدول اللي في نافذة اختيار المنطقة (`§«الأعمدة التلاتة بتقابل
+//    بعضها عمود بعمود»` في CLAUDE.md) — وسطر تاني باقي العنوان (`address1`/`address2`).
+function shopifyAddressCell(r) {
+  const head = [r.province, r.addressCity].filter(Boolean).join(' ◀ ');
+  const rest = [r.address1, r.address2].filter(Boolean).join(' — ');
+  return `<div class="addr-head">${esc(head || '—')}</div>`
+       + (rest ? `<div class="addr-rest">${esc(rest)}</div>` : '');
+}
+// 🔴 زون بوسطة («مدينة بوسطة» في التسمية عندنا) اللي الدرجة الحالية تابعة
+//    له — عمود جديد (واجهة v2.20.0)، كان معلومة مخبّاة جوّه نافذة اختيار
+//    المنطقة بس. نفس ترتيب أولوية `addrModeInfo`: تدخّل يدوي أول حاجة، بعدين
+//    الدرجة التلقائية. صف على درجة المحافظة (تثبيت أو مطابقة) مالوش زون
+//    معروف — بيرجع فاضي (مش تخمين).
+function rowBostaZone(r) {
+  const ov = districtOverride[r.orderId];
+  if (ov?.forceZone)                     return { en: ov.zoneName || '', ar: ov.zoneNameAr || '' };
+  if (ov?.districtId)                    return { en: ov.districtZoneName || '', ar: ov.districtZoneNameAr || '' };
+  if (ov?.forceProvince || ov?.cityId)   return { en: '', ar: '' };
+  if (r.mode === 'zone')                 return { en: r.zoneName || '', ar: r.zoneNameAr || '' };
+  if (r.mode === 'zoneName')             return { en: r.districtName || '', ar: r.districtNameAr || '' };
+  if (r.mode === 'district')             return { en: r.districtZoneName || '', ar: r.districtZoneNameAr || '' };
+  return { en: '', ar: '' };
+}
+function districtZoneCell(r) {
+  return esc(displayName(rowBostaZone(r).en, rowBostaZone(r).ar) || '—');
 }
 
 function applyFilters() {
@@ -3703,12 +3763,17 @@ function tableColumns() {
         const reasons = rowUploadable(r) ? [] : (r.problems || []).slice();
         return `${esc(r.customer || '—')}${reasons.length ? `<span class="problem-text">${esc(reasons.join(' · '))}</span>` : ''}`;
       } },
-    { key: 'address',     label: 'العنوان كامل', sort: 'address', cls: 'cell-wrap cell-addr',
-      cell: r => esc(fullAddressText(r) || '—') },
-    { key: 'province',    label: 'المحافظة (شوبيفاي)', sort: 'province', cell: r => esc(r.province || '—') },
-    { key: 'cityName',    label: 'محافظة بوسطة', sort: 'cityName', cell: cityCell },
-    { key: 'district',    label: 'المنطقة', cell: districtCell },
-    { key: 'addrMode',    label: 'حالة العنوان', sort: 'addrMode', cell: addrModeCell },
+    // 🔴 دمج «العنوان كامل» + «المحافظة (شوبيفاي)» (واجهة v2.20.0) —
+    //    `shopifyAddressCell` فوق. سطر أول المحافظة ◀ المدينة، وتحته باقي
+    //    العنوان.
+    { key: 'shopifyAddr', label: 'العنوان بالكامل (شوبيفاي)', sort: 'shopifyAddr',
+      cls: 'cell-wrap cell-addr', cell: shopifyAddressCell },
+    // 🔴 بوسطة بقت تلات عواميد بدل اتنين (واجهة v2.20.0): محافظة · مدينة ·
+    //    منطقة — نفس التلاتة اللي نافذة اختيار المنطقة بتعرضهم في صف واحد.
+    { key: 'cityName',     label: 'محافظة بوسطة', sort: 'cityName', cell: cityCell },
+    { key: 'districtZone', label: 'مدينة بوسطة', sort: 'districtZone', cell: districtZoneCell },
+    { key: 'district',     label: 'منطقة بوسطة', cell: districtCell },
+    { key: 'addrMode',     label: 'حالة العنوان', sort: 'addrMode', cell: addrModeCell },
   ];
 
   if (re) {
@@ -3824,8 +3889,11 @@ function upCell(r) {
     return `<span class="badge badge-warn" title="${esc(hint)}">`
          + `🔁 مرفوع${r.previousTracking ? ` · ${trackingLink(r.previousTracking)}` : ''}${stopped ? ' · ⛔' : ''}</span>`;
   }
-  if (!rowUploadable(r)) return `<span class="badge badge-danger">⛔ موقوف</span>`;
-  return `<span class="badge badge-success">🟢 جاهز</span>`;
+  // 🔴 (قرار أحمد 26-09-2026) الصف اللي لسه ما اترفعش بيقول نفس الحاجة سواء
+  //    كان جاهز أو موقوف — البادج ده بقى بيجاوب سؤال واحد بس (اترفع ولا لأ)،
+  //    ومنع الرفع نفسه باين في لون الصف والشيك بوكس المقفول (`rowUploadable`
+  //    في `renderTable`) مش هنا. توحيد اللون هنا **مقصود**، مش رجوع.
+  return `<span class="badge badge-muted">⬜ لسه ما اترفعش</span>`;
 }
 
 function renderTable(rows) {
@@ -4950,6 +5018,9 @@ function chooseDistrict(id, name) {
   districtOverride[dpOrderId] = {
     districtId: id, districtName: en, districtNameAr: ar,
     cityId: dpCityId, cityName: cSrc.en, cityNameAr: cSrc.ar,
+    // 🔴 زون المنطقة المختارة — للعرض بس (عمود «مدينة بوسطة»)، جاي من نفس
+    //    `d` اللي بيحمل الاسم فوق. مش بيتبعت لبوسطة (المرفوع `districtId` بس).
+    districtZoneName: d?.zone || '', districtZoneNameAr: d?.zoneAr || '',
   };
   renderDistrictList();
   applyFilters();
@@ -4964,6 +5035,7 @@ async function chooseCrossCity(cityId, cityName, districtId, districtName) {
   districtOverride[dpOrderId] = {
     cityId, cityName, cityNameAr: c?.cityNameAr || '',
     districtId, districtName, districtNameAr: c?.districtNameAr || '',
+    districtZoneName: c?.zone || '', districtZoneNameAr: c?.zoneAr || '',
   };
   applyFilters();
   await loadDpCity(cityId);
@@ -5541,7 +5613,9 @@ async function exportOrdersXLSX() {
     { header: 'المحافظة (شوبيفاي)', key: 'province', width: 18 },
     { header: 'محافظة بوسطة', key: 'cityName', width: 16 },
     { header: 'محافظة المطابقة التلقائية', key: 'cityAuto', width: 20 },
-    { header: 'المنطقة', key: 'district', width: 20 },
+    // 🔴 عمود جديد (v2.20.0) — نفس التلاتة اللي الجدول بقى بيعرضهم
+    { header: 'مدينة بوسطة', key: 'districtZone', width: 16 },
+    { header: 'منطقة بوسطة', key: 'district', width: 20 },
     { header: 'حالة العنوان', key: 'addrMode', width: 24 },
     { header: 'العنوان', key: 'address', width: 40 },
     { header: 'التحصيل', key: 'cod', width: 12 },
@@ -5568,6 +5642,7 @@ async function exportOrdersXLSX() {
       province: r.province,
       cityName: displayName(effCity(r).cityName, effCity(r).cityNameAr),
       cityAuto: effCity(r).changed ? displayName(r.cityName, r.cityNameAr) : '',
+      districtZone: displayName(rowBostaZone(r).en, rowBostaZone(r).ar),
       district: ov?.districtId
         ? displayName(ov.districtName, ov.districtNameAr)
         : displayName(r.districtName, r.districtNameAr),
