@@ -211,8 +211,8 @@ console.log('\n⑥ بادج حالة الرفع — الشحنة الموجود�
   //    (الصف الأحمر · الشيك بوكس المقفول) زي ما هو برّه البادج ده.
   const blocked = api.upCell({ orderId:'Y', uploadable:false, addressOk:true,
     mode:'coverageBlocked', problems:[], alreadyUploaded:false });
-  ok('والموقوف غير المرفوع بيقول «لسه ما اترفعش» زي أي صف مش مرفوع',
-     /لسه ما اترفعش/.test(blocked) && !/موقوف/.test(blocked) && !/مرفوع/.test(blocked), blocked);
+  ok('والموقوف غير المرفوع بيقول «لم يتم الرفع» زي أي صف مش مرفوع',
+     /لم يتم الرفع/.test(blocked) && !/موقوف/.test(blocked) && !/مرفوع/.test(blocked), blocked);
 }
 
 console.log(`\n${'═'.repeat(50)}\nنجح ${pass} · فشل ${fail}\n`);
