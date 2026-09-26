@@ -111,12 +111,15 @@ const cov = { orderId:'E', uploadable:false, coverageOnly:true, addressOk:true,
 api.setRows([...rows, cov]);
 
 chk('E موقوف قبل أي تعديل',       api.rowUploadable(cov),        false);
-chk('وحالة الرفع «موقوف»',        api.rowUpLabel(cov),           'موقوف');
+// 🔴 (قرار أحمد 26-09-2026) «حالة الرفع» بقت بتقول اترفع قبل كده ولا لأ بس —
+//    الصف الموقوف مش المرفوع بيقول «لسه ما اترفعش» زي أي صف تاني مش مرفوع.
+//    المنع نفسه (`rowUploadable`) هو اللي فرّق بينهم فوق، مش البادج ده.
+chk('وحالة الرفع «لسه ما اترفعش» (زي أي صف مش مرفوع)', api.rowUpLabel(cov), 'لسه ما اترفعش');
 chk('ومستثنى من تحديد الكل',      api.isAutoSelectable(cov),     false);
 
 api.ov['E'] = { cityId:'s', cityName:'South Sinai', districtId:'d-dahab', districtName:'Dahab' };
 chk('بعد اختيار منطقة: بقى يترفع', api.rowUploadable(cov),        true);
-chk('وحالة الرفع بقت «جاهز»',      api.rowUpLabel(cov),           'جاهز');
+chk('وحالة الرفع لسه «لسه ما اترفعش» (لسه مش مرفوع)', api.rowUpLabel(cov), 'لسه ما اترفعش');
 chk('ودخل تحديد الكل',            api.isAutoSelectable(cov),     true);
 // ⚠️ القرار ده لازم يفضل **باين**: البادج بقى 📍 زي أي اختيار يدوي، فالتلميح
 //    هو الأثر الوحيد الباقي على إن العنوان ده كان خارج التغطية.
@@ -157,8 +160,11 @@ chk('ومستبعد من «تحديد الكل»',            api.isAutoSelectab
 const upOk = { ...rows[0], orderId:'G', alreadyUploaded:true, previousTracking:'111' };
 api.setRows([...rows, upBlocked, upOk]);
 chk('وصف مرفوع سليم زي ما هو',           api.rowUpState(upOk),        'uploaded');
-chk('وصف موقوف مش مرفوع لسه «موقوف»',     api.rowUpState(rows[3]),     'blocked');
-chk('وصف سليم مش مرفوع «جاهز»',           api.rowUpState(rows[0]),     'ready');
+// 🔴 (قرار أحمد 26-09-2026) صفين مش مرفوعين — واحد موقوف وواحد جاهز — بقوا
+//    نفس القيمة `notUploaded`. الفرق بينهم (موقوف ولا لأ) عايش في
+//    `rowUploadable`/الصف الأحمر، مش في `rowUpState`.
+chk('وصف موقوف مش مرفوع «لسه ما اترفعش»', api.rowUpState(rows[3]),    'notUploaded');
+chk('وصف سليم مش مرفوع «لسه ما اترفعش» برضه', api.rowUpState(rows[0]), 'notUploaded');
 
 console.log(`\n${p}/${n} نجحت`);
 process.exit(p === n ? 0 : 1);
