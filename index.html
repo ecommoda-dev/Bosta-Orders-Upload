@@ -958,6 +958,15 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <span class="cl-ver-date">26-09-2026</span>
         </div>
         <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>🎯 <b>احتمالين بالظبط في «❓ احتمالات متعددة»، وواحد منهم بس اسمه == اسم مدينة بوسطة اللي الاتنين تابعين لها</b> (زي منطقة «بلقاس» جوّه مدينة بوسطة «بلقاس» نفسها — #55191) <b>بيترفعوا تلقائيًا</b> على الاحتمال التاني بلا مراجعة يدوية، ببادج مستقل «🎯 استبعاد تكرار الاسم» (Worker v2.12.0 · قرار أحمد 26-09-2026). ⛔ <b>٣ احتمالات فأكتر بتفضل ❓ زي ما هي</b> — بلا اختيار تلقائي، لأن الحسم مش واضح بنفس القوة مع مرشحين تلاتة فأكتر. راجع الصف من بادجه لو الاستبعاد غلط (العميل فعلًا في مركز المدينة).</span></li>
+        </ul>
+      </div>
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge">v2.22.0</span>
+          <span class="cl-ver-date">26-09-2026</span>
+        </div>
+        <ul class="cl-items">
           <li class="cl-item"><span class="cl-tag new">جديد</span><span>🧹 <b>زرار «امسح التاج/الميتافيلد» في نافذة «أوردرات مرفوعة على بوسطة قبل كده»</b> — بيمسح التاج (<code>Bosta_Uploaded_S1</code>/<code>_S2</code>) وميتافيلد رقم التتبع (<code>custom.bosta_tracking_number_s1</code>/<code>_s2</code>) من شوبيفاي. أكشن <b>منفصل</b> عن «احذف الشحنة من بوسطة» — الحذف بيلغي عند بوسطة بس، وده بيمسح علامة الرفع على شوبيفاي اللي حارس الرفع المكرر بيقرا منها. ⚠️ استخدمه بعد ما تتأكد إن الشحنة القديمة اتلغت أو مش موجودة أصلًا — مسحه قبل كده بيسيب الباب مفتوح لشحنة مكررة بفلوس، والتأكيد قبل الضغط بيقول كده صراحةً.</span></li>
         </ul>
       </div>
@@ -2224,7 +2233,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.22.0';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.23.0';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2242,7 +2251,11 @@ const TOOL_VERSION       = 'v2.22.0';  // مصدر واحد لرقم نسخة ا
 //    الخانة) لكن الموظف بيقرا شاشة غير اللي اتدرّب عليها ومفيش أي رسالة
 //    تقول السبب — والاسم العربي **مش قابل للاشتقاق في الواجهة** أصلًا:
 //    مصدره الكتالوج، والكتالوج بيتقرا في الـ Worker.
-const MIN_WORKER_VERSION = '2.11.0';
+// 🎯 v2.12.0 — Worker أقدم مابيرجّعش `districtFromCityTiebreak`/
+//    `cityTiebreakDropped`، فغموض الاحتمالين اللي واحد منهم بس اسمه == اسم
+//    الزون بيفضل ⛔ `ambiguous` موقوف عن الرفع زي قبل v2.23.0 — مش خطر
+//    (بيفشل مقفول)، لكن الميزة الجديدة مابتشتغلش من غير الـ Worker ده.
+const MIN_WORKER_VERSION = '2.12.0';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -3042,6 +3055,12 @@ const ADDR_MODE_ITEMS = [
   //    بين تخمين وحقيقة. توحيدها مع «عنوان مظبوط» بيخلي الموظف يعدّي على
   //    التخمين وهو فاكره مطابقة.
   { value: 'anchor',   label: '🔍 مرشّح تلقائي' },
+  // 🎯 (Worker v2.12.0 · قرار أحمد 26-09-2026) غموض احتمالين واحد منهم بس
+  //    اسمه == اسم الزون اللي الاتنين تابعين له (منطقة «بلقاس» جوّه مدينة
+  //    «بلقاس» — #55191). الشحنة **بتترفع** على الاحتمال التاني تلقائيًا،
+  //    بلا مراجعة يدوية — بادج مستقل عن «مرشّح تلقائي» لأن مصدر التخمين
+  //    مختلف (استبعاد تكرار اسم، مش كلمة واحدة من العنوان).
+  { value: 'cityTiebreak', label: '🎯 استبعاد تكرار الاسم' },
   // 🔴 درجة وسيطة حقيقية بين المنطقة والمحافظة (واجهة v2.4.0) — مش تسمية
   //    تجميلية. الـ`zoneId` بيغيّر **الهب وكود الفرز** على البوليصة،
   //    و«المحافظة فقط» بتاخد هب افتراضي. لازم الموظف يفرّق بين الاتنين.
@@ -3550,6 +3569,9 @@ function rowAddrMode(r) {
   //    كأن الأداة طابقت اسم المنطقة كامل. ⚠️ **وبعد `ov?.districtId`**:
   //    الموظف اللي اختار بإيده بقى صاحب القرار، والصف بقى مطابقة يدوية.
   if (r.districtFromAnchor) return 'anchor';
+  // 🎯 نفس السبب فوق بالحرف — الـ Worker بيرجّع `district` للحالة دي كمان
+  //    (غموض احتمالين اتحسم باستبعاد المكرر مع اسم الزون، Worker v2.12.0).
+  if (r.districtFromCityTiebreak) return 'cityTiebreak';
   return r.mode;
 }
 // حالة العنوان **المعروضة** للموظف (بادج/فلتر/تصدير) — بقرار أحمد 15-09-2026
@@ -3709,6 +3731,16 @@ function addrModeInfo(r) {
           + 'دي **كلمة واحدة مش اسم كامل**، فلو الكلمة دي علامة مميزة (مستشفى · مسجد · سنتر) '
           + 'مش عنوان العميل، افتح وغيّر المنطقة.' };
   }
+  // 🎯 استبعاد تكرار الاسم — **أسبق من `district`** لنفس سبب المرشّح
+  //    التلقائي فوق: الـ Worker بيرجّع نفس الـ`mode`، والفرق في العلم.
+  if (r.districtFromCityTiebreak) {
+    const d = r.cityTiebreakDropped || {};
+    return { label: `🎯 ${displayName(r.districtName, r.districtNameAr)}`, set: true, candidate: true,
+      hint: `العنوان طابق احتمالين متساويين — واحد منهم (${displayName(d.name, d.nameAr) || '—'}) `
+          + `اسمه نفس اسم مدينة بوسطة اللي الاتنين تابعين لها، فاتستبعد تلقائيًا والشحنة هتترفع `
+          + `على الاحتمال التاني. **قرار آلي مش مطابقة اسم كامل مؤكَّدة** — لو الاستبعاد غلط `
+          + '(العميل فعلًا في مركز المدينة)، افتح وغيّر المنطقة.' };
+  }
   if (r.mode === 'district') return { label: `📍 ${displayName(r.districtName, r.districtNameAr)}`, set: true,
     hint: 'المطابقة التلقائية لقت منطقة واحدة في كتالوج بوسطة — الشحنة هتترفع بالمنطقة دي' };
   // 🗺️ درجة الزون — بين المنطقة والمحافظة. `set: true` لأن الشحنة **بتترفع
@@ -3786,7 +3818,7 @@ function addrModeCell(r) {
   const cls  = rowNeedsManualAddressConfirm(r) ? 'badge-warn'
              // 🔍 مرشّح تلقائي — **مش أخضر ومش رمادي**: أخضر بيقرا «متأكَّد»،
              //    ورمادي بيقرا «مالوش لازمة» وهو صف **هيترفع**.
-             : mode === 'anchor' ? 'badge-info'
+             : (mode === 'anchor' || mode === 'cityTiebreak') ? 'badge-info'
              : (mode === 'district' || mode === 'zone' || mode === 'province') ? 'badge-success'
              : (mode === 'blocked' || mode === 'coverageBlocked') ? 'badge-danger' : 'badge-muted';
   return `<span class="badge ${cls}" title="${esc(addrModeInfo(r).hint)}">${esc(ADDR_MODE_LABEL[mode] || mode)}</span>`;
@@ -4955,12 +4987,19 @@ function renderDistrictList() {
       //    دي الشاشة اللي الموظف بيراجع فيها. توحيد النص كان هيخلي «كلمة
       //    واحدة من الاسم» تتقرا زي «الاسم كامل» على نفس الشريط الأخضر.
       const anchored = !manual && !!r?.districtFromAnchor;
+      // 🎯 نفس فكرة `anchored` فوق بالحرف — الشحنة بترفع على قرار آلي مش
+      //    مطابقة اسم كامل، فالنافذة لازم تقول كده صراحةً هنا بالذات.
+      const tiebreak = !manual && !!r?.districtFromCityTiebreak;
       const aTxt = r?.addressAnchor?.text || '';
-      head += `<div class="dp-group-hdr ${anchored ? 'pick' : 'match'}">${
+      const dropped = r?.cityTiebreakDropped || {};
+      head += `<div class="dp-group-hdr ${(anchored || tiebreak) ? 'pick' : 'match'}">${
         anchored ? `🔍 مرشّح تلقائي — دي اللي الشحنة هتترفع عليها. <b>راجعها</b>`
+        : tiebreak ? `🎯 اختيار آلي — دي اللي الشحنة هتترفع عليها. <b>راجعها</b>`
                  : `✅ ${manual ? 'المنطقة اللي اخترتها' : 'المطابقة التلقائية'} — دي اللي الشحنة هتترفع عليها`}</div>`;
-      head += dpRow(md, anchored ? 'suggested' : 'is-match', true,
+      head += dpRow(md, (anchored || tiebreak) ? 'suggested' : 'is-match', true,
         anchored ? `كلمة «${aTxt}» في العنوان موجودة في اسم المنطقة دي وبس — مش مطابقة لاسم المنطقة كامل`
+        : tiebreak ? `فيه احتمال تاني (${displayName(dropped.name, dropped.nameAr) || '—'}) اسمه نفس اسم `
+                    + 'مدينة بوسطة، فاتستبعد تلقائيًا — دي مش مطابقة اسم كامل مؤكَّدة'
                  : (manual ? 'اختيار يدوي — اختيار منطقة تانية من القايمة بيغيّره'
                            : (cand?.matchedText ? `طابق "${cand.matchedText}" في ${cand.fieldLabel || 'العنوان'}` : '')),
         anchored ? '🔍 مرشّح' : (manual ? '✅ اختيارك' : '✅ المطابقة الحالية'));
