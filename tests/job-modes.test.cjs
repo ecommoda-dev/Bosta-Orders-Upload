@@ -161,7 +161,7 @@ console.log('\n④ قيم فلتر السجل لازم تطابق الـ Worker 
   // 🔴 قيمة مكتوبة غلط هنا بتدّي فلتر بيرجّع **صفر صف من غير أي خطأ** —
   //    الموظف بيفتكر إن العملية ما حصلتش. مفيش طريقة يكتشفها غير المقارنة دي.
   const workerTypes = new Set();
-  for (const m of workerSrc.matchAll(/'(uploaded|upload_failed|shopify_write_failed|skipped|upload_re_return|upload_re_exchange|re_upload_failed|re_shopify_write_failed|re_cancelled|s1_cancelled|cycle_block|scan|export_return|export_exchange|confirm_return|confirm_exchange)'/g)) {
+  for (const m of workerSrc.matchAll(/'(uploaded|upload_failed|shopify_write_failed|skipped|upload_re_return|upload_re_exchange|re_upload_failed|re_shopify_write_failed|re_cancelled|s1_cancelled|s1_marks_cleared|re_marks_cleared|cycle_block|scan|export_return|export_exchange|confirm_return|confirm_exchange)'/g)) {
     workerTypes.add(m[1]);
   }
   const pageTypes = api.LOG_TYPE_ITEMS.map(i => i.value);

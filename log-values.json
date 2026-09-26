@@ -5,7 +5,9 @@
     "row.skipped ?",
     "r.status === 'error' ?",
     "job.exportType",
-    "job.confirmType"
+    "job.confirmType",
+    "CANCEL_TYPE_BY_JOB[job.jobType]",
+    "CLEAR_TYPE_BY_JOB[job.jobType]"
   ],
   "types": {
     "login": {
@@ -75,6 +77,22 @@
       "result": ["success", "already", "error"],
       "stage": null,
       "desc": "إلغاء شحنة بوسطة استرجاع/استبدال قبل رفع شحنة تانية — already لو كانت ملغية عند بوسطة خلاص"
+    },
+    "s1_cancelled": {
+      "result": ["success", "already", "error"],
+      "stage": null,
+      "desc": "إلغاء شحنة بوسطة شحن عادي (type 10) قبل رفع شحنة تانية — already لو كانت ملغية عند بوسطة خلاص (v2.10.0)"
+    },
+    "s1_marks_cleared": {
+      "result": null,
+      "stage": null,
+      "desc": "مسح تاج Bosta_Uploaded_S1 وميتافيلد custom.bosta_tracking_number_s1 من شوبيفاي — أكشن منفصل عن إلغاء الشحنة عند بوسطة، بيتستخدم بعد التأكد إنها اتلغت (v2.11.0)"
+    },
+    "re_marks_cleared": {
+      "tool": "bosta_exchange_export",
+      "result": null,
+      "stage": null,
+      "desc": "مسح تاج Bosta_Uploaded_S2 وميتافيلد custom.bosta_tracking_number_s2 من شوبيفاي — أكشن منفصل عن إلغاء شحنة R/E عند بوسطة (v2.11.0)"
     },
     "export_return": {
       "tool": "bosta_exchange_export",

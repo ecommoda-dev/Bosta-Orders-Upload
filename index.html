@@ -958,6 +958,15 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
           <span class="cl-ver-date">26-09-2026</span>
         </div>
         <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>🧹 <b>زرار «امسح التاج/الميتافيلد» في نافذة «أوردرات مرفوعة على بوسطة قبل كده»</b> — بيمسح التاج (<code>Bosta_Uploaded_S1</code>/<code>_S2</code>) وميتافيلد رقم التتبع (<code>custom.bosta_tracking_number_s1</code>/<code>_s2</code>) من شوبيفاي. أكشن <b>منفصل</b> عن «احذف الشحنة من بوسطة» — الحذف بيلغي عند بوسطة بس، وده بيمسح علامة الرفع على شوبيفاي اللي حارس الرفع المكرر بيقرا منها. ⚠️ استخدمه بعد ما تتأكد إن الشحنة القديمة اتلغت أو مش موجودة أصلًا — مسحه قبل كده بيسيب الباب مفتوح لشحنة مكررة بفلوس، والتأكيد قبل الضغط بيقول كده صراحةً.</span></li>
+        </ul>
+      </div>
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge">v2.21.0</span>
+          <span class="cl-ver-date">26-09-2026</span>
+        </div>
+        <ul class="cl-items">
           <li class="cl-item"><span class="cl-tag new">جديد</span><span>🔴 <b>زرار «✕ إلغاء الشحنة» بقى شغّال في الشحن العادي كمان</b>، مش بس الاسترجاع/الاستبدال — بيلغي عند بوسطة فعلًا (<code>terminate</code>) مش مجرد إخفاء الصف، وبيحرّر <code>uniqueBusinessReference</code> فإعادة الرفع بعد التصحيح بتعدّي. باين في تفاصيل نافذة النتيجة على أي صف عليه رقم تتبع.</span></li>
           <li class="cl-item"><span class="cl-tag new">جديد</span><span>🗑️ <b>«احذف الشحنة من بوسطة» في نافذة «أوردرات مرفوعة على بوسطة قبل كده»</b> — بدل ما الموظف يروح داشبورد بوسطة يلغي الشحنة القديمة بإيده قبل ما يقرر «أكّد وارفعهم كلهم»، بقى يقدر يلغيها من هنا على طول. ⚠️ الإلغاء مابيمسحش تاج/ميتافيلد الرفع القديم — «أكّد وارفعهم كلهم» لسه الخطوة المطلوبة بعده.</span></li>
         </ul>
@@ -2215,7 +2224,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary)
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION       = 'v2.21.0';  // مصدر واحد لرقم نسخة الواجهة
+const TOOL_VERSION       = 'v2.22.0';  // مصدر واحد لرقم نسخة الواجهة
 // 🔴 v2.0.0 — Worker أقدم من ده مافيهوش `fetch_candidates` ولا `upload_re`
 //    **ولا الميتافيلدات الجديدة**. الصفحة هتطلب أوضاع الاسترجاع/الاستبدال
 //    وتاخد 404، والأخطر: وضع الشحن العادي هيكتب على `bosta_tracking_number`
@@ -2233,7 +2242,7 @@ const TOOL_VERSION       = 'v2.21.0';  // مصدر واحد لرقم نسخة ا
 //    الخانة) لكن الموظف بيقرا شاشة غير اللي اتدرّب عليها ومفيش أي رسالة
 //    تقول السبب — والاسم العربي **مش قابل للاشتقاق في الواجهة** أصلًا:
 //    مصدره الكتالوج، والكتالوج بيتقرا في الـ Worker.
-const MIN_WORKER_VERSION = '2.10.0';
+const MIN_WORKER_VERSION = '2.11.0';
 const WORKER_URL         = 'https://bosta-orders-upload-worker.ecommoda-dev.workers.dev';
 const SHOP_DOMAIN        = '6c7e1a-53.myshopify.com';
 const LS_SECRET          = 'bosta_orders_upload_worker_secret';   // السر هو الوحيد المخزَّن
@@ -3063,11 +3072,15 @@ const LOG_TYPE_ITEMS = [
   // 🔴 (v2.10.0) الإلغاء بقى شامل الشحن العادي — نوع منفصل عن `re_cancelled`
   //    لأنه بيتكتب تحت `tool = bosta_orders_upload` مش `bosta_exchange_export`.
   { value: 's1_cancelled',            label: '✕ إلغاء شحنة (شحن)' },
+  // 🔴 (v2.11.0) مسح التاج/الميتافيلد — أكشن منفصل عن الإلغاء، بنفس تفرقة
+  //    الـ `tool` بتاعة الإلغاء بالظبط.
+  { value: 's1_marks_cleared',        label: '🧹 مسح علامة الرفع (شحن)' },
   { value: 'upload_re_return',        label: '↩️ اترفع (استرجاع)' },
   { value: 'upload_re_exchange',      label: '🔄 اترفع (استبدال)' },
   { value: 're_upload_failed',        label: '↩️ فشل الرفع (استرجاع/استبدال)' },
   { value: 're_shopify_write_failed', label: '↩️ فشل الكتابة على شوبيفاي (استرجاع/استبدال)' },
   { value: 're_cancelled',            label: '✕ إلغاء شحنة' },
+  { value: 're_marks_cleared',        label: '🧹 مسح علامة الرفع (استرجاع/استبدال)' },
   { value: 'cycle_block',             label: '⛔ اتمنع بسبب الدورات' },
   { value: 'scan',                    label: '🔍 فحص' },
   { value: 'export_return',           label: '📄 تصدير إكسيل (استرجاع)' },
@@ -5224,6 +5237,11 @@ function startUpload() {
       (r.previousTracking
         ? ` <button class="mini-btn doubt" onclick="cancelShipment('${jsq(r.previousTracking)}','${jsq(r.orderId)}','${jsq(r.orderNumber)}',this)">🗑️ احذف الشحنة من بوسطة</button>`
         : '') +
+      // 🔴 زرار منفصل عمدًا (v2.11.0) — الحذف بيلغي عند بوسطة بس، وده بيمسح
+      // التاج/الميتافيلد القديم على شوبيفاي. باين حتى لو مفيش `previousTracking`
+      // («عليه تاج رفع» بس من غير رقم تتبع) — دي بالظبط الحالة اللي مفيش فيها
+      // شحنة تتلغي عند بوسطة أصلًا، ومسح العلامة هو الحل الوحيد للتكرار.
+      ` <button class="mini-btn doubt" onclick="clearUploadMarks('${jsq(r.orderId)}','${jsq(r.orderNumber)}',this)">🧹 امسح التاج/الميتافيلد</button>` +
       `</div>`
     ).join('');
     document.getElementById('dupOverlay').classList.add('open');
@@ -5451,6 +5469,47 @@ async function cancelShipment(trackingNumber, orderId, orderName, btn) {
   } catch (e) {
     showToast(`فشل الإلغاء: ${e.message}`, 'error', 8000);
     if (btn) { btn.disabled = false; btn.textContent = '✕ إلغاء الشحنة'; }
+  }
+}
+
+// ─── §TOOL-JS::clearUploadMarks ───
+// 🔴 أكشن منفصل عن `cancelShipment` عمدًا (v2.11.0 · طلب أحمد) — الإلغاء
+// بيلغي الشحنة عند بوسطة بس، وده بيمسح **علامة الرفع على شوبيفاي** (التاج +
+// الميتافيلد) اللي حارس الرفع المكرر بيقرا منها. مفيش نداء لبوسطة هنا خالص.
+// ⚠️ **استخدمه بس بعد ما تتأكد إن الشحنة القديمة اتلغت أو مش موجودة أصلًا** —
+// مسح العلامة من غير كده بيسيب الباب مفتوح لرفع مكرر بفلوس، وده السبب في
+// تحذير الـ `confirm()` الصريح تحت (مش تكرار لتحذير `cancelShipment`).
+async function clearUploadMarks(orderId, orderName, btn) {
+  const j = job();
+  const okGo = confirm(
+    `مسح علامة رفع ${orderName} من شوبيفاي؟\n\n`
+    + `• هيتشال التاج ${j.tag}.\n`
+    + `• وهيتمسح الميتافيلد custom.${j.trackingKey}.\n`
+    + '• استخدمها بس لو متأكد إن الشحنة القديمة اتلغت عند بوسطة أو مش موجودة أصلًا —\n'
+    + '  مسحها قبل كده بيسيب الأوردر يترفع تاني بشحنة مكررة بفلوس حقيقية.\n'
+    + '• حالة الأوردر على شوبيفاي مش هتتغيّر.',
+  );
+  if (!okGo) return;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ جاري المسح...'; }
+  try {
+    const res = await apiPost('clear_upload_marks', {
+      jobType: currentJobKey, employee: currentEmployee?.username || null,
+      orderId, orderName, reason: 'مسح من الأداة بعد إلغاء الشحنة',
+    });
+    if (res.tagCleared && res.mfCleared) {
+      showToast(`اتمسحت علامة الرفع ✓ — ${orderName} بقى قابل لرفع جديد`, 'success', 7000);
+      if (btn) { btn.textContent = '✓ اتمسحت العلامة'; }
+    } else {
+      showToast(
+        `اتمسح جزء بس: التاج ${res.tagCleared ? '✓' : '✗ ' + (res.tagError || '')} · `
+        + `الميتافيلد ${res.mfCleared ? '✓' : '✗ ' + (res.mfError || '')}`,
+        'warning', 9000,
+      );
+      if (btn) { btn.disabled = false; btn.textContent = '🧹 مسح العلامة (جزئي — أعد المحاولة)'; }
+    }
+  } catch (e) {
+    showToast(`فشل مسح العلامة: ${e.message}`, 'error', 8000);
+    if (btn) { btn.disabled = false; btn.textContent = '🧹 امسح التاج/الميتافيلد'; }
   }
 }
 
