@@ -454,8 +454,10 @@ function assertEnv(env, ...groups) {
 
 // ─── §HELPERS::time — `Africa/Cairo` يتحسب، مايتكتبش ثابت ───
 // نسخة **حرفية** من `ecommoda-constants` §13 — ونفس البلوك بالظبط في
-// `index.html`. الإزاحة ١٨٠ دقيقة صيفًا و١٢٠ شتاءً، ومصر بتوقف التوقيت الصيفي
-// 29-10-2026 — فأي ثابت مكتوب بالإيد بيغلط من غير ما الأداة تشتكي.
+// `Bosta-Orders-Upload.html` بتاع `Delivery-COD-Operations-Center` (الواجهة
+// مش عايشة في الريبو ده من v3.0.0 — راجع «مسائل مفتوحة» في `CLAUDE.md`).
+// الإزاحة ١٨٠ دقيقة صيفًا و١٢٠ شتاءً، ومصر بتوقف التوقيت الصيفي 29-10-2026 —
+// فأي ثابت مكتوب بالإيد بيغلط من غير ما الأداة تشتكي.
 const CAIRO_TZ = 'Africa/Cairo';
 const _cairoFmt = new Intl.DateTimeFormat('en-CA', {
   timeZone: CAIRO_TZ, hourCycle: 'h23',
