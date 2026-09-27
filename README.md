@@ -2,14 +2,19 @@
 
 # 🚚 رفع بوسطة — Bosta Upload
 
-![version](https://img.shields.io/badge/version-v2.16.0-blue)
+![version](https://img.shields.io/badge/version-v3.0.0-blue)
 
 **كل شحنات بوسطة من أداة واحدة.** بديل زرار **Send to Bosta** بتاع بلجن بوسطة
 على شوبيفاي للشحن العادي، **وبديل أداة `Bosta-Return-Exchange-Exporter` بالكامل**
 للاسترجاع والاستبدال (اتدمجت هنا في v2.0.0). الأداة بتعرض الأوردرات المؤهَّلة لكل
 نوع، والموظف بيرفعها **جماعيًا**، والأداة بتكتب النتيجة على شوبيفاي وبتسجّلها في D1.
 
-**الواجهة:** <https://ecommoda-dev.github.io/Bosta-Orders-Upload/>
+> 🔴 **من v3.0.0 (27-09-2026 · قرار أحمد): الريبو ده Worker بس — مفيش واجهة
+> هنا خالص.** `index.html` اتشال **بلا أي تحويل** (لا صفحة redirect ولا رسالة) —
+> الرابط القديم `https://ecommoda-dev.github.io/Bosta-Orders-Upload/` بقى
+> **404 صريح** من GitHub Pages نفسها. الواجهة الوحيدة الشغّالة دلوقتي
+> `Bosta-Orders-Upload.html` جوّه **`Delivery-COD-Operations-Center`**. التفاصيل
+> الكاملة (وليه اتقرر كده بعد ما كان القرار عكسه في v1.13.0) في `CLAUDE.md`.
 
 ---
 
@@ -180,34 +185,34 @@ v2.4.0). أول ما العنوان يطابق مدينة جوّه المحاف�
 |---|---|
 | `SPEC.md` | **العقد المرجعي** — كل قرار وفخ بمصدره. يتقرا قبل أي تعديل |
 | `CLAUDE.md` | ثوابت الأداة · الأسرار · فخاخها · بصمة المهارات · المسائل المفتوحة |
-| `index.js` | الـ Worker |
-| `index.html` | الواجهة (ملف واحد، GitHub Pages) |
+| `index.js` | الـ Worker — **الكود الوحيد في الريبو ده من v3.0.0** |
 | `wrangler.toml` | إعداد النشر |
 | `MERGE-BRIEF.md` | تكليف الدمج — الجرد والقرارات والفخاخ |
-| `tests/` | ١٣ مجموعة بـ Node عادي بلا تنصيب |
+| `tests/` | ٨ مجموعات بـ Node عادي بلا تنصيب — كلها بتفحص `index.js` (الـ Worker) بس |
 
 ```
 node tests/address-matching.test.cjs   # ترجيح مطابقة المنطقة
-node tests/row-state.test.cjs          # حالة الصف واستثناء «تحديد الكل»
-node tests/zone-label.test.cjs         # عرض الزون و«بلا زون»
 node tests/zone-cross-city.test.cjs    # اقتراح زون العبور
-node tests/zone-picker-flow.test.cjs   # رحلة الضغطة الواحدة
-node tests/bulk-and-pin.test.cjs       # «رفع الكل» + تثبيت المنطقة
-node tests/cairo-time.test.cjs         # إزاحة القاهرة المحسوبة
-node tests/worker-logs.test.cjs        # ترتيب السجل وحدوده
 node tests/re-payload.test.cjs         # عقد شحنة الاسترجاع/الاستبدال
 node tests/upload-flow.test.cjs        # مسار الرفع كامل على fetch مزيّف
-node tests/job-modes.test.cjs          # الأوضاع التلاتة في الواجهة
 node tests/re-endpoints.test.cjs       # الـ handler نفسه من الطلب للرد
-node tests/result-modal.test.cjs       # نافذة النتيجة · مربعات العدّادات · اسم «حالة العنوان»
-node tests/upload-confirm.test.cjs     # نافذة تأكيد الرفع · مربعات حالة العنوان · التثبيت الأخضر
+node tests/coverage-and-degree.test.cjs # التغطية المقفولة · درجة العنوان
+node tests/address-anchor.test.cjs     # المرساة — منطقة مخمّنة من كلمة واحدة
+node tests/worker-logs.test.cjs        # ترتيب السجل وحدوده
 ```
 
-النشر أوتوماتيك على `main` عبر Cloudflare Workers Builds. الواجهة على GitHub Pages.
+🔴 **وتسع مجموعات كانت بتحمّل `index.html` مباشرة اتشالت معاه** (v3.0.0):
+`bilingual-names` · `bulk-and-pin` · `cairo-time` · `job-modes` · `result-modal` ·
+`row-state` · `upload-confirm` · `zone-label` · `zone-picker-flow`. مكانها لو
+اتقرر يوم يتكتب اختبار للواجهة تاني هو `Delivery-COD-Operations-Center` —
+لسه بند مفتوح هناك (`CLAUDE.md` §«مسائل مفتوحة» هنا، بند صفر).
+
+النشر أوتوماتيك على `main` عبر Cloudflare Workers Builds. **مفيش GitHub Pages
+على الريبو ده من v3.0.0** — لا واجهة ولا تحويل.
 
 > 🔴 **مسار رفع الاسترجاع/الاستبدال ما اشتغلش حي ولا مرة.** قبل أي توسّع لازم
 > تشغيل مراقَب: صف واحد، يتراجع على داشبورد بوسطة. التفاصيل في `CLAUDE.md`.
 
-آخر تحديث: 17-09-2026 — 14:30
+آخر تحديث: 27-09-2026 — الريبو بقى Worker بس (v3.0.0)
 
 </div>
