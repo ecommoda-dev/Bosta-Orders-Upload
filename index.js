@@ -199,7 +199,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.12.0';
+const WORKER_VERSION = '2.13.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2464,12 +2464,17 @@ function resolveAddress(order, catalog) {
   // ❓ أكتر من مطابقة — **مفيش مرساة هنا عن قصد**: المرشحين متثبّتين أول
   //    القايمة، وبحث جاهز بيخفيهم بنفس القاعدة اللي فوق.
 
-  // 🎯 (قرار أحمد 26-09-2026) **احتمالين بالظبط**، وواحد منهم بس اسمه == اسم
-  //    الزون (المدينة) اللي الاتنين تابعين له — زي منطقة «بلقاس» جوّه مدينة
-  //    بوسطة «بلقاس» نفسها (#55191). بوسطة بتسمّي منطقة «مركز المدينة»
-  //    بنفس اسم المدينة نفسها كتير، فتكرار الاسم ده إشارة إن المطابقة دي
-  //    صدفة تسمية مش عنوان العميل — والاحتمال **التاني** غير المكرر هو
-  //    الأقرب للعنوان الحقيقي. بيترفع عليه تلقائيًا بلا مراجعة يدوية.
+  // 🎯 (قرار أحمد 26-09-2026 — **اتلغى بادجه المستقل بقرار أحمد 27-09-2026**)
+  //    **احتمالين بالظبط**، وواحد منهم بس اسمه == اسم الزون (المدينة) اللي
+  //    الاتنين تابعين له — زي منطقة «بلقاس» جوّه مدينة بوسطة «بلقاس» نفسها
+  //    (#55191). بوسطة بتسمّي منطقة «مركز المدينة» بنفس اسم المدينة نفسها
+  //    كتير، فتكرار الاسم ده إشارة إن المطابقة دي صدفة تسمية مش عنوان العميل
+  //    — والاحتمال **التاني** غير المكرر هو الأقرب للعنوان الحقيقي. بيترفع
+  //    عليه تلقائيًا بلا مراجعة يدوية، **وبقى بيرجع بنفس شكل مطابقة واحدة
+  //    بالظبط** (`mode: 'district'` بلا أي علم تمييز) — قرار أحمد إن الحالة
+  //    دي تتعرض «مطابقة مؤكَّدة» زي أي مطابقة كاملة، مش حالة وسطى ليها بادج
+  //    وتحذير مستقلين. الاستبعاد نفسه (تفضيل الاحتمال غير المكرر) فضل زي ما
+  //    هو — اللي اتشال هو **التمييز** بس.
   //    ⛔ **العدد لازم يبقى ٢ بالظبط.** ٣ احتمالات فأكتر بتفضل `ambiguous`
   //    زي ما هي — نفس القاعدة تبقى تخمين أضعف مع مرشحين تلاتة فأكتر (مين
   //    المكرر ومين الصح مش واضح زي حالة الاتنين بالظبط)، فالمراجعة اليدوية
@@ -2483,17 +2488,12 @@ function resolveAddress(order, catalog) {
       return (!!n && !!zn && n === zn) || (!!na && !!zna && na === zna);
     });
     if (sameZone[0] !== sameZone[1]) {
-      const pick    = matches[sameZone[0] ? 1 : 0];
-      const dropped = matches[sameZone[0] ? 0 : 1];
+      const pick = matches[sameZone[0] ? 1 : 0];
       return {
         ...base, mode: 'district', ambiguous: false,
         districtId: pick.id, districtName: pick.name, districtNameAr: pick.nameAr || '',
         districtZoneId: pick.zoneId || null, districtZoneName: pick.zone || '',
         districtZoneNameAr: pick.zoneAr || '',
-        // 🔴 مش `districtFromAnchor` — مصدر التخمين مختلف (استبعاد تكرار
-        //    مع اسم المدينة، مش مرساة كلمة واحدة). الواجهة بتلوّن وتسمّي منه.
-        districtFromCityTiebreak: true,
-        cityTiebreakDropped: { id: dropped.id, name: dropped.name, nameAr: dropped.nameAr || '' },
       };
     }
   }
@@ -2936,10 +2936,6 @@ function buildRow(order, catalog) {
     // 🔴 `mode` بيقول `district` في الحالتين — العلم ده هو **الفرق الوحيد**
     //    بين مطابقة اسم كامل ومرساة كلمة واحدة، والواجهة بتلوّن وتسمّي منه.
     districtFromAnchor: plan.ok ? !!plan.districtFromAnchor : false,
-    // 🎯 اختيار تلقائي عن غموض احتمالين تكرّر فيهم اسم المنطقة مع اسم الزون
-    //    — نفس فكرة `districtFromAnchor` فوق، بمصدر تخمين مختلف.
-    districtFromCityTiebreak: plan.ok ? !!plan.districtFromCityTiebreak : false,
-    cityTiebreakDropped: plan.ok ? (plan.cityTiebreakDropped || null) : null,
     // 🔴 العنوان طابق منطقة **مقفولة للتسليم** — برّه تغطية بوسطة (8.11).
     //    بتترجع بالاسم عشان الموظف يشوف السبب، مش «مفيش مطابقة» صامتة.
     blockedDistricts: plan.ok ? (plan.blockedDistricts || []) : [],
@@ -3872,8 +3868,6 @@ function buildReRow(order, catalog, job, cycleAnalysis) {
     // 🔍 نفس `§UPLOAD::buildRow` بالحرف — النافذة واحدة للتلات أوضاع
     addressAnchor: plan.ok ? (plan.addressAnchor || null) : null,
     districtFromAnchor: plan.ok ? !!plan.districtFromAnchor : false,
-    districtFromCityTiebreak: plan.ok ? !!plan.districtFromCityTiebreak : false,
-    cityTiebreakDropped: plan.ok ? (plan.cityTiebreakDropped || null) : null,
     blockedDistricts:  plan.ok ? (plan.blockedDistricts || []) : [],
     catalogWarning: plan.ok ? plan.catalogWarning : null,
     problems,
