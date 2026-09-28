@@ -37,7 +37,9 @@ const catalog = { cities: [
   { cityId:'yp3atroeTwnyiBNKE', cityName:'El Kalioubia', cityAr:'القليوبية', districts:[
       D('q1','Banha','بنها'), D('q2','Qalyub','قليوب'), D('q3','Shubra El Kheima','شبرا الخيمة') ]},
   { cityId:'ruBSjGBDX9wpRa3cc', cityName:'Monufia', cityAr:'المنوفية', districts:[
-      D('m1','Shebin El Kom','شبين الكوم') ]},
+      D('m1','Shebin El Kom','شبين الكوم'),
+      // #56584 — اسم بوسطة الرسمي «مدينة منوف»، والعميل كتب «منوف» بلا اللقب
+      D('m2','Menouf City','مدينة منوف') ]},
   { cityId:'K3RwC677J8kJytdZD', cityName:'Gharbia', cityAr:'الغربية', districts:[
       D('g1','Tanta','طنطا'), D('g2','El Santa','السنطة') ]},
   { cityId:'qoZvYcZ8Cqji4pGp5', cityName:'Damietta', cityAr:'دمياط', districts:[
@@ -76,6 +78,11 @@ const cases = [
   ['طلخا/كفر سعد/شربين (٣ احتمالات) = غموض', {city:'الدقهلية', address1:'طلخا كفر سعد شربين', province:'Dakahlia', provinceCode:'DK'}, 'ambiguous'],
   // محافظة مش في الجدول = وقف صريح، مش تخمين
   ['محافظة مش في الجدول',        {city:'مكان', address1:'عنوان', province:'Nowhere', provinceCode:'ZZ'}, 'BLOCKED'],
+  // #56584 (v2.15.0) — اسم بوسطة الرسمي «مدينة منوف»، والعميل كتب «منوف»
+  // بلا اللقب الإداري. قبل التجريد كان ده بيفشل محليًا ويوقع على `province`
+  // (أو `cityDoubt` لو فيه كلمة عامة زي «البحري» طابقت منطقة في محافظة تانية).
+  // بعد `stripAdminPrefix` المفروض يطابق «مدينة منوف» محليًا من أول خانة.
+  ['#56584 منوف — تجريد «مدينة»', {city:'منوف', address1:'المنوفيه منوف سدود قريه بجوار المسجد البحري - منوف', province:'Monufia', provinceCode:'MNF'}, 'Menouf City'],
 ];
 
 let pass = 0;

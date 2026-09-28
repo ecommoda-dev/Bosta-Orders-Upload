@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.14.0';
+const WORKER_VERSION = '2.15.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -1885,6 +1885,39 @@ function availableDistricts(city) {
   return { list, blocked, fieldMissing };
 }
 
+// ─── §BOSTA::ADMIN_PREFIXES — v2.15.0 (28-09-2026 · طلب أحمد) ───
+// 🔴 بادئات إدارية مصرية **مقفولة** (تصنيف رسمي محدود — مش قايمة كلمات عامة).
+//    بتتشال من أول اسم المنطقة **في الكتالوج نفسه** بس، مش من نص العميل —
+//    فرق جوهري عن أي قايمة استبعاد على العنوان الحر: دي عدد ثابت ومعروف من
+//    أسماء بوسطة (٥ لقب إداري)، مش تخمين على كلمات العميل المفتوحة.
+// 🔴 السبب: العميل بيكتب اسم المكان **بلا اللقب الإداري** كعادة («منوف» بدل
+//    «مدينة منوف»)، والمحرك بيدوّر على الاسم **الكامل** كسلسلة واحدة —
+//    فمطابقة فشلت على أوردر #56584 (المنوفية) رغم إن «منوف» مكتوبة صراحةً.
+// ⚠️ بعد `normText()` تاء مربوطة وهاء بيتوحّدوا (ة→ه)، فـ«مدينة»/«مدينه» و
+//    «منطقة»/«منطقه» بيبقوا نفس الكلمة المطبَّعة — القايمة هنا مكتوبة بالشكلين
+//    عن قصد (طلب أحمد) رغم التكرار البرمجي، عشان تفضل مقروءة من غير ما حد
+//    يفتكر إن إحدى الهجاءين ناقصة.
+// ⚠️ **`حي` قصيرة ومخاطرها موجودة** — «حي الجديد» بعد التجريد بيبقى «الجديد»
+//    وهي كلمة عامة أوسع من أي بادئة تانية هنا. الحد الوحيد عليها هو نفس حد
+//    الأربعة الباقيين: طول ≥٣ حرف بعد التجريد + شرط الفرادة (منطقة واحدة بس
+//    بتحتوي الكلمة المتبقية) — لو النسبة طلعت عالية في القياس، ده أول مرشّح
+//    للمراجعة.
+const ADMIN_PREFIXES = [...new Set(
+  ['مدينة', 'مدينه', 'مركز', 'قسم', 'حي', 'منطقة', 'منطقه'].map(normText),
+)];
+
+// كلمة أولى من الاسم المطبَّع لو كانت بادئة إدارية معروفة، بترجّع الباقي
+// بعد شيلها — و`null` لو مفيش بادئة أو لو الباقي فاضي (اسم المنطقة كله لقب).
+function stripAdminPrefix(nameN) {
+  if (!nameN) return null;
+  const sp = nameN.indexOf(' ');
+  if (sp < 0) return null;
+  const head = nameN.slice(0, sp);
+  if (!ADMIN_PREFIXES.includes(head)) return null;
+  const rest = nameN.slice(sp + 1).trim();
+  return rest || null;
+}
+
 // ─── §BOSTA::ensureNormalized ───
 // الأسماء المطبَّعة بتتحسب مرة واحدة على الكتالوج بدل مرة لكل أوردر. الكتالوج
 // بييجي أحيانًا من كاش قديم اتكتب قبل الحقول دي — فالتعبئة كسولة، مش مفترضة.
@@ -1896,6 +1929,11 @@ function ensureNormalized(catalog) {
     for (const d of c.districts) {
       d.nameN   = normText(d.name);
       d.nameArN = normText(d.nameAr);
+      // 🔴 نسخة تانية من الاسم **بلا اللقب الإداري** (لو موجود) — تُجرَّب
+      //    كبديل لما الاسم الكامل مايطابقش (`matchDistrictsIn`). مش بديل
+      //    عن الاسم الكامل، تجربة إضافية بعده.
+      d.nameStrippedN   = stripAdminPrefix(d.nameN);
+      d.nameArStrippedN = stripAdminPrefix(d.nameArN);
       // 🔴 «عامّة» = اسم المنطقة هو اسم المدينة/المحافظة نفسها. العميل بيكتب اسم
       //    محافظته في العنوان كعادة، فالمطابقة دي بتحمل معلومة شبه صفرية —
       //    وهي اللي كانت بتكسب بالطول وتبعت الشحنة لفرع غلط (#53834 · #53818).
@@ -2030,8 +2068,12 @@ function matchDistrictsIn(city, fields, zoneOnly, sourceList) {
     const ftext = f.textN;
     if (!ftext) continue;
     for (const d of pool) {
-      for (const n of [d.nameN, d.nameArN]) {
+      // 🔴 الاسمين الكاملين أولًا، وبعدهم الاسمين **بلا اللقب الإداري** —
+      //    `break` بيقف عند أول مطابقة، فالاسم الكامل بياخد أولوية طبيعية
+      //    ولا يتلمسش لو نجح؛ التجريد بيتجرّب بس لما الكامل يفشل (v2.15.0).
+      for (const n of [d.nameN, d.nameArN, d.nameStrippedN, d.nameArStrippedN]) {
         if (!n || n.length < 3 || !ftext.includes(n)) continue;
+        const isAr = n === d.nameArN || n === d.nameArStrippedN;
         const hit = {
           id: d.id, name: d.name, nameAr: d.nameAr, zone: d.zone,
           // 🔴 مضافة (عمود «مدينة بوسطة» الجديد في الجدول) — الزون كان موجود
@@ -2039,7 +2081,7 @@ function matchDistrictsIn(city, fields, zoneOnly, sourceList) {
           //    مش حساب جديد، والمطابقة والـ payload ما اتغيّروش حرف.
           zoneAr: d.zoneAr, zoneId: d.zoneId || null,
           tier: f.tier, field: f.key, fieldLabel: f.label,
-          matched: n, matchedText: n === d.nameArN ? d.nameAr : d.name,
+          matched: n, matchedText: isAr ? d.nameAr : d.name,
           exact: ftext === n, generic: !!d.generic,
         };
         const prev = best.get(d.id);
