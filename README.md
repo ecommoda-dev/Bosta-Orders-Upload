@@ -188,7 +188,7 @@ v2.4.0). أول ما العنوان يطابق مدينة جوّه المحاف�
 | `index.js` | الـ Worker — **الكود الوحيد في الريبو ده من v3.0.0** |
 | `wrangler.toml` | إعداد النشر |
 | `MERGE-BRIEF.md` | تكليف الدمج — الجرد والقرارات والفخاخ |
-| `tests/` | ٨ مجموعات بـ Node عادي بلا تنصيب — كلها بتفحص `index.js` (الـ Worker) بس |
+| `tests/` | ٧ مجموعات بـ Node عادي بلا تنصيب — كلها بتفحص `index.js` (الـ Worker) بس |
 
 ```
 node tests/address-matching.test.cjs   # ترجيح مطابقة المنطقة
@@ -197,9 +197,11 @@ node tests/re-payload.test.cjs         # عقد شحنة الاسترجاع/ال
 node tests/upload-flow.test.cjs        # مسار الرفع كامل على fetch مزيّف
 node tests/re-endpoints.test.cjs       # الـ handler نفسه من الطلب للرد
 node tests/coverage-and-degree.test.cjs # التغطية المقفولة · درجة العنوان
-node tests/address-anchor.test.cjs     # المرساة — منطقة مخمّنة من كلمة واحدة
 node tests/worker-logs.test.cjs        # ترتيب السجل وحدوده
 ```
+
+🔴 **`tests/address-anchor.test.cjs` اتشال (v2.14.0)** — «🔍 مرشّح تلقائي»
+(المرساة) اتلغت نهائيًا من الكود، فمفيش منطق يتقاس.
 
 🔴 **وتسع مجموعات كانت بتحمّل `index.html` مباشرة اتشالت معاه** (v3.0.0):
 `bilingual-names` · `bulk-and-pin` · `cairo-time` · `job-modes` · `result-modal` ·
