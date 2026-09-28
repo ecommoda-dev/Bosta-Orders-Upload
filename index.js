@@ -108,42 +108,22 @@
 //    بيتكتب صف مع كل فتحة شاشة وكل تبديل وضع وكل «تحديث» — قراءة مالهاش أي
 //    أثر بتغرّق صفوف الرفع الحقيقية. الصفوف التاريخية ما اتمسحتش.
 //
-// v2.5.0 (17-09-2026) — **المرساة · وقياس التدخّل اليدوي.**
-// ① 🔍 `§BOSTA::findAddressAnchor` — كلمة من العنوان موجودة في اسم منطقة
-//    **واحدة بس** في المحافظة، بترجع في الصف (`addressAnchor`) والواجهة
-//    بتفتح بيها خانة البحث في نافذة اختيار المنطقة. **مش قرار ومش اقتراح
-//    منطقة**: الصف بيفضل «🏙️ المحافظة فقط» وموقوف لحد التأكيد اليدوي زي ما
-//    هو، والدرجة والـ payload ما اتغيّروش. السبب مقيس على `#55065`: العميل
-//    كتب «الكينج مريوط» والمنطقة «كنج مريوط» — فرق حرف واحد أسقط المطابقة،
-//    والموظف كتب «مريوط» بإيده ولقى الصف من أول نتيجة.
-//    🔴 بتتحسب في فرع «المحافظة فقط» **غير المشكوك في مدينته** وبس — أي فرع
-//    تاني بيثبّت حاجة أول القايمة، والنافذة بتخفيها لما البحث يتملا.
-// ② 📊 السجل بقى بيفرّق بين مطابقة نجحت وموظف صلّحها: `district_overridden` ·
-//    `degree_forced` · `address_anchor` · `anchor_hit`. قبل كده `district_sent`
-//    كان بيتكتب في الحالتين، يعني **نسبة نجاح المطابقة مش قابلة للقراءة من
-//    السجل أصلًا** — وأي قرار عن تحسين المطابقة بيتاخد على تقدير مش على رقم.
-//    `anchor_hit` تحديدًا هو اللي هيقول لو المرساة تستاهل تبقى اقتراح قابل
-//    للضغط بعدين (بند ١٩ المفتوح) — مش قرار يتاخد دلوقتي بالتخمين.
-//
-// v2.6.0 (17-09-2026) — **المرساة بقت بتتطبّق** (قرار أحمد).
-// 🔴 الصف اللي المطابقة فشلت فيه ولقيناله مرساة **بيترفع على منطقتها**: كان
-//    بينزل «المحافظة فقط» وموقوف لحد تأكيد يدوي، وبقى `mode: 'district'`
-//    ومعاه `districtId` وقابل للرفع **وداخل «رفع الكل»** (طلب أحمد صراحةً).
-//    السبب: الصف كان محتاج ٣ ضغطات (افتح · اختر · أكّد) على منطقة الأداة
-//    عارفاها أصلًا.
-// 🔴 **و`mode` فضل `district` عن قصد، والفرق في علم منفصل** —
-//    `districtFromAnchor`. قيمة رابعة للـ`mode` كانت هتطلب فرع جديد في
-//    `buildAddressObject` و`addressDegree` و`nextAddressDegree` وسلّم النزول،
-//    وأي واحدة تنساها = 400 من بوسطة أو درجة غلط في D1 **في صمت**. اللي
-//    اتغيّر مصدر الـ`districtId` وعرضه، مش عقد العنوان.
-// 🔴 **والواجهة بتعرضها «🔍 مرشّح تلقائي» مش «📍 عنوان مظبوط»** — مطابقة اسم
-//    كامل ومرساة كلمة واحدة مش نفس الثقة، وتوحيد البادج بيخلي الموظف يعدّي
-//    على تخمين وهو فاكره حقيقة.
-// 📊 و`anchor_applied` اتضاف للسجل، و**معنى `anchor_hit` اتقلب**: بقى
-//    `false` = الموظف صحّح المرساة (خطأ اتمسك)، و`null` = ما لمسش (موافق
-//    ضمنيًا). النسبة دي هي معدّل الخطأ الفعلي — بند ١٩.
-// ⚠️ **والمرساة لسه بتتلغي لو المدينة مشكوك فيها** (`cityDoubt`) — اقتراح
-//    المحافظة التانية إشارة أقوى، وتطبيق منطقة فوق شك بيثبّت الشك.
+// v2.14.0 (28-09-2026) — **«🔍 مرشّح تلقائي» (المرساة) اتلغى نهائيًا** (طلب
+// أحمد). `findAddressAnchor` ومعاها `addressAnchor`/`districtFromAnchor`/
+// `anchorHit`/`anchorApplied` وكل التسجيل المرتبط بيهم في D1 (`address_anchor`
+// · `anchor_applied` · `anchor_hit`) اتشالوا بالكامل من الكود — كأن الميزة
+// دي ماكانتش موجودة. الصف اللي كان بياخد مرساة بيفضل دلوقتي على `mode:
+// 'province'` زي أي صف مالوش مطابقة منطقة، وبيحتاج تأكيد يدوي عادي.
+// 🔴 السبب: قياس حي على أوردر `#56584` كشف عطل هيكلي مش في المرساة نفسها —
+//    العنوان فيه «منوف» (اسم مدينة حقيقي داخل المنوفية) بس اسم المنطقة عند
+//    بوسطة «مدينة منوف» كامل، فالمطابقة المحلية فشلت من الأصل. ولأن
+//    `cityDoubt` بيلغي المرساة، والصف كان أصلًا واقع في `cityDoubt` بسبب
+//    كلمة عامة («البحري» في «المسجد البحري» طابقت منطقة حقيقية اسمها «بحري»
+//    في الإسكندرية)، المرساة ماكانتش هتوصل للحل الصح أصلًا هنا. القرار: صفوف
+//    زي دي تتراجع يدويًا زي أي «محافظة فقط»، مش تترفع على تخمين كلمة واحدة.
+// ⚠️ صفوف D1 التاريخية فيها `address_anchor`/`anchor_hit`/`anchor_applied`
+//    فضلت زي ما هي (جوّه `extra` JSON، بلا migration) — القيم دي بقت مفاتيح
+//    مهجورة من v2.14.0.
 //
 // v2.7.0 (17-09-2026) — **الملحوظة الإعلامية اتفصلت عن التحذير الناقص**
 // (طلب أحمد، على حالة حقيقية: `#54618` اترفع صح بالكامل — شحنة · رقم تتبع ·
@@ -199,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.13.0';
+const WORKER_VERSION = '2.14.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2167,99 +2147,6 @@ function findLocalZones(city, fields) {
     }));
 }
 
-// ─── §BOSTA::findAddressAnchor ───
-// 🔍 «المرساة» — كلمة **واحدة** من العنوان موجودة جوّه اسم منطقة **واحدة بس**
-//    في المحافظة دي. دي **مش** مطابقة ومش اقتراح منطقة: دي **نص بحث** الواجهة
-//    بتفتح بيه خانة البحث في نافذة اختيار المنطقة، عشان الموظف يلاقي الصف
-//    قدامه بدل ما يدوّر في ٢٢١ منطقة (الإسكندرية) أو ٥٩٠ (القاهرة).
-//
-// 🔴 ليه أصلًا: محرك المطابقة بيسأل «هل العنوان فيه اسم المنطقة **كاملًا**؟»
-//    وده حدّه المعروف (SPEC §٥.٤.١). مقيس على `#55065`: العميل كتب
-//    «الكينج مريوط» والمنطقة عند بوسطة اسمها «كنج مريوط» — **فرق حرف واحد**
-//    (ي)، فالمطابقة فشلت والصف نزل «المحافظة فقط». وكلمة «مريوط» لوحدها
-//    موجودة في اسم منطقة **واحدة بالظبط** في الإسكندرية، وهي كل اللي الموظف
-//    كان محتاجه عشان يوصل — وهو فعلًا كتبها بإيده.
-//
-// 🔴 **مابيغيّرش أي حاجة في القرار.** مابيلمسش `mode` ولا `districtId` ولا
-//    `uploadable` ولا الـ payload: الصف بيفضل «🏙️ المحافظة فقط» وموقوف لحد
-//    التأكيد اليدوي زي ما هو بالظبط، والفرق الوحيد إن خانة البحث بتفتح مليانة.
-//    ده مقصود — «ضغطة واحدة تظبّط المكان» على صف سليم هي بالظبط اللي كانت
-//    هتنقل `#54863` لمحافظة غلط (v2.4.0)، فالمرساة **بتختصر البحث، مش القرار**.
-//
-// 🔴 **شرط الفرادة هو الحارس الوحيد، وهو بيصين نفسه.** كلمة موجودة في أكتر من
-//    منطقة (`كفر` · `ميت` · `نجع` · `مدينة`) بتسقط لوحدها من غير قايمة استبعاد
-//    محتاجة صيانة — وكل ما المحافظة تكبر، الشرط يبقى **أصعب** مش أسهل.
-//
-// ⚠️ **والنص المرجوع كلمة من اسم المنطقة نفسها زي ما هو مكتوب في الكتالوج، مش
-//    الكلمة المطبَّعة.** بحث الواجهة بيقارن على النص **الخام** (`d.name` ·
-//    `d.nameAr`)، و`normText` بتحوّل ة→ه وى→ي — فكلمة مطبَّعة زي «المنشيه» كانت
-//    هترجّع «مفيش مناطق مطابقة» على منطقة اسمها «المنشية» **من غير أي خطأ**.
-const ANCHOR_MIN_LEN       = 4;   // أقصر من كده ضوضاء — نفس عتبة `CROSS_MIN_LEN`
-const ANCHOR_MAX_TOKENS    = 16;  // سقف الكلمات المفحوصة لكل خانة
-const ANCHOR_MAX_DISTRICTS = 1;   // 🔴 الفرادة. تكبيره بيوسّع التغطية وبيضعّف الإشارة.
-
-// كلمة من الاسم **الخام** بتطابق الكلمة المطبَّعة — مصدر النص اللي الواجهة
-// بتبحث بيه. بترجّع `null` لو مفيش، والمرساة ساعتها بتتلغي بدل ما تترجع بنص
-// مش هيلاقي حاجة في القايمة.
-function rawWordFor(rawName, token) {
-  for (const w of String(rawName || '').split(/[^\p{L}\p{N}]+/u)) {
-    if (w && normText(w).includes(token)) return w;
-  }
-  return null;
-}
-
-function findAddressAnchor(city, fields) {
-  // 🔴 نفس حارس `findLocalZones`: المدينة ممكن تبقى `null` لو الكتالوج اتغيّر،
-  //    وأوردر واحد بيرمي هنا بيوقّع `get_orders` / `fetch_candidates` كلها.
-  if (!city) return null;
-  const { list } = availableDistricts(city);
-  if (!list.length) return null;
-
-  const seen = new Set();
-  // الخانات مرتّبة بالأخصّية أصلًا (`city` ← `address1` ← `address2`)
-  for (const f of fields) {
-    // ⚠️ الفلترة **قبل** السقف — السقف للأداء، وتطبيقه على الخام كان بيرمي
-    //    كلمات معتبرة عشان أرقام ومسافات قبلها. و`\p{L}` بتشيل أرقام المباني
-    //    والشوارع: رقم مالوش أي معنى كمرساة.
-    const toks = [...new Set(f.textN.split(' '))]
-      .filter(t => t.length >= ANCHOR_MIN_LEN && /\p{L}/u.test(t))
-      .slice(0, ANCHOR_MAX_TOKENS)
-      .sort((a, b) => b.length - a.length);   // الأطول أولًا — الأخصّ
-    for (const t of toks) {
-      if (seen.has(t)) continue;
-      seen.add(t);
-      // اسم المحافظة نفسه معلومة شبه صفرية — نفس منطق `generic` بالظبط
-      if (t === city.cityNameN || t === city.cityArN) continue;
-      let hit = null, count = 0;
-      for (const d of list) {
-        if (!(d.nameN || '').includes(t) && !(d.nameArN || '').includes(t)) continue;
-        hit = d;
-        if (++count > ANCHOR_MAX_DISTRICTS) break;
-      }
-      if (!hit || count > ANCHOR_MAX_DISTRICTS) continue;
-      const text = rawWordFor((hit.nameArN || '').includes(t) ? hit.nameAr : hit.name, t);
-      if (!text) continue;
-      return {
-        text,                       // اللي بيتكتب في خانة البحث — كلمة من اسم المنطقة الخام
-        token: t,                   // الكلمة المطبَّعة اللي جت من العنوان (للتشخيص)
-        fieldLabel: f.label,
-        // 🔴 للقياس فقط (`anchor_hit` في السجل) — **ممنوع** أي تطبيق تلقائي
-        //    منه. القرار قرار الموظف، والرقم ده هو اللي هيقول بعدين لو الطبقة
-        //    دي تستاهل تتحوّل لاقتراح قابل للضغط (بند ١٩ المفتوح).
-        districtId: hit.id,
-        districtName: hit.name,
-        districtNameAr: hit.nameAr,
-        // 🔴 مضافة لعمود «مدينة بوسطة» — نفس الزون المخزّن على المنطقة في
-        //    الكتالوج، مش تخمين جديد.
-        zoneId: hit.zoneId || null,
-        zoneName: hit.zone || '',
-        zoneNameAr: hit.zoneAr || '',
-      };
-    }
-  }
-  return null;
-}
-
 // ─── §BOSTA::resolveAddress ───
 // خوارزمية اختيار شكل العنوان لكل أوردر (SPEC §٥.٤):
 //   province → cityId حتميًا من الجدول المقفول (ممنوع مطابقة نصية بديلة)
@@ -2330,10 +2217,6 @@ function resolveAddress(order, catalog) {
     crossCity: [],
     localZones: [],
     blockedDistricts: [],
-    // 🔍 المرساة — بتتحسب في فرع «مفيش مطابقة» لوحده (تحت)
-    addressAnchor: null,
-    // 🔴 الـ`districtId` جه من المرساة (كلمة واحدة) مش من مطابقة اسم كامل؟
-    districtFromAnchor: false,
   };
 
   if (matches.length === 1) {
@@ -2420,45 +2303,12 @@ function resolveAddress(order, catalog) {
       };
     }
 
-    // 🔍 المرساة — **بقت بتتطبّق فعلًا** (v2.6.0 · قرار أحمد 17-09-2026).
-    //    لحد v2.5.0 كانت نص بحث بس والصف بينزل «المحافظة فقط» موقوف؛ دلوقتي
-    //    الـ`districtId` بتاعها **بيترفع** والصف قابل للرفع وداخل «رفع الكل».
-    // 🔴 و**بتتلغي لو المدينة مشكوك فيها** — اقتراح المحافظة التانية إشارة
-    //    أقوى، وتطبيق منطقة جوّه محافظة مشكوك فيها بيثبّت الشك بدل ما يراجعه.
-    const addressAnchor = cityDoubt ? null : findAddressAnchor(city, fields);
-
-    if (addressAnchor) {
-      // 🔴 **`mode` بيفضل `district` عن قصد — مش قيمة جديدة.** كل اللي تحت
-      //    (`buildAddressObject` · `addressDegree` · `nextAddressDegree` ·
-      //    سلّم النزول) بيقرا `mode`، وقيمة رابعة كانت معناها فرع جديد في
-      //    **أربع** دوال، وأي واحدة تنساها بتدّي 400 من بوسطة أو درجة غلط في
-      //    D1 **في صمت**. اللي بيتغيّر هو **مصدر** الـ`districtId` وعرضه —
-      //    مش عقد العنوان. والعلم `districtFromAnchor` هو اللي بيحمل الفرق.
-      // ⚠️ والـ`localZones` بتتبعت زي ما هي: لو بوسطة رفضت المنطقة بـ`3003`،
-      //    سلّم النزول بيروح للمدينة ثم المحافظة زي أي صف منطقة بالظبط.
-      return {
-        ...base, mode: 'district', ambiguous: false,
-        districtId: addressAnchor.districtId,
-        districtName: addressAnchor.districtName,
-        districtNameAr: addressAnchor.districtNameAr || '',
-        // 🔴 `districtZone*` للعرض بس — زون المنطقة اللي المرساة وصلت لها.
-        //    نفس سبب تسمية فرع المطابقة الكاملة فوق: `zoneId`/`zoneName` اسم
-        //    محجوز لدرجة الرفع بالزون وسلّم النزول.
-        districtZoneId: addressAnchor.zoneId || null,
-        districtZoneName: addressAnchor.zoneName || '',
-        districtZoneNameAr: addressAnchor.zoneNameAr || '',
-        // 🔴 الواجهة بتقرا منه عشان تعرض «🔍 مرشّح تلقائي» بدل «📍 عنوان
-        //    مظبوط» — مطابقة اسم كامل ومرساة كلمة واحدة **مش نفس الثقة**،
-        //    وعرضهم بنفس البادج بيخلي الموظف يعدّي على تخمين وهو فاكره حقيقة.
-        districtFromAnchor: true,
-        addressAnchor,
-        localZones, crossCity, cityDoubt,
-      };
-    }
-
+    // 🔴 «🔍 مرشّح تلقائي» (المرساة) اتلغى نهائيًا v2.14.0 — الصف اللي ماله
+    //    مطابقة منطقة (وماله زون محلي واحد) بيوقع هنا على طول على `province`،
+    //    بلا أي محاولة تخمين من كلمة واحدة.
     return {
       ...base, mode: 'province', ambiguous: false,
-      localZones, crossCity, cityDoubt, addressAnchor,
+      localZones, crossCity, cityDoubt,
     };
   }
   // ❓ أكتر من مطابقة — **مفيش مرساة هنا عن قصد**: المرشحين متثبّتين أول
@@ -2931,11 +2781,6 @@ function buildRow(order, catalog) {
     districtZoneId:     plan.ok ? (plan.districtZoneId || null) : null,
     districtZoneName:   plan.ok ? (plan.districtZoneName || null) : null,
     districtZoneNameAr: plan.ok ? (plan.districtZoneNameAr || '') : '',
-    // 🔍 المرساة — الكلمة اللي وصلت للمنطقة دي، والواجهة بتعرضها كسبب.
-    addressAnchor: plan.ok ? (plan.addressAnchor || null) : null,
-    // 🔴 `mode` بيقول `district` في الحالتين — العلم ده هو **الفرق الوحيد**
-    //    بين مطابقة اسم كامل ومرساة كلمة واحدة، والواجهة بتلوّن وتسمّي منه.
-    districtFromAnchor: plan.ok ? !!plan.districtFromAnchor : false,
     // 🔴 العنوان طابق منطقة **مقفولة للتسليم** — برّه تغطية بوسطة (8.11).
     //    بتترجع بالاسم عشان الموظف يشوف السبب، مش «مفيش مطابقة» صامتة.
     blockedDistricts: plan.ok ? (plan.blockedDistricts || []) : [],
@@ -2981,19 +2826,6 @@ async function uploadOne(env, token, order, catalog, override) {
     //    المطابقة بيتاخد على تقدير مش على رقم.
     districtOverridden: false,  // الموظف اختار المنطقة بإيده؟
     degreeForced: null,         // 'zone' · 'province' — تثبيت يدوي على درجة أقل
-    addressAnchor: null,        // نص المرساة اللي النافذة فتحت بيه (لو فيه)
-    // 🎯 المعنى **اتقلب في v2.6.0** — المرساة بقت بتتطبّق لوحدها، فالموظف
-    //    اللي موافق عليها **مابيلمسش حاجة**:
-    //      `null`  = ما اختارش منطقة بإيده (موافق ضمنيًا · أو مفيش مرساة)
-    //      `true`  = اختار بإيده **نفس** منطقة المرساة (تأكيد صريح)
-    //      `false` = اختار **غيرها** ← 🔴 **المرساة كانت غلط والموظف مسكها**
-    //    `false` هو **إشارة الخطأ الوحيدة** دلوقتي، ونسبته لإجمالي الصفوف
-    //    اللي فيها مرساة هي معدّل الخطأ الفعلي (بند ١٩).
-    anchorHit: null,
-    // 🎯 الشحنة اتعملت على منطقة المرساة فعلًا؟ بيتحسب في `applyDegree` من
-    //    **الدرجة اللي اتبعتت فعلًا** مش من النيّة — لو بوسطة رفضت المنطقة
-    //    ونزلنا للمدينة، المرساة ما اتطبقتش على الشحنة اللي موجودة دلوقتي.
-    anchorApplied: false,
     error: null,
     warnings: [],
     // ─── ℹ️ ملحوظات إعلامية — منفصلة عن `warnings` عن قصد (v2.7.0) ───
@@ -3011,7 +2843,6 @@ async function uploadOne(env, token, order, catalog, override) {
   };
 
   const plan = resolveAddress(order, catalog);
-  row.addressAnchor = plan.addressAnchor?.text || null;
   // 🔴 الـ `override` بيتبعت للڤاليديشن **قبل** ما يتطبّق تحت، وده مقصود:
   //    حارس التغطية الوحيد اللي بيتأثر بيه (`coverageProblems`) لازم يعرف إن
   //    الموظف بدّل المنطقة، وإلا الصف بيترفض هنا ويرجع قبل ما الكود يوصل أصلًا
@@ -3067,8 +2898,6 @@ async function uploadOne(env, token, order, catalog, override) {
     planUsed.districtId = d.id;
     planUsed.districtName = d.name;
     row.districtOverridden = true;
-    // 🎯 المرساة وصلت لنفس المنطقة اللي الموظف اختارها؟ (قياس · v2.5.0)
-    row.anchorHit = plan.addressAnchor ? plan.addressAnchor.districtId === d.id : null;
   } else if (override?.forceZone) {
     // 🔴 «ارفع على الزون فقط» — درجة وسيطة **يختارها الموظف**، مش تلقائية فقط.
     //    الفايدة مقيسة: هب وكود فرز محددين بدل الهب الافتراضي للمحافظة
@@ -3101,17 +2930,12 @@ async function uploadOne(env, token, order, catalog, override) {
     ? null
     : (planUsed.zoneId || planUsed.localZones?.[0]?.zoneId || null);
 
-  // 🔴 المرساة اتطبّقت **على الشحنة** ولا لأ — الاختيار اليدوي بيلغيها،
-  //    وسلّم النزول بيلغيها كمان (الشحنة بقت على المدينة/المحافظة مش عليها).
-  const anchorPlanned = !!plan.districtFromAnchor && !override?.districtId;
-
   const applyDegree = (m) => {
     const doc = m === 'district' || m === 'zoneName';
     row.contractUsed   = doc ? 'documented' : 'undocumented';
     row.addressDegree  = addressDegree(m);
     row.districtSent   = (m === 'district' || m === 'zoneName') ? planUsed.districtName : null;
     row.zoneSent       = m === 'zone' ? (planUsed.zoneName || null) : null;
-    row.anchorApplied  = anchorPlanned && m === 'district';
     return doc;
   };
 
@@ -3217,11 +3041,6 @@ async function logRow(env, row, employee, job = S1_JOB) {
         //    فنسبة نجاح المطابقة **مش قابلة للقراءة من السجل** (v2.5.0).
         district_overridden: !!row.districtOverridden,
         degree_forced:   row.degreeForced,
-        address_anchor:  row.addressAnchor,
-        // 🎯 اتبعتت على منطقة المرساة فعلًا · و`anchor_hit = false` معناها
-        //    الموظف صحّحها — ودي إشارة الخطأ اللي بند ١٩ بيتقاس بيها.
-        anchor_applied:  !!row.anchorApplied,
-        anchor_hit:      row.anchorHit,
         actions:         row.actions,
         // 🔴 قايمتين منفصلتين في السجل كمان (v2.7.0): `warnings` = حاجة ناقصة
         //    محتاجة تدخّل · `advisories` = ملحوظة على عملية تمّت. أي تقرير
@@ -3517,9 +3336,6 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     // ─── قياس التدخّل اليدوي على العنوان — نفس §UPLOAD بالحرف (v2.5.0) ───
     districtOverridden: false,
     degreeForced: null,
-    addressAnchor: null,
-    anchorHit: null,
-    anchorApplied: false,
     codSent: null,
     codClipped: false,
     codRemainder: 0,
@@ -3545,7 +3361,6 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   };
 
   const plan  = resolveAddress(order, catalog);
-  row.addressAnchor = plan.addressAnchor?.text || null;
   const parts = buildPayloadParts(order, job.jobType);
 
   // 🔴 الـ `override` بيتبعت هنا للسبب اللي في `§UPLOAD::uploadOne` بالظبط:
@@ -3597,7 +3412,6 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     planUsed.districtId   = d.id;
     planUsed.districtName = d.name;
     row.districtOverridden = true;
-    row.anchorHit = plan.addressAnchor ? plan.addressAnchor.districtId === d.id : null;
   } else if (override?.forceZone) {
     // 🔴 نفس حارس §UPLOAD بالحرف — الوقف مش الرجوع الصامت.
     const z = resolveZoneOverride(catalog, planUsed.cityId, override.zoneId);
@@ -3623,16 +3437,12 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     ? null
     : (planUsed.zoneId || planUsed.localZones?.[0]?.zoneId || null);
 
-  // نفس قاعدة §UPLOAD بالحرف — الدرجة اللي اتبعتت فعلًا هي اللي بتتسجّل
-  const anchorPlanned = !!plan.districtFromAnchor && !override?.districtId;
-
   const applyDegree = (m) => {
     const doc = m === 'district' || m === 'zoneName';
     row.contractUsed  = doc ? 'documented' : 'undocumented';
     row.addressDegree = addressDegree(m);
     row.districtSent  = (m === 'district' || m === 'zoneName') ? planUsed.districtName : null;
     row.zoneSent      = m === 'zone' ? (planUsed.zoneName || null) : null;
-    row.anchorApplied = anchorPlanned && m === 'district';
     return doc;
   };
 
@@ -3865,9 +3675,6 @@ function buildReRow(order, catalog, job, cycleAnalysis) {
     districtZoneId:     plan.ok ? (plan.districtZoneId || null) : null,
     districtZoneName:   plan.ok ? (plan.districtZoneName || null) : null,
     districtZoneNameAr: plan.ok ? (plan.districtZoneNameAr || '') : '',
-    // 🔍 نفس `§UPLOAD::buildRow` بالحرف — النافذة واحدة للتلات أوضاع
-    addressAnchor: plan.ok ? (plan.addressAnchor || null) : null,
-    districtFromAnchor: plan.ok ? !!plan.districtFromAnchor : false,
     blockedDistricts:  plan.ok ? (plan.blockedDistricts || []) : [],
     catalogWarning: plan.ok ? plan.catalogWarning : null,
     problems,
@@ -4545,9 +4352,6 @@ export default {
               // نفس حقول §UPLOAD::logRow بالحرف — الوضعين بيتقروا مع بعض
               district_overridden: !!r.districtOverridden,
               degree_forced: r.degreeForced,
-              address_anchor: r.addressAnchor,
-              anchor_applied: !!r.anchorApplied,
-              anchor_hit: r.anchorHit,
               district_sent: r.districtSent,
               zone_sent: r.zoneSent || null,
               codSent: r.codSent,
