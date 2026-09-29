@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.15.0';
+const WORKER_VERSION = '2.16.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -1918,6 +1918,29 @@ function stripAdminPrefix(nameN) {
   return rest || null;
 }
 
+// ─── §BOSTA::containsName — v2.16.0 (29-09-2026 · طلب أحمد) ───
+// 🔴 المطابقة على **حدود كلمة** مش احتواء حرفي. `includes` لوحده كان بيطابق
+//    «قليوب» جوّه «القليوبيه» (اسم المحافظة نفسها)، فأوردر العبور (#57158) كان
+//    بياخد منطقة قليوب وعنوانه مفيهوش الكلمة أصلًا.
+// ✅ السوابق المسموحة **تلاتة بس**: «ال» (هرم/الهرم — طلب أحمد) و«و» و«وال»
+//    (واو العطف الملزوقة: «كفر سعد وشربين» — من غيرها «وشربين» بتختفي والحالة
+//    الغامضة بتتحوّل لحسم على منطقة واحدة، وده أسوأ من الغموض؛ اتمسكت في
+//    اختبار «كفر سعد/شربين»). ممنوع أي سابقة تانية (ب/ل/ف…) — دي بتفتح نفس
+//    الباب: أي حرف + اسم بقى «كلمة».
+// ⚠️ الثمن المعروف: عنوان بلا مسافات («مدينةنصر») مابيطابقش تلقائيًا وبينزل
+//    لدرجة أقل أو لتأكيد يدوي. `normText` بتحوّل أي رمز لمسافة فالتلقيم آمن.
+// الاسم الباقي بعد شيل «ال» لازم يكون ≥٣ حروف، وإلا «الي/الا» بتلقّط ضوضاء.
+const NAME_PREFIXES = ['', 'ال', 'و', 'وال'];
+function containsName(textN, n) {
+  if (!textN || !n) return false;
+  const hay = ' ' + textN + ' ';
+  const bare = n.startsWith('ال') && n.length - 2 >= 3 ? n.slice(2) : n;
+  for (const pre of NAME_PREFIXES) {
+    if (hay.includes(' ' + pre + bare + ' ')) return true;
+  }
+  return bare !== n && hay.includes(' ' + n + ' ');
+}
+
 // ─── §BOSTA::ensureNormalized ───
 // الأسماء المطبَّعة بتتحسب مرة واحدة على الكتالوج بدل مرة لكل أوردر. الكتالوج
 // بييجي أحيانًا من كاش قديم اتكتب قبل الحقول دي — فالتعبئة كسولة، مش مفترضة.
@@ -1987,7 +2010,7 @@ function matchZonesIn(city, fields) {
     if (!ftext) continue;
     for (const z of (city.zoneIndex || [])) {
       for (const n of [z.nameN, z.nameArN]) {
-        if (!n || n.length < 3 || !ftext.includes(n)) continue;
+        if (!n || n.length < 3 || !containsName(ftext, n)) continue;
         const hit = {
           zone: z.zone, zoneAr: z.zoneAr, zoneId: z.zoneId || null, count: z.count,
           tier: f.tier, field: f.key, fieldLabel: f.label,
@@ -2072,7 +2095,7 @@ function matchDistrictsIn(city, fields, zoneOnly, sourceList) {
       //    `break` بيقف عند أول مطابقة، فالاسم الكامل بياخد أولوية طبيعية
       //    ولا يتلمسش لو نجح؛ التجريد بيتجرّب بس لما الكامل يفشل (v2.15.0).
       for (const n of [d.nameN, d.nameArN, d.nameStrippedN, d.nameArStrippedN]) {
-        if (!n || n.length < 3 || !ftext.includes(n)) continue;
+        if (!n || n.length < 3 || !containsName(ftext, n)) continue;
         const isAr = n === d.nameArN || n === d.nameArStrippedN;
         const hit = {
           id: d.id, name: d.name, nameAr: d.nameAr, zone: d.zone,
