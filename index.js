@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.16.0';
+const WORKER_VERSION = '2.17.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -1885,39 +1885,6 @@ function availableDistricts(city) {
   return { list, blocked, fieldMissing };
 }
 
-// ─── §BOSTA::ADMIN_PREFIXES — v2.15.0 (28-09-2026 · طلب أحمد) ───
-// 🔴 بادئات إدارية مصرية **مقفولة** (تصنيف رسمي محدود — مش قايمة كلمات عامة).
-//    بتتشال من أول اسم المنطقة **في الكتالوج نفسه** بس، مش من نص العميل —
-//    فرق جوهري عن أي قايمة استبعاد على العنوان الحر: دي عدد ثابت ومعروف من
-//    أسماء بوسطة (٥ لقب إداري)، مش تخمين على كلمات العميل المفتوحة.
-// 🔴 السبب: العميل بيكتب اسم المكان **بلا اللقب الإداري** كعادة («منوف» بدل
-//    «مدينة منوف»)، والمحرك بيدوّر على الاسم **الكامل** كسلسلة واحدة —
-//    فمطابقة فشلت على أوردر #56584 (المنوفية) رغم إن «منوف» مكتوبة صراحةً.
-// ⚠️ بعد `normText()` تاء مربوطة وهاء بيتوحّدوا (ة→ه)، فـ«مدينة»/«مدينه» و
-//    «منطقة»/«منطقه» بيبقوا نفس الكلمة المطبَّعة — القايمة هنا مكتوبة بالشكلين
-//    عن قصد (طلب أحمد) رغم التكرار البرمجي، عشان تفضل مقروءة من غير ما حد
-//    يفتكر إن إحدى الهجاءين ناقصة.
-// ⚠️ **`حي` قصيرة ومخاطرها موجودة** — «حي الجديد» بعد التجريد بيبقى «الجديد»
-//    وهي كلمة عامة أوسع من أي بادئة تانية هنا. الحد الوحيد عليها هو نفس حد
-//    الأربعة الباقيين: طول ≥٣ حرف بعد التجريد + شرط الفرادة (منطقة واحدة بس
-//    بتحتوي الكلمة المتبقية) — لو النسبة طلعت عالية في القياس، ده أول مرشّح
-//    للمراجعة.
-const ADMIN_PREFIXES = [...new Set(
-  ['مدينة', 'مدينه', 'مركز', 'قسم', 'حي', 'منطقة', 'منطقه'].map(normText),
-)];
-
-// كلمة أولى من الاسم المطبَّع لو كانت بادئة إدارية معروفة، بترجّع الباقي
-// بعد شيلها — و`null` لو مفيش بادئة أو لو الباقي فاضي (اسم المنطقة كله لقب).
-function stripAdminPrefix(nameN) {
-  if (!nameN) return null;
-  const sp = nameN.indexOf(' ');
-  if (sp < 0) return null;
-  const head = nameN.slice(0, sp);
-  if (!ADMIN_PREFIXES.includes(head)) return null;
-  const rest = nameN.slice(sp + 1).trim();
-  return rest || null;
-}
-
 // ─── §BOSTA::containsName — v2.16.0 (29-09-2026 · طلب أحمد) ───
 // 🔴 المطابقة على **حدود كلمة** مش احتواء حرفي. `includes` لوحده كان بيطابق
 //    «قليوب» جوّه «القليوبيه» (اسم المحافظة نفسها)، فأوردر العبور (#57158) كان
@@ -1952,11 +1919,6 @@ function ensureNormalized(catalog) {
     for (const d of c.districts) {
       d.nameN   = normText(d.name);
       d.nameArN = normText(d.nameAr);
-      // 🔴 نسخة تانية من الاسم **بلا اللقب الإداري** (لو موجود) — تُجرَّب
-      //    كبديل لما الاسم الكامل مايطابقش (`matchDistrictsIn`). مش بديل
-      //    عن الاسم الكامل، تجربة إضافية بعده.
-      d.nameStrippedN   = stripAdminPrefix(d.nameN);
-      d.nameArStrippedN = stripAdminPrefix(d.nameArN);
       // 🔴 «عامّة» = اسم المنطقة هو اسم المدينة/المحافظة نفسها. العميل بيكتب اسم
       //    محافظته في العنوان كعادة، فالمطابقة دي بتحمل معلومة شبه صفرية —
       //    وهي اللي كانت بتكسب بالطول وتبعت الشحنة لفرع غلط (#53834 · #53818).
@@ -2061,7 +2023,16 @@ function betterHit(a, b) {
 // b مهزومة حسمًا قدام a؟ (مش مجرد أقل ترتيبًا — لازم فرق في طبقة، أو احتواء)
 function dominates(a, b) {
   const ka = HIT_KEY(a), kb = HIT_KEY(b);
-  for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i] < kb[i];
+  for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) {
+    // 🔴 فرق الخانة (tier) بيحسم **بس** لو مرشح الخانة الأدنى جزء من مرشح
+    //    الأعلى أو نفس المنطقة. منطقتين مختلفتين تمامًا في خانتين (#57280:
+    //    city=«طنطا» و address1=«مركز قطور») = غموض معلَن مش حسم صامت.
+    //    فرق العامّة (i=0) والتطابق التام (i=2) لسه بيحسموا زي ما هم.
+    if (i === 1 && a.id !== b.id && a.tier < b.tier
+        && !a.matched.includes(b.matched) && !b.matched.includes(a.matched)
+        && !a.generic && !b.generic) return false;
+    return ka[i] < kb[i];
+  }
   // الأقصر **جوّه** الأطول = احتواء. الشرط على الطول مقصود: اسمين متطابقين
   // لمنطقتين مختلفتين غموض حقيقي، مش حسم عشوائي لأول واحدة في الترتيب.
   return a.matched.length > b.matched.length && a.matched.includes(b.matched);
@@ -2091,12 +2062,9 @@ function matchDistrictsIn(city, fields, zoneOnly, sourceList) {
     const ftext = f.textN;
     if (!ftext) continue;
     for (const d of pool) {
-      // 🔴 الاسمين الكاملين أولًا، وبعدهم الاسمين **بلا اللقب الإداري** —
-      //    `break` بيقف عند أول مطابقة، فالاسم الكامل بياخد أولوية طبيعية
-      //    ولا يتلمسش لو نجح؛ التجريد بيتجرّب بس لما الكامل يفشل (v2.15.0).
-      for (const n of [d.nameN, d.nameArN, d.nameStrippedN, d.nameArStrippedN]) {
+      for (const n of [d.nameN, d.nameArN]) {
         if (!n || n.length < 3 || !containsName(ftext, n)) continue;
-        const isAr = n === d.nameArN || n === d.nameArStrippedN;
+        const isAr = n === d.nameArN;
         const hit = {
           id: d.id, name: d.name, nameAr: d.nameAr, zone: d.zone,
           // 🔴 مضافة (عمود «مدينة بوسطة» الجديد في الجدول) — الزون كان موجود
