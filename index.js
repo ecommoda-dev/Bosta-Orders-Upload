@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.17.0';
+const WORKER_VERSION = '2.18.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -3182,6 +3182,27 @@ function buildUniqueRef(order, jobType) {
   return { ok: true, uref: `${cleanText(order.name)}${jobType === JOB_EXCHANGE ? '-EX' : '-R'}${n}` };
 }
 
+// ─── §RE-UPLOAD::reopenedCycleRef ───
+// 🔴 دورة اتفتحت تاني بنفس الرقم (R1 → شوبيفاي ما عملتش R2): المرجع الفريد
+//    `#12345-EX1` لسه محجوز عند بوسطة على شحنة الدورة القديمة (حتى لو حالتها
+//    Returned — الفرادة بتتحرر بـ`terminate` بس)، فالرفع بيرجع `400 · 11000`.
+//    (طلب أحمد 01-10-2026 · `#54549`: استبدال تاني على نفس الأوردر.)
+//    الحل: لاحقة عدّادية — `#12345-EX1-2` ثم `-3`… بدل ما الأوردر يفضل متعطّل.
+//    ⛔ **مش بديل لحارس 11000 العام**: الحارس ده هو اللي بيمنع شحنة تانية بفلوس
+//    لنفس الدورة (ضغطتين · إعادة رفع). فاللاحقة **مشروطة بدليل رفع سابق على
+//    الأوردر نفسه** (تاج `Bosta_Uploaded_S2` أو ميتافيلد `_s2`) — الموظف شافه
+//    في نافذة «مرفوعة قبل كده» ووافق. من غير الدليل ده 11000 بيفضل خطأ.
+//    ⚠️ سقف المحاولات عشان حلقة مفتوحة على نداءات بتكلّف ما تبقاش ممكنة.
+const MAX_REOPEN_SUFFIX = 5;
+function hasPriorS2Upload(order, job) {
+  const tags = Array.isArray(order?.tags) ? order.tags : [];
+  return !!(cleanText(order?.mfTrackS2?.value) || tags.includes(job.tag));
+}
+function nextReopenedUref(baseUref, attempt) {
+  // attempt=2 → `${base}-2` · الأولى (بلا لاحقة) هي الـbase نفسه
+  return `${baseUref}-${attempt}`;
+}
+
 // ─── §RE-UPLOAD::resolveCod ───
 // 🔴 §UPLOAD فوق بيلف القيمة دي في `Math.abs`. ده **صح هناك** (السالب في s1
 //    معناه العميل دفع زيادة) و**كارثة هنا**: بيحوّل «رجّعله ٢٠٠٠» لـ«حصّل منه
@@ -3479,12 +3500,29 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     return doc;
   };
 
-  let documented = applyDegree(mode);
-  let payload = buildRePayload(order, planUsed, mode, job.jobType, parts2);
+  // 🔴 إنشاء الشحنة + إعادة محاولة المرجع الفريد المحجوز (§RE-UPLOAD::reopenedCycleRef).
+  //    بيقرا `parts2.uref` الحالي ويبنيه من جديد في كل محاولة، فالنزول درجة
+  //    (تحت) بيفضل ماسك آخر مرجع اتقبل بدل ما يرجّع الأصلي المحجوز.
+  const baseUref = ref.uref;
+  let urefAttempt = 1;
+  const createWithRef = async (m, doc) => {
+    let pl = buildRePayload(order, planUsed, m, job.jobType, parts2);
+    let r = await createDelivery(env, pl, doc);
+    while (!r.ok && String(r.errorCode) === '11000'
+           && hasPriorS2Upload(order, job) && urefAttempt < MAX_REOPEN_SUFFIX) {
+      urefAttempt += 1;
+      parts2.uref = nextReopenedUref(baseUref, urefAttempt);
+      row.uref = parts2.uref;
+      pl = buildRePayload(order, planUsed, m, job.jobType, parts2);
+      r = await createDelivery(env, pl, doc);
+    }
+    return r;
+  };
 
+  let documented = applyDegree(mode);
   let res;
   try {
-    res = await createDelivery(env, payload, documented);
+    res = await createWithRef(mode, documented);
   } catch (e) {
     row.error = e.message;
     return row;
@@ -3514,9 +3552,8 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
       planUsed.zoneName = planUsed.zoneName || planUsed.localZones?.[0]?.zone || '';
     }
     documented = applyDegree(mode);
-    payload = buildRePayload(order, planUsed, mode, job.jobType, parts2);
     try {
-      res = await createDelivery(env, payload, documented);
+      res = await createWithRef(mode, documented);
     } catch (e) {
       row.error = e.message;
       return row;
@@ -3524,6 +3561,14 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   }
 
   if (!res.ok) { row.error = humanizeBostaError(res, job); return row; }
+
+  // ℹ️ ملحوظة مش تحذير: الشحنة اتعملت كاملة بمرجع فريد بلاحقة — الموظف لازم
+  //    يعرف ليه المرجع مش `#12345-EX1` (بيبان في السجل وعمود الملحوظة).
+  if (urefAttempt > 1) {
+    row.advisories.push(
+      `الدورة ${cleanText(order.cycleName) || ''} اتفتحت تاني بعد شحنة سابقة — `
+      + `المرجع الفريد اتغيّر لـ ${row.uref} (الأصلي ${baseUref} محجوز عند بوسطة على الشحنة القديمة)`);
+  }
 
   actions.push(`رفع شحنة ${job.label} على بوسطة (${DEGREE_LABEL[row.addressDegree] || 'بالمحافظة'})`);
   row.trackingNumber = res.trackingNumber;
