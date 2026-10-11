@@ -22,7 +22,13 @@
 > `Delivery-COD-Operations-Center`.** الرابط المستقل القديم
 > (`https://ecommoda-dev.github.io/Bosta-Orders-Upload/`) **بقى 404 من غير أي
 > تحويل** — قرار صريح من أحمد ومُدرك عواقبه: مفيش صفحة redirect، ومفيش
-> مسار بديل. لو حد عنده بوكمارك قديم لازم يستخدم رابط الهب.
+> مسار بديل.
+> ⚠️ **والـ 404 ما حصلش بمجرد حذف `index.html`** (اتصحّح 11-10-2026): GitHub
+> Pages كان لسه مفعّل (`main` / root) وJekyll بيستخدم `README.md` كصفحة
+> رئيسية لو مفيش `index.html`، فالرابط فضل بيعرض الـ README مرندر بشكل مكسور.
+> الـ 404 الفعلي اتحقق بعد ما أحمد **عطّل Pages للريبو ده يدويًا** من
+> Settings → Pages (Branch → None). لو Pages اتفعّل تاني، الرابط يرجع يعرض
+> الـ README — الحماية الوحيدة إعداد الريبو مش الكود. لو حد عنده بوكمارك قديم لازم يستخدم رابط الهب.
 > ⛔ **والتلاتين ملف اختبار اللي كانت بتحمّل `index.html` مباشرة اتشالت
 > معاه** (`bilingual-names` · `bulk-and-pin` · `cairo-time` · `job-modes` ·
 > `result-modal` · `row-state` · `upload-confirm` · `zone-label` ·
