@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.18.0';
+const WORKER_VERSION = '2.19.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2641,6 +2641,65 @@ async function createDelivery(env, payload, documented) {
   };
 }
 
+// ─── §BOSTA::openPackageImages ───
+// 🔴 `400 · errorCode 2150` — «Product images are required when
+//    allowToOpenPackage is enabled». ظهرت 04-10-2026 و11-10-2026 (#59704) من غير
+//    أي تعديل عندنا، فالقاعدة عند بوسطة بتشتغل وتقف لوحدها (`bosta-api-helper` 8.13).
+//    العلاج: رفع صورة المنتج (signed-url ← PUT ← `deliveryImages`) وإعادة الإرسال
+//    **مرة واحدة**، ومن غير رفع استباقي (٣ نداءات زيادة لكل أوردر والقاعدة مطفية).
+//    ⛔ **ممنوع التحويل الصامت لـ `allowToOpenPackage:false`** — قرار أحمد
+//    04-10-2026: العميل مش هيقدر يفتح الطرد، وده قرار تشغيلي مش قرار كود.
+//    ⚠️ بوسطة مابتتحققش إن الصورة اترفعت (path وهمي بيتقبل 201)، فالـ `path`
+//    مايتبعتش إلا بعد ما الـ `PUT` يرجع 2xx.
+const OPEN_PKG_IMAGE_TYPE = 'ALLOW_TO_OPEN_THE_PACKAGE';
+
+async function fetchProductImageUrl(env, token, orderGid) {
+  const data = await shopifyGQL(env, token,
+    `query OrderImages($id: ID!) { node(id: $id) { ... on Order {
+       lineItems(first: 20) { nodes { currentQuantity image { url } } } } } }`,
+    { id: orderGid }, 'fetchProductImageUrl');
+  const nodes = data?.data?.node?.lineItems?.nodes || [];
+  const li = nodes.find(n => (n.currentQuantity || 0) > 0 && n.image?.url)
+          || nodes.find(n => n.image?.url);
+  return li?.image?.url || null;
+}
+
+async function uploadOpenPackageImage(env, imageUrl) {
+  const img = await fetch(imageUrl);
+  if (!img.ok) throw new Error(`تنزيل صورة المنتج من شوبيفاي فشل (HTTP ${img.status})`);
+  const bytes = await img.arrayBuffer();
+  const ctype = img.headers?.get?.('content-type') || 'image/png';
+
+  const sResp = await fetch(`${BOSTA_BASE}/deliveries/delivery-images/signed-url`, {
+    method: 'POST', headers: bostaHeaders(env), body: JSON.stringify({ type: OPEN_PKG_IMAGE_TYPE }),
+  });
+  const sBody = await sResp.json().catch(() => null);
+  const signedUrl = sBody?.data?.signedUrl, path = sBody?.data?.path;
+  if (!sResp.ok || !signedUrl || !path) throw new Error(`بوسطة ما رجّعتش رابط رفع الصورة (HTTP ${sResp.status})`);
+
+  // الرابط الموقّع على الـ host بس — من غير Authorization
+  const put = await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': ctype }, body: bytes });
+  if (!put.ok) throw new Error(`رفع الصورة لبوسطة فشل (HTTP ${put.status})`);
+  return path;
+}
+
+// بديل `createDelivery` في كل مسارات الرفع: نفس النتيجة، ومعاها إعادة محاولة
+// واحدة بالصورة لو الرد `2150`. أي فشل في مسار الصورة بيرجّع رد الـ 2150 الأصلي.
+async function createDeliveryWithImages(env, token, order, payload, documented) {
+  const res = await createDelivery(env, payload, documented);
+  if (res.ok || res.errorCode !== '2150') return res;
+  try {
+    const imageUrl = await fetchProductImageUrl(env, token, order.id);
+    if (!imageUrl) return { ...res, imageError: 'مفيش صورة لأي منتج في الأوردر على شوبيفاي' };
+    const path = await uploadOpenPackageImage(env, imageUrl);
+    return await createDelivery(env, {
+      ...payload, deliveryImages: [{ type: OPEN_PKG_IMAGE_TYPE, images: [path] }],
+    }, documented);
+  } catch (e) {
+    return { ...res, imageError: e.message };
+  }
+}
+
 // ─── §BOSTA::terminateDelivery ───
 // الرجوع الوحيد. 🔴 بالـ `trackingNumber` — مسار الـ `_id` بيرجّع 404.
 // بعد نجاحه الشحنة **بتختفي** (أي GET بعدها بيرجّع "400 Delivery not found.")،
@@ -2694,6 +2753,9 @@ function humanizeBostaError(res, job = null) {
         + '(uniqueBusinessReference مكرر). لو الشحنة القديمة غلط، ألغيها الأول بزرار «إلغاء الشحنة» وبعدين ارفع تاني.'
       : 'بوسطة رافضة: رقم الأوردر ده مرفوع عندها قبل كده (uniqueBusinessReference مكرر)';
   }
+  if (code === '2150')  return 'بوسطة رافضة: لازم صورة للمنتج لأن «فتح الطرد» مفعّل — '
+    + `الأداة حاولت ترفع صورة المنتج من شوبيفاي ${res.imageError ? `وما نفعش (${res.imageError})` : 'وما نفعش'}. `
+    + 'أضف صورة للمنتج على شوبيفاي أو ارفع الأوردر يدويًا. (الأداة مابتقفلش فتح الطرد من نفسها.)';
   if (code === '3003')  return 'بوسطة رافضة: المنطقة غير موجودة عندها (District Not Found)';
   if (code === '3002')  return 'بوسطة رافضة: الزون غير موجود عندها (Zone Not Found)';
   if (code === '3000')  return 'بوسطة رافضة: بيانات العنوان ناقصة — لازم درجة عنوان (منطقة أو مدينة أو محافظة) مع نص العنوان';
@@ -2974,7 +3036,7 @@ async function uploadOne(env, token, order, catalog, override) {
 
   let documented = applyDegree(mode);
   let payload = buildDeliveryPayload(order, planUsed, mode);
-  let res = await createDelivery(env, payload, documented);
+  let res = await createDeliveryWithImages(env, token, order, payload, documented);
   row.citySent     = planUsed.cityName;
   row.cityAuto     = plan.cityName;
 
@@ -2997,7 +3059,7 @@ async function uploadOne(env, token, order, catalog, override) {
     }
     documented = applyDegree(mode);
     payload = buildDeliveryPayload(order, planUsed, mode);
-    res = await createDelivery(env, payload, documented);
+    res = await createDeliveryWithImages(env, token, order, payload, documented);
   }
 
   if (!res.ok) {
@@ -3507,14 +3569,14 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   let urefAttempt = 1;
   const createWithRef = async (m, doc) => {
     let pl = buildRePayload(order, planUsed, m, job.jobType, parts2);
-    let r = await createDelivery(env, pl, doc);
+    let r = await createDeliveryWithImages(env, token, order, pl, doc);
     while (!r.ok && String(r.errorCode) === '11000'
            && hasPriorS2Upload(order, job) && urefAttempt < MAX_REOPEN_SUFFIX) {
       urefAttempt += 1;
       parts2.uref = nextReopenedUref(baseUref, urefAttempt);
       row.uref = parts2.uref;
       pl = buildRePayload(order, planUsed, m, job.jobType, parts2);
-      r = await createDelivery(env, pl, doc);
+      r = await createDeliveryWithImages(env, token, order, pl, doc);
     }
     return r;
   };
