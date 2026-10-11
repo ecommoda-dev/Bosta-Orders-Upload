@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.19.0';
+const WORKER_VERSION = '2.19.1';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2653,15 +2653,20 @@ async function createDelivery(env, payload, documented) {
 //    مايتبعتش إلا بعد ما الـ `PUT` يرجع 2xx.
 const OPEN_PKG_IMAGE_TYPE = 'ALLOW_TO_OPEN_THE_PACKAGE';
 
-async function fetchProductImageUrl(env, token, orderGid) {
+// 🔴 صورة لكل منتج في الأوردر (مش أول منتج بس) — الداشبورد بيبعت كل الصور في مدخل
+//    واحد، وأوردر فيه منتجين (#59629) كان بيتبعت بصورة واحدة. بالسقف عشان الرد
+//    مايكبرش: حد بوسطة للعدد على الـ API مش معروف.
+const OPEN_PKG_MAX_IMAGES = 5;
+
+async function fetchProductImageUrls(env, token, orderGid) {
   const data = await shopifyGQL(env, token,
     `query OrderImages($id: ID!) { node(id: $id) { ... on Order {
        lineItems(first: 20) { nodes { currentQuantity image { url } } } } } }`,
-    { id: orderGid }, 'fetchProductImageUrl');
+    { id: orderGid }, 'fetchProductImageUrls');
   const nodes = data?.data?.node?.lineItems?.nodes || [];
-  const li = nodes.find(n => (n.currentQuantity || 0) > 0 && n.image?.url)
-          || nodes.find(n => n.image?.url);
-  return li?.image?.url || null;
+  const active = nodes.filter(n => (n.currentQuantity || 0) > 0 && n.image?.url);
+  const pool = active.length ? active : nodes.filter(n => n.image?.url);
+  return [...new Set(pool.map(n => n.image.url))].slice(0, OPEN_PKG_MAX_IMAGES);
 }
 
 async function uploadOpenPackageImage(env, imageUrl) {
@@ -2689,11 +2694,17 @@ async function createDeliveryWithImages(env, token, order, payload, documented) 
   const res = await createDelivery(env, payload, documented);
   if (res.ok || res.errorCode !== '2150') return res;
   try {
-    const imageUrl = await fetchProductImageUrl(env, token, order.id);
-    if (!imageUrl) return { ...res, imageError: 'مفيش صورة لأي منتج في الأوردر على شوبيفاي' };
-    const path = await uploadOpenPackageImage(env, imageUrl);
+    const imageUrls = await fetchProductImageUrls(env, token, order.id);
+    if (!imageUrls.length) return { ...res, imageError: 'مفيش صورة لأي منتج في الأوردر على شوبيفاي' };
+    // صورة فاشلة مابتوقفش الباقي — المهم يوصل لبوسطة صورة واحدة على الأقل
+    const paths = [];
+    let lastErr = null;
+    for (const u of imageUrls) {
+      try { paths.push(await uploadOpenPackageImage(env, u)); } catch (e) { lastErr = e; }
+    }
+    if (!paths.length) throw lastErr || new Error('رفع الصور فشل');
     return await createDelivery(env, {
-      ...payload, deliveryImages: [{ type: OPEN_PKG_IMAGE_TYPE, images: [path] }],
+      ...payload, deliveryImages: [{ type: OPEN_PKG_IMAGE_TYPE, images: paths }],
     }, documented);
   } catch (e) {
     return { ...res, imageError: e.message };

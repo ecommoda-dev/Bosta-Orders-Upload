@@ -22,20 +22,21 @@ const order = () => ({ id: 'gid://shopify/Order/1', name: '#53517', note: null,
 const env = { BOSTA_API_KEY: 'k', SHOP_DOMAIN: 's.myshopify.com' };
 const JOB = load(async () => reply(200, {})).getJob('return');
 
+let seq = 0;
 function mk({ withImage = true, putStatus = 200, retryFails = false } = {}) {
   const log = [];
   const f = async (url, opts = {}) => {
     const u = String(url); log.push({ u, method: opts.method, body: opts.body });
     if (u.includes('/admin/api/')) {
       const q = JSON.parse(opts.body).query;
-      if (/OrderImages/.test(q)) return reply(200, { data: { node: { lineItems: { nodes: [{ currentQuantity: 1, image: withImage ? { url: 'https://cdn.shopify.com/p.png' } : null }] } } } });
+      if (/OrderImages/.test(q)) return reply(200, { data: { node: { lineItems: { nodes: [{ currentQuantity: 1, image: withImage ? { url: 'https://cdn.shopify.com/p.png' } : null }, { currentQuantity: 1, image: withImage ? { url: 'https://cdn.shopify.com/p2.png' } : null }] } } } });
       const v = JSON.parse(opts.body).variables;
       if (/metafieldsSet/.test(q)) return reply(200, { data: { metafieldsSet: { metafields: (v.metafields || []).map(m => ({ key: m.key, value: m.value, namespace: m.namespace, owner: { id: m.ownerId } })), userErrors: [] } } });
       if (/tagsAdd/.test(q)) return reply(200, { data: { tagsAdd: { node: { id: v.id }, userErrors: [] } } });
       return reply(200, { data: {} });
     }
-    if (u === 'https://cdn.shopify.com/p.png') return reply(200, {});
-    if (u.endsWith('/delivery-images/signed-url')) return reply(200, { data: { signedUrl: 'https://storage.googleapis.com/x?sig=1', path: 'imgs/abc' } });
+    if (u.startsWith('https://cdn.shopify.com/p')) return reply(200, {});
+    if (u.endsWith('/delivery-images/signed-url')) return reply(200, { data: { signedUrl: 'https://storage.googleapis.com/x?sig=1', path: 'imgs/' + (++seq) } });
     if (u.startsWith('https://storage.googleapis.com/')) return reply(putStatus, {});
     if (u.includes('/deliveries')) {
       const b = JSON.parse(opts.body);
@@ -55,7 +56,7 @@ const posts = (log) => log.filter(c => c.u.includes('/deliveries') && !c.u.inclu
     const p = posts(log);
     ok('الرفع نجح وفيه رقم تتبع', row.status === 'success' && row.trackingNumber === '777', row);
     ok('نداءين إنشاء بس (الأول رفضه 2150 والتاني بالصورة)', p.length === 2, p.length);
-    ok('التاني فيه deliveryImages بالـ path', JSON.parse(p[1].body).deliveryImages?.[0]?.images?.[0] === 'imgs/abc');
+    ok('أوردر بمنتجين → صورتين في deliveryImages (مش واحدة)', JSON.parse(p[1].body).deliveryImages?.[0]?.images?.length === 2, JSON.parse(p[1].body).deliveryImages);
     ok('النوع ALLOW_TO_OPEN_THE_PACKAGE', JSON.parse(p[1].body).deliveryImages[0].type === 'ALLOW_TO_OPEN_THE_PACKAGE');
     ok('⛔ allowToOpenPackage فضلت true', JSON.parse(p[1].body).allowToOpenPackage === true);
     ok('الأول من غير صور (مفيش رفع استباقي)', !JSON.parse(p[0].body).deliveryImages);
