@@ -12,7 +12,9 @@
 > 🔴 **من v3.0.0 (27-09-2026 · قرار أحمد): الريبو ده Worker بس — مفيش واجهة
 > هنا خالص.** `index.html` اتشال **بلا أي تحويل** (لا صفحة redirect ولا رسالة) —
 > الرابط القديم `https://ecommoda-dev.github.io/Bosta-Orders-Upload/` بقى
-> **404 صريح** من GitHub Pages نفسها. الواجهة الوحيدة الشغّالة دلوقتي
+> **404 صريح** — ⚠️ بعد ما GitHub Pages اتعطّل يدويًا للريبو ده من Settings →
+> Pages (حذف `index.html` لوحده مكانش كفاية: Jekyll كان بيعرض `README.md`
+> كصفحة رئيسية). الواجهة الوحيدة الشغّالة دلوقتي
 > `Bosta-Orders-Upload.html` جوّه **`Delivery-COD-Operations-Center`**. التفاصيل
 > الكاملة (وليه اتقرر كده بعد ما كان القرار عكسه في v1.13.0) في `CLAUDE.md`.
 
