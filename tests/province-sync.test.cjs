@@ -15,11 +15,11 @@ function ok(label, cond, extra) {
 }
 const reply = (status, body) => ({ ok: status >= 200 && status < 300, status, text: async () => JSON.stringify(body) });
 function load(fetchImpl) {
-  return new Function('fetch', 'caches', src + `\n return { uploadOneRE, ensureNormalized, getJob };`)(
+  return new Function('fetch', 'caches', src + `\n return { uploadOneRE, ensureNormalized, getJob, pickCustomerAddress };`)(
     fetchImpl, { default: { match: async () => null, put: async () => {} } });
 }
 const LIVE = [{ name: 'Cairo', code: 'C' }, { name: 'Giza', code: 'GZ' }, { name: 'Qalyubia', code: 'KB' }];
-function make({ provinces = LIVE, profilesFail = false, updateErrors = [], confirmCode } = {}) {
+function make({ provinces = LIVE, profilesFail = false, updateErrors = [], confirmCode, custAddrs = null, custErrors = [], custConfirmCode } = {}) {
   const log = { gql: [] };
   const impl = async (url, opts) => {
     if (String(url).includes('/admin/api/')) {
@@ -33,6 +33,13 @@ function make({ provinces = LIVE, profilesFail = false, updateErrors = [], confi
       if (/orderUpdate/.test(q)) {
         const code = confirmCode ?? v.input.shippingAddress.provinceCode;
         return reply(200, { data: { orderUpdate: { order: { id: v.input.id, shippingAddress: { province: 'x', provinceCode: code } }, userErrors: updateErrors } } });
+      }
+      if (/OrderCustomerAddresses/.test(q)) {
+        return reply(200, { data: { order: { customer: custAddrs ? { id: 'gid://shopify/Customer/9', addressesV2: { nodes: custAddrs } } : null } } });
+      }
+      if (/customerAddressUpdate/.test(q)) {
+        const code = custConfirmCode ?? v.address.provinceCode;
+        return reply(200, { data: { customerAddressUpdate: { address: { id: v.addressId, provinceCode: code }, userErrors: custErrors } } });
       }
       if (/metafieldsSet/.test(q)) return reply(200, { data: { metafieldsSet: { metafields: (v.metafields || []).map(m => ({ key: m.key, value: m.value, namespace: m.namespace, owner: { id: m.ownerId } })), userErrors: [] } } });
       if (/tagsAdd/.test(q)) return reply(200, { data: { tagsAdd: { node: { id: v.id }, userErrors: [] } } });
@@ -62,6 +69,9 @@ const run = async (opts, override) => {
   const row = await api.uploadOneRE(env, 'tok', order(), catalog, job, override);
   return { row, log };
 };
+const CA = (id, over = {}) => ({ id, firstName: 'A', lastName: 'B', phone: '01019191915', company: null,
+  address1: 'مدينة نصر شارع مصطفى النحاس', address2: null, city: 'مدينة نصر', province: 'Cairo', provinceCode: 'C', countryCodeV2: 'EG', zip: '11765', ...over });
+const custUpdates = (log) => log.gql.filter(c => /customerAddressUpdate/.test(c.q));
 const updates = (log) => log.gql.filter(c => /orderUpdate/.test(c.q));
 
 (async () => {
@@ -100,6 +110,41 @@ const updates = (log) => log.gql.filter(c => /orderUpdate/.test(c.q));
   console.log('\n⑥ شوبيفاي ما أكدتش المحافظة الجديدة → failed');
   { const { row } = await run({ confirmCode: 'C' }, { cityId: 'yp3atroeTwnyiBNKE' });
     ok('failed مش synced', row.provinceSync === 'failed', row.provinceSync);
+  }
+  const KB = { cityId: 'yp3atroeTwnyiBNKE' };
+  console.log('\n⑦ سجل العميل: عنوانين — بيتعدّل المطابق بس');
+  { const home = CA('gid://a/1', { address1: 'شارع تاني خالص', provinceCode: 'GZ' });
+    const mine = CA('gid://a/2');
+    const { row, log } = await run({ custAddrs: [home, mine] }, KB);
+    const u = custUpdates(log);
+    ok('نداء واحد بس على العنوان المطابق', u.length === 1 && u[0].v.addressId === 'gid://a/2', u.map(x => x.v.addressId));
+    ok('المحافظة KB وباقي الحقول زي ما هي', u[0]?.v.address.provinceCode === 'KB' && u[0].v.address.address1 === mine.address1 && u[0].v.address.zip === '11765', u[0]?.v.address);
+    ok('مفيش setAsDefault', u[0] && !('setAsDefault' in u[0].v));
+    ok('customerAddressSync = synced والصف success', row.customerAddressSync === 'synced' && row.status === 'success', [row.customerAddressSync, row.status]);
+  }
+  console.log('\n⑧ عنوان واحد بنص مختلف + نفس المحافظة القديمة → بيتعدّل');
+  { const { row, log } = await run({ custAddrs: [CA('gid://a/1', { address1: 'نص تاني' })] }, KB);
+    ok('اتعدّل (tier sole)', custUpdates(log).length === 1 && row.customerAddressSync === 'synced');
+  }
+  console.log('\n⑨ أكتر من عنوان ومفيش تطابق → مفيش كتابة');
+  { const { row, log } = await run({ custAddrs: [CA('gid://a/1', { address1: 'س1' }), CA('gid://a/2', { address1: 'س2' })] }, KB);
+    ok('صفر customerAddressUpdate', !custUpdates(log).length);
+    ok('skipped + ملحوظة، والصف success', row.customerAddressSync === 'skipped' && row.status === 'success' && row.advisories.join(' ').includes('سجل'), row.advisories);
+  }
+  console.log('\n⑩ فشل سجل العميل مايأثرش على الشحنة ولا على عنوان الأوردر');
+  { const { row } = await run({ custAddrs: [CA('gid://a/1')], custErrors: [{ field: ['x'], message: 'denied' }] }, KB);
+    ok('provinceSync لسه synced والصف success بلا تحذير', row.provinceSync === 'synced' && row.status === 'success' && row.warnings.length === 0);
+    ok('customerAddressSync = failed + النص ظاهر', row.customerAddressSync === 'failed' && row.advisories.join(' ').includes('denied'), row.advisories);
+  }
+  { const { row } = await run({ custAddrs: [CA('gid://a/1')], custConfirmCode: 'C' }, KB);
+    ok('شوبيفاي ما أكدتش → failed', row.customerAddressSync === 'failed');
+  }
+  console.log('\n⑪ من غير عميل / من غير تغيير يدوي');
+  { const { row, log } = await run({ custAddrs: null }, KB);
+    ok('بلا عميل → skipped', row.customerAddressSync === 'skipped' && !custUpdates(log).length);
+  }
+  { const { log } = await run({ custAddrs: [CA('gid://a/1')] }, null);
+    ok('بلا تغيير يدوي → صفر نداء على السجل', !log.gql.some(c => /OrderCustomerAddresses|customerAddressUpdate/.test(c.q)));
   }
   console.log(`\n${'═'.repeat(50)}\nنجح ${pass} · فشل ${fail}\n`);
   process.exit(fail ? 1 : 0);
