@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.20.0';
+const WORKER_VERSION = '2.21.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -1339,20 +1339,113 @@ async function syncShopifyProvince(env, token, order, targetCityId) {
     if (String(res?.order?.shippingAddress?.provinceCode || '').toUpperCase() !== target.code.toUpperCase()) {
       throw new Error('orderUpdate: شوبيفاي ما أكدتش تعديل المحافظة');
     }
-    return { status: 'synced', from, to: target.province };
+    return { status: 'synced', from, to: target.province, code: target.code, fromCode };
   } catch (e) {
     return { status: 'failed', from, to: target.province, note: e.message };
+  }
+}
+
+// ─── §SHOPIFY::syncCustomerAddressProvince ───
+// 🔴 (v2.21.0 · طلب أحمد 13-10-2026) بعد ما محافظة عنوان الأوردر اتعدّلت، نفس
+//    التعديل بيتعمل على **العنوان بتاع الأوردر ده بس** في سجل عناوين العميل
+//    (المحافظة بس). العميل ممكن عنده أكتر من عنوان — الباقي **ما بيتلمسش**.
+// 🔴 تحديد العنوان (بالترتيب، وأول مرحلة تحسم):
+//    ① تطابق عنوان الأوردر القديم (address1 + address2 + city) بعد التطبيع —
+//       لو أكتر من واحد، اللي محافظته = محافظة الأوردر القديمة؛ ولو لسه أكتر من
+//       واحد = غموض = **مفيش كتابة**.
+//    ② مفيش تطابق نصي + العميل عنده **عنوان واحد بس** ومحافظته = محافظة الأوردر
+//       القديمة (حالة الموظف اللي عدّل نص العنوان على الأوردر بعد إنشائه).
+//    ③ غير كده (أكتر من عنوان ومفيش تطابق) = **مفيش كتابة** + ملحوظة.
+//    ⚠️ المرحلة ② تخمين ضيّق مقصود — بتشتغل بس لما مفيش بديل في السجل أصلًا.
+// 🔴 الدالة **مابترميش**، والفشل `advisory` مش `warning` (الشحنة سليمة).
+// ⚠️ بتتطلب `read_customers` + `write_customers` على تطبيق الـ Worker — غيابهم
+//    = failed بملحوظة مش عطل في الرفع.
+function normAddrPart(s) {
+  return String(s || '').toLowerCase().replace(/[ً-ٟـ]/g, '').replace(/\s+/g, ' ').trim();
+}
+// بترجّع { address, tier } أو { address: null, reason }
+function pickCustomerAddress(addresses, sa) {
+  const list = (addresses || []).filter(Boolean);
+  const fromCode = String(sa?.provinceCode || '').toUpperCase();
+  const key = a => [normAddrPart(a.address1), normAddrPart(a.address2), normAddrPart(a.city)].join('|');
+  const want = key(sa || {});
+  let hits = want === '||' ? [] : list.filter(a => key(a) === want);
+  if (hits.length > 1) hits = hits.filter(a => String(a.provinceCode || '').toUpperCase() === fromCode);
+  if (hits.length === 1) return { address: hits[0], tier: 'match' };
+  if (hits.length > 1) return { address: null, reason: 'أكتر من عنوان في سجل العميل بنفس النص' };
+  if (list.length === 1 && String(list[0].provinceCode || '').toUpperCase() === fromCode) {
+    return { address: list[0], tier: 'sole' };
+  }
+  return { address: null, reason: list.length
+    ? 'مفيش عنوان في سجل العميل بيطابق عنوان الأوردر'
+    : 'العميل مالوش عناوين في السجل' };
+}
+
+async function syncCustomerAddressProvince(env, token, order, sa, targetCode, targetName) {
+  try {
+    const Q = `
+      query OrderCustomerAddresses($id: ID!) {
+        order(id: $id) { customer { id addressesV2(first: 50) { nodes {
+          id firstName lastName phone company address1 address2 city province provinceCode countryCodeV2 zip
+        } } } }
+      }`;
+    const d = await shopifyGQL(env, token, Q, { id: order.id }, 'orderCustomerAddresses');
+    const cust = d.data?.order?.customer;
+    if (!cust?.id) return { status: 'skipped', note: 'الأوردر مالوش عميل مسجّل — سجل العناوين ما اتعدّلش' };
+    const pick = pickCustomerAddress(cust.addressesV2?.nodes, sa);
+    if (!pick.address) return { status: 'skipped', note: `${pick.reason} — سجل عناوين العميل ما اتعدّلش` };
+    const a = pick.address;
+    if (String(a.provinceCode || '').toUpperCase() === targetCode.toUpperCase()) {
+      return { status: 'same', tier: pick.tier };
+    }
+    const MUT = `
+      mutation SetCustAddrProvince($customerId: ID!, $addressId: ID!, $address: MailingAddressInput!) {
+        customerAddressUpdate(customerId: $customerId, addressId: $addressId, address: $address) {
+          address { id provinceCode }
+          userErrors { field message }
+        }
+      }`;
+    // باقي حقول العنوان بتتبعت بقيمها الحالية — التعديل على provinceCode بس
+    const address = {
+      firstName: a.firstName ?? null, lastName: a.lastName ?? null,
+      phone: a.phone ?? null, company: a.company ?? null,
+      address1: a.address1 ?? null, address2: a.address2 ?? null,
+      city: a.city ?? null, zip: a.zip ?? null,
+      countryCode: a.countryCodeV2 || sa?.countryCodeV2 || 'EG',
+      provinceCode: targetCode,
+    };
+    const m = await shopifyGQL(env, token, MUT, { customerId: cust.id, addressId: a.id, address }, 'customerAddressUpdate');
+    const res = m.data?.customerAddressUpdate;
+    const errs = res?.userErrors || [];
+    if (errs.length) throw new Error('customerAddressUpdate: ' + errs.map(e => e.message).join(' | '));
+    if (String(res?.address?.provinceCode || '').toUpperCase() !== targetCode.toUpperCase()) {
+      throw new Error('customerAddressUpdate: شوبيفاي ما أكدتش تعديل المحافظة');
+    }
+    return { status: 'synced', tier: pick.tier, to: targetName };
+  } catch (e) {
+    return { status: 'failed', note: e.message };
   }
 }
 
 // بيتنده بعد نجاح الشحنة في التلات أوضاع — الشرط الوحيد: الموظف غيّر المحافظة يدويًا.
 async function syncProvinceAfterUpload(env, token, order, row, targetCityId) {
   if (!row.cityOverridden) return;
+  const sa = order?.shippingAddress ? { ...order.shippingAddress } : null;   // العنوان **قبل** التعديل
   const r = await syncShopifyProvince(env, token, order, targetCityId);
   row.provinceSync = r.status;
   if (r.status === 'synced') {
     row.actions.push(`تعديل محافظة عنوان الشحن على شوبيفاي: ${r.from || '—'} ← ${r.to}`);
     row.advisories.push(`محافظة الأوردر على شوبيفاي اتعدّلت من ${r.from || '—'} إلى ${r.to}`);
+    // نفس التعديل على عنوان الأوردر ده في سجل عناوين العميل (ومن غير ما نلمس باقي عناوينه)
+    const c = await syncCustomerAddressProvince(env, token, order, sa, r.code, r.to);
+    row.customerAddressSync = c.status;
+    if (c.status === 'synced') {
+      row.actions.push(`تعديل محافظة العنوان في سجل عناوين العميل: ${r.from || '—'} ← ${r.to}`);
+      row.advisories.push(`محافظة العنوان في سجل عناوين العميل اتعدّلت إلى ${r.to}`);
+    } else if (c.status === 'skipped' || c.status === 'failed') {
+      row.advisories.push(`⚠️ ${c.status === 'failed' ? 'تعذّر تعديل عنوان العميل في السجل: ' : ''}${c.note}`
+        + ' — الشحنة وعنوان الأوردر سليمين (عدّل سجل العميل يدويًا لو لازم)');
+    }
   } else if (r.status === 'skipped' || r.status === 'failed') {
     row.advisories.push(`⚠️ ${r.status === 'failed' ? 'تعذّر تعديل محافظة الأوردر على شوبيفاي: ' : ''}${r.note}`
       + ' — الشحنة نفسها اترفعت سليمة (عدّلها يدويًا لو لازم)');
@@ -3265,6 +3358,7 @@ async function logRow(env, row, employee, job = S1_JOB) {
         city_auto:       row.cityAuto,
         city_overridden: !!row.cityOverridden,
         province_sync:   row.provinceSync || null,   // synced · same · skipped · failed (v2.20.0)
+        customer_address_sync: row.customerAddressSync || null,   // synced · same · skipped · failed (v2.21.0)
         // 🔴 نفس السبب بالظبط، على مستوى **المنطقة**: من غير العلم ده
         //    `district_sent` مابيفرّقش بين مطابقة نجحت وموظف صلّحها بإيده،
         //    فنسبة نجاح المطابقة **مش قابلة للقراءة من السجل** (v2.5.0).
@@ -4645,6 +4739,7 @@ export default {
               // تدخّل يدوي كل مرة.
               city_overridden: !!r.cityOverridden,
               province_sync: r.provinceSync || null,
+              customer_address_sync: r.customerAddressSync || null,
               // نفس حقول §UPLOAD::logRow بالحرف — الوضعين بيتقروا مع بعض
               district_overridden: !!r.districtOverridden,
               degree_forced: r.degreeForced,
