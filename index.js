@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.19.1';
+const WORKER_VERSION = '2.20.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -1029,7 +1029,7 @@ const ORDER_FIELDS = `
   displayFulfillmentStatus
   totalOutstandingSet      { presentmentMoney { amount currencyCode } }
   currentSubtotalPriceSet  { presentmentMoney { amount currencyCode } }
-  shippingAddress { name firstName lastName phone address1 address2 city province provinceCode zip }
+  shippingAddress { name firstName lastName phone company address1 address2 city province provinceCode countryCodeV2 zip }
   mfStatus:   metafield(namespace: "custom", key: "manual_status")         { value }
   mfZone:     metafield(namespace: "custom", key: "zone")                  { value }
   mfCourier:  metafield(namespace: "custom", key: "courier")                  { value }
@@ -1236,6 +1236,127 @@ async function writeBackToShopify(env, token, order, trackingNumber, actions, jo
   actions.push(`إضافة التاج ${job.tag}`);
 
   return warnings;
+}
+
+// ─── §SHOPIFY::syncShopifyProvince ───
+// 🔴 (v2.20.0 · طلب أحمد 13-10-2026) لما الموظف يغيّر **محافظة بوسطة** يدويًا
+//    (`row.cityOverridden`) وبعد ما الشحنة تتعمل، محافظة عنوان الشحن على
+//    الأوردر في شوبيفاي بتتعدّل لنفس المحافظة — **تلقائي بلا تأكيد**، والتعديل
+//    على المحافظة **فقط** (مش `city` ولا العنوان).
+// 🔴 مقابلة المحافظة = نفس المحافظة بالظبط من `PROVINCE_TABLE` (cityId → province)،
+//    ومعاها **تحقّق من قايمة شوبيفاي الحية** قبل الكتابة (`deliveryProfiles` ←
+//    محافظات مصر في مناطق الشحن). كود مش في القايمة = **مفيش كتابة** + ملحوظة.
+//    ⚠️ ولو القايمة نفسها ماجتش (صلاحية `read_shipping` ناقصة مثلًا) برضه مفيش
+//    كتابة — التحقق شرط مش تحسين.
+// 🔴 الدالة **مابترميش أبدًا**: الشحنة موجودة بفلوس لما بتتنده، والفشل هنا
+//    `advisory` مش `warning` (الشحنة والتتبع والتاج سليمين، ومفيش إعادة رفع).
+// ⚠️ `MailingAddressInput` مالوش `province` بالاسم — بيتبعت `provinceCode` بس،
+//    **ومعاه باقي العنوان كامل** عشان orderUpdate مايفضّيش حقول مش مبعوتة.
+let SHOPIFY_PROVINCES_CACHE = { at: 0, byCode: null };
+const SHOPIFY_PROVINCES_TTL_MS = 6 * 60 * 60 * 1000;
+
+async function getShopifyProvinces(env, token, countryCode = 'EG') {
+  const now = Date.now();
+  if (SHOPIFY_PROVINCES_CACHE.byCode && now - SHOPIFY_PROVINCES_CACHE.at < SHOPIFY_PROVINCES_TTL_MS) {
+    return SHOPIFY_PROVINCES_CACHE.byCode;
+  }
+  const Q = `
+    query ShopProvinces {
+      deliveryProfiles(first: 10) {
+        nodes { profileLocationGroups { locationGroupZones(first: 50) { nodes { zone {
+          countries { code { countryCode } provinces { name code } }
+        } } } } }
+      }
+    }`;
+  const d = await shopifyGQL(env, token, Q, {}, 'deliveryProfiles');
+  const byCode = new Map();
+  for (const prof of d.data?.deliveryProfiles?.nodes || []) {
+    for (const g of prof.profileLocationGroups || []) {
+      for (const zn of g.locationGroupZones?.nodes || []) {
+        for (const c of zn.zone?.countries || []) {
+          if (c.code?.countryCode !== countryCode) continue;
+          for (const pr of c.provinces || []) {
+            if (pr?.code) byCode.set(String(pr.code).toUpperCase(), pr.name);
+          }
+        }
+      }
+    }
+  }
+  if (!byCode.size) throw new Error('قايمة محافظات شوبيفاي رجعت فاضية');
+  SHOPIFY_PROVINCES_CACHE = { at: now, byCode };
+  return byCode;
+}
+
+// المحافظة المقابلة لمدينة بوسطة — صف `zoneOnly` (٦ أكتوبر/حلوان) **مابيتختارش**:
+// دول نفس cityId بتاع الجيزة/القاهرة، والمقابلة «نفس المحافظة بالظبط» = الجيزة/القاهرة.
+function shopifyProvinceForCityId(cityId) {
+  return PROVINCE_TABLE.find(r => r.cityId === cityId && !r.zoneOnly) || null;
+}
+
+// بترجّع { status, from, to, note } — status: synced · same · skipped · failed
+async function syncShopifyProvince(env, token, order, targetCityId) {
+  const sa = order?.shippingAddress;
+  const target = shopifyProvinceForCityId(targetCityId);
+  if (!target) {
+    return { status: 'skipped', note: 'محافظة بوسطة دي ملهاش مقابل في شوبيفاي — محافظة الأوردر على شوبيفاي ما اتعدّلتش' };
+  }
+  if (!sa) {
+    return { status: 'skipped', note: 'الأوردر مالوش عنوان شحن على شوبيفاي — ما اتعدّلتش المحافظة' };
+  }
+  const fromCode = String(sa.provinceCode || '').toUpperCase();
+  const from = sa.province || fromCode || null;
+  if (fromCode === target.code) return { status: 'same', from, to: target.province };
+
+  try {
+    const live = await getShopifyProvinces(env, token, sa.countryCodeV2 || 'EG');
+    if (!live.has(target.code.toUpperCase())) {
+      return { status: 'skipped', from, to: target.province,
+               note: `محافظة ${target.province} (${target.code}) مش في قايمة محافظات شوبيفاي — محافظة الأوردر على شوبيفاي ما اتعدّلتش` };
+    }
+    const MUT = `
+      mutation SetProvince($input: OrderInput!) {
+        orderUpdate(input: $input) {
+          order { id shippingAddress { province provinceCode } }
+          userErrors { field message }
+        }
+      }`;
+    const input = {
+      id: order.id,
+      shippingAddress: {
+        firstName: sa.firstName ?? null, lastName: sa.lastName ?? null,
+        phone: sa.phone ?? null, company: sa.company ?? null,
+        address1: sa.address1 ?? null, address2: sa.address2 ?? null,
+        city: sa.city ?? null, zip: sa.zip ?? null,
+        countryCode: sa.countryCodeV2 || 'EG',
+        provinceCode: target.code,
+      },
+    };
+    const d = await shopifyGQL(env, token, MUT, { input }, 'orderUpdate');
+    const res = d.data?.orderUpdate;
+    const errs = res?.userErrors || [];
+    if (errs.length) throw new Error('orderUpdate: ' + errs.map(e => e.message).join(' | '));
+    // ③ تأكيد الـ payload — `userErrors:[]` مش معناها «اتنفّذت»
+    if (String(res?.order?.shippingAddress?.provinceCode || '').toUpperCase() !== target.code.toUpperCase()) {
+      throw new Error('orderUpdate: شوبيفاي ما أكدتش تعديل المحافظة');
+    }
+    return { status: 'synced', from, to: target.province };
+  } catch (e) {
+    return { status: 'failed', from, to: target.province, note: e.message };
+  }
+}
+
+// بيتنده بعد نجاح الشحنة في التلات أوضاع — الشرط الوحيد: الموظف غيّر المحافظة يدويًا.
+async function syncProvinceAfterUpload(env, token, order, row, targetCityId) {
+  if (!row.cityOverridden) return;
+  const r = await syncShopifyProvince(env, token, order, targetCityId);
+  row.provinceSync = r.status;
+  if (r.status === 'synced') {
+    row.actions.push(`تعديل محافظة عنوان الشحن على شوبيفاي: ${r.from || '—'} ← ${r.to}`);
+    row.advisories.push(`محافظة الأوردر على شوبيفاي اتعدّلت من ${r.from || '—'} إلى ${r.to}`);
+  } else if (r.status === 'skipped' || r.status === 'failed') {
+    row.advisories.push(`⚠️ ${r.status === 'failed' ? 'تعذّر تعديل محافظة الأوردر على شوبيفاي: ' : ''}${r.note}`
+      + ' — الشحنة نفسها اترفعت سليمة (عدّلها يدويًا لو لازم)');
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1446,8 +1567,8 @@ function buildReDetailsQuery() {
           displayFulfillmentStatus
           totalOutstandingSet { shopMoney { amount currencyCode } }
           shippingAddress {
-            name firstName lastName phone
-            address1 address2 city province provinceCode zip
+            name firstName lastName phone company
+            address1 address2 city province provinceCode countryCodeV2 zip
           }
           customer { firstName lastName email phone }
           s2Status:  metafield(namespace: "custom", key: "status_2_r_e")             { value }
@@ -3101,6 +3222,7 @@ async function uploadOne(env, token, order, catalog, override) {
     row.warnings.push(`الشحنة اترفعت (${res.trackingNumber}) لكن الكتابة على شوبيفاي فشلت: ${e.message}`);
     row.shopifyWriteFailed = true;
   }
+  await syncProvinceAfterUpload(env, token, order, row, planUsed.cityId);
   return row;
 }
 
@@ -3142,6 +3264,7 @@ async function logRow(env, row, employee, job = S1_JOB) {
         // المرشحة تتحوّل لصف في جدول المحافظات بدل تدخّل يدوي كل مرة
         city_auto:       row.cityAuto,
         city_overridden: !!row.cityOverridden,
+        province_sync:   row.provinceSync || null,   // synced · same · skipped · failed (v2.20.0)
         // 🔴 نفس السبب بالظبط، على مستوى **المنطقة**: من غير العلم ده
         //    `district_sent` مابيفرّقش بين مطابقة نجحت وموظف صلّحها بإيده،
         //    فنسبة نجاح المطابقة **مش قابلة للقراءة من السجل** (v2.5.0).
@@ -3686,6 +3809,9 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
     row.shopifyWriteFailed = true;
   }
 
+  // 🔴 محافظة الأوردر على شوبيفاي (v2.20.0) — تلقائي لو الموظف غيّر محافظة بوسطة
+  await syncProvinceAfterUpload(env, token, order, row, planUsed.cityId);
+
   // 🔴 نفس قاعدة §UPLOAD: `advisories` **مش** بتلوّن الصف (v2.7.0). صف اتعملت
   //    فيه الشحنة والكتابة والتاج والحالة — وكل اللي عليه إن المبلغ اتقص عند
   //    حد بوسطة — **نجاح**، والملحوظة بتتعرض جنبه.
@@ -4132,6 +4258,24 @@ export default {
           });
         } catch { /* الكتالوج فشل فوق وبيتعرض هناك */ }
 
+        // 🔴 قايمة محافظات شوبيفاي (v2.20.0) — شرط مزامنة محافظة الأوردر بعد تغيير
+        //    محافظة بوسطة يدويًا. من غيرها المزامنة بتتخطّى بملحوظة على كل أوردر.
+        try {
+          const token = await getAccessToken(env);
+          const live = await getShopifyProvinces(env, token);
+          const need = PROVINCE_TABLE.filter(r => !r.zoneOnly);
+          const missing = need.filter(r => !live.has(r.code.toUpperCase()));
+          checks.push({
+            ok: missing.length === 0,
+            label: 'محافظات شوبيفاي ↔ جدول المحافظات',
+            detail: missing.length ? `مش في قايمة شوبيفاي: ${missing.map(m => `${m.province} (${m.code})`).join(', ')}`
+                                   : `${live.size} محافظة في شوبيفاي — كل محافظات الجدول موجودة`,
+          });
+        } catch (e) {
+          checks.push({ ok: false, label: 'محافظات شوبيفاي ↔ جدول المحافظات',
+            detail: `تعذّر قراءة القايمة (${e.message}) — مزامنة محافظة الأوردر على شوبيفاي هتتخطّى. غالبًا صلاحية read_shipping ناقصة` });
+        }
+
         // جدول المحافظات مقابل الكتالوج
         try {
           const cat = await getCatalog(env);
@@ -4500,6 +4644,7 @@ export default {
               // القياس اللي بيقول أنهي مدن تستاهل صف في جدول المحافظات بدل
               // تدخّل يدوي كل مرة.
               city_overridden: !!r.cityOverridden,
+              province_sync: r.provinceSync || null,
               // نفس حقول §UPLOAD::logRow بالحرف — الوضعين بيتقروا مع بعض
               district_overridden: !!r.districtOverridden,
               degree_forced: r.degreeForced,
