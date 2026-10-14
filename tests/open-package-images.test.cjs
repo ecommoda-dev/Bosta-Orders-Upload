@@ -15,10 +15,12 @@ const load = (f) => new Function('fetch', 'caches', src + '\nreturn { uploadOneR
 
 const D = (id, name, nameAr) => ({ id, name, nameAr, zone: 'Z', zoneAr: '', dropOff: true });
 const catalog = { cities: [{ cityId: 'FceDyHXwpSYYF9zGW', cityName: 'Cairo', cityAr: 'القاهرة', districts: [D('c1', 'Nasr City', 'مدينة نصر')] }] };
-const order = () => ({ id: 'gid://shopify/Order/1', name: '#53517', note: null,
+const li = (sku, img) => ({ node: { quantity: 1, fulfillmentLineItem: { lineItem: { sku, name: sku, originalUnitPriceSet: { shopMoney: { amount: '1650' } }, image: img ? { url: img } : null } } } });
+// 🔴 صور الدورة بتيجي من returnLineItems نفسها — مش من قطع الأوردر (#57833)
+const order = (imgs = ['https://cdn.shopify.com/p.png', 'https://cdn.shopify.com/p2.png']) => ({ id: 'gid://shopify/Order/1', name: '#53517', note: null,
   shippingAddress: { name: 'Ahmed Ali', firstName: 'Ahmed', lastName: 'Ali', phone: '01019191915', address1: 'مدينة نصر شارع النحاس', city: 'مدينة نصر', province: 'Cairo', provinceCode: 'C' },
   customer: { phone: '01019191915' }, totalOutstandingSet: { shopMoney: { amount: '-1650' } }, outgoingItems: [],
-  currentCycle: { name: '#53517-R1', returnLineItems: { edges: [{ node: { quantity: 1, fulfillmentLineItem: { lineItem: { sku: 'A', name: 'A', originalUnitPriceSet: { shopMoney: { amount: '1650' } } } } } }] } } });
+  currentCycle: { name: '#53517-R1', returnLineItems: { edges: imgs.map((u, i) => li('A' + i, u)) } } });
 const env = { BOSTA_API_KEY: 'k', SHOP_DOMAIN: 's.myshopify.com' };
 const JOB = load(async () => reply(200, {})).getJob('return');
 
@@ -65,7 +67,7 @@ const posts = (log) => log.filter(c => c.u.includes('/deliveries') && !c.u.inclu
 
   console.log('\n② مفيش صورة على شوبيفاي → خطأ واضح، ومفيش إعادة إرسال');
   { const { f, log } = mk({ withImage: false }); const api = load(f); api.ensureNormalized(catalog);
-    const row = await api.uploadOneRE(env, 'tok', order(), catalog, JOB, null);
+    const row = await api.uploadOneRE(env, 'tok', order([null]), catalog, JOB, null);
     ok('error', row.status === 'error' && !row.trackingNumber, row);
     ok('الرسالة بتقول 2150 وسبب الصورة', /صورة للمنتج/.test(row.error) && /مفيش صورة/.test(row.error), row.error);
     ok('نداء إنشاء واحد بس', posts(log).length === 1); }
@@ -81,6 +83,19 @@ const posts = (log) => log.filter(c => c.u.includes('/deliveries') && !c.u.inclu
     const row = await api.uploadOneRE(env, 'tok', order(), catalog, JOB, null);
     ok('error', row.status === 'error', row);
     ok('نداءين بالظبط، مفيش حلقة', posts(log).length === 2, posts(log).length); }
+
+  console.log('\n⑤ #57833 — الصورة صورة المرتجع (Salomon) مش القطعة المحتفظ بيها (Columbia)');
+  { const { f, log } = mk(); const api = load(f); api.ensureNormalized(catalog);
+    const o = order(['https://cdn.shopify.com/p-salomon.png']);
+    // قطعة العميل محتفظ بيها على الأوردر (currentQuantity 1) — كانت هي اللي بتتبعت
+    o.lineItems = { edges: [{ node: { sku: 'GT1', name: 'Columbia', currentQuantity: 1, unfulfilledQuantity: 0, image: { url: 'https://cdn.shopify.com/p-columbia.png' } } }] };
+    const row = await api.uploadOneRE(env, 'tok', o, catalog, JOB, null);
+    const dl = log.filter(c => c.u.startsWith('https://cdn.shopify.com/')).map(c => c.u);
+    ok('الرفع نجح', row.status === 'success', row.error);
+    ok('اتنزّلت صورة Salomon بس', dl.length === 1 && dl[0].includes('p-salomon'), dl);
+    ok('⛔ صورة Columbia ما اتنزّلتش', !dl.some(u => u.includes('columbia')), dl);
+    ok('ومفيش استعلام صور الأوردر العامة', !log.some(c => c.u.includes('/admin/api/') && /OrderImages/.test(c.body || '')));
+    ok('صورة واحدة في deliveryImages', JSON.parse(posts(log)[1].body).deliveryImages[0].images.length === 1); }
 
   console.log(`\n${pass} عدّى · ${fail} فشل`);
   process.exit(fail ? 1 : 0);

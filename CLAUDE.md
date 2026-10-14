@@ -1534,3 +1534,10 @@ git show <sha>:index.js
 - تحديد العنوان (`pickCustomerAddress`): ① تطابق address1+address2+city مع عنوان الأوردر **القديم** (لو أكتر من واحد → اللي محافظته = القديمة، ولسه أكتر → مفيش كتابة) ② مفيش تطابق + العميل عنده **عنوان واحد** بنفس المحافظة القديمة ③ غير كده = `skipped` + ملحوظة. ⚠️ ② تخمين ضيّق مقصود.
 - الفشل `advisory` بس (الشحنة وعنوان الأوردر سليمين). النتيجة في `extra.customer_address_sync` (`synced` · `same` · `skipped` · `failed`).
 - ⚠️ **محتاج `read_customers` + `write_customers`** على تطبيق الـ Worker — لو ناقصين = `failed` بملحوظة. ⚠️ **ما اتجرّبش على شوبيفاي حقيقية** (الـ queries اتعمل لها validate على الـ schema). `tests/province-sync.test.cjs` ٢٩ بند.
+
+---
+
+## v2.22.0 (14-10-2026 · `#57833`)
+- 🔴 **صور مسار `2150` في الاسترجاع/الاستبدال بقت من قطع الدورة نفسها.** `fetchProductImageUrls` كان بيقرا `currentQuantity > 0` على الأوردر كله، والقطع الراجعة `currentQuantity = 0` — فـ`#57833` (R3 استرجاع Salomon) اتبعتت بصورة Columbia (القطعة المحتفظ بيها العميل).
+- الإصلاح: `image { url }` اتضافت لـ`returnLineItems` و`exchangeLineItems` وسطور الأوردر، و`cycleImageUrls` (استرجاع ← القطع الراجعة · استبدال ← الخارجة وfallback للراجعة) بتتمرّر لـ`createDeliveryWithImages`. ⛔ مفيش رجوع لصور الأوردر العامة — مفيش صورة للدورة = فشل بخطأ واضح. الشحن العادي زي ما هو.
+- ⚠️ **الاستبدال بياخد صور القطع الخارجة** (نفس مصدر `goodsValue`) — تقدير، مش مقيس على بوسطة. `tests/open-package-images.test.cjs` ⑤ بيقفل حالة #57833.

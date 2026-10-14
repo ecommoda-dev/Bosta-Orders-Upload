@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.21.0';
+const WORKER_VERSION = '2.22.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -1512,6 +1512,7 @@ function itemsFromCycle(cycle) {
         label: cleanText(li?.sku) || cleanText(li?.name) || null,
         qty,
         unitPrice: parseFloat(li?.originalUnitPriceSet?.shopMoney?.amount || 0) || 0,
+        imageUrl: cleanText(li?.image?.url) || null,
       }));
     })
     .filter((row) => !!row.label);
@@ -1529,6 +1530,7 @@ function itemsFromUnfulfilledLines(order) {
       label: cleanText(node.sku) || cleanText(node.name) || null,
       qty: node.unfulfilledQuantity,
       unitPrice: parseFloat(node.originalUnitPriceSet?.shopMoney?.amount || 0) || 0,
+      imageUrl: cleanText(node.image?.url) || null,
     }))
     .filter((row) => !!row.label);
 }
@@ -1673,6 +1675,7 @@ function buildReDetailsQuery() {
               node {
                 sku name currentQuantity unfulfilledQuantity
                 originalUnitPriceSet { shopMoney { amount } }
+                image { url }
               }
             }
           }
@@ -1687,7 +1690,7 @@ function buildReDetailsQuery() {
                       quantity
                       ... on ReturnLineItem {
                         fulfillmentLineItem {
-                          lineItem { sku name originalUnitPriceSet { shopMoney { amount } } }
+                          lineItem { sku name originalUnitPriceSet { shopMoney { amount } } image { url } }
                         }
                       }
                     }
@@ -1697,7 +1700,7 @@ function buildReDetailsQuery() {
                   edges {
                     node {
                       quantity
-                      lineItems { sku name originalUnitPriceSet { shopMoney { amount } } }
+                      lineItems { sku name originalUnitPriceSet { shopMoney { amount } } image { url } }
                     }
                   }
                 }
@@ -2904,12 +2907,21 @@ async function uploadOpenPackageImage(env, imageUrl) {
 
 // بديل `createDelivery` في كل مسارات الرفع: نفس النتيجة، ومعاها إعادة محاولة
 // واحدة بالصورة لو الرد `2150`. أي فشل في مسار الصورة بيرجّع رد الـ 2150 الأصلي.
-async function createDeliveryWithImages(env, token, order, payload, documented) {
+// 🔴 `cycleImages` (مصفوفة، حتى لو فاضية) = مسار R/E: الصور من قطع الدورة بس ومفيش
+//    رجوع لصور الأوردر العامة — صورة غلط عند المندوب أسوأ من فشل واضح. `undefined`
+//    = الشحن العادي (كل قطع الأوردر الحالية).
+async function createDeliveryWithImages(env, token, order, payload, documented, cycleImages) {
   const res = await createDelivery(env, payload, documented);
   if (res.ok || res.errorCode !== '2150') return res;
   try {
-    const imageUrls = await fetchProductImageUrls(env, token, order.id);
-    if (!imageUrls.length) return { ...res, imageError: 'مفيش صورة لأي منتج في الأوردر على شوبيفاي' };
+    const imageUrls = Array.isArray(cycleImages)
+      ? cycleImages
+      : await fetchProductImageUrls(env, token, order.id);
+    if (!imageUrls.length) {
+      return { ...res, imageError: Array.isArray(cycleImages)
+        ? 'مفيش صورة لقطع الدورة على شوبيفاي — ضيف صورة للمنتج الراجع'
+        : 'مفيش صورة لأي منتج في الأوردر على شوبيفاي' };
+    }
     // صورة فاشلة مابتوقفش الباقي — المهم يوصل لبوسطة صورة واحدة على الأقل
     const paths = [];
     let lastErr = null;
@@ -3417,6 +3429,7 @@ function resolveReturnItems(cycle) {
         label: cleanText(li.sku) || cleanText(li.name) || null,
         qty,
         unitPrice: parseFloat(li.originalUnitPriceSet?.shopMoney?.amount || 0) || 0,
+        imageUrl: cleanText(li.image?.url) || null,
       };
     })
     .filter((row) => row && row.label);
@@ -3512,6 +3525,23 @@ function resolveCod(order) {
   };
 }
 
+// ─── §RE-UPLOAD::cycleImageUrls ───
+// 🔴 صور الطرد في `2150` لازم تبقى صور **قطع الدورة اللي بتتشحن** مش أي سطر في
+//    الأوردر: `#57833` (دورة R3 استرجاع) اتبعتت بصورة Columbia — القطعة اللي العميل
+//    **محتفظ بيها** — لأن `fetchProductImageUrls` كان بيقرا `currentQuantity > 0`
+//    على الأوردر كله، والقطع الراجعة `currentQuantity = 0`.
+//    استرجاع ← القطع الراجعة · استبدال ← القطع الخارجة (نفس مصدر `goodsValue`)
+//    وfallback للراجعة لو الخارجة مالهاش صور. ⛔ ومفيش رجوع لصور الأوردر العامة.
+function cycleImageUrls(returns, outgoing, jobType) {
+  const pick = (rows) => [...new Set((rows || []).map((r) => r?.imageUrl).filter(Boolean))]
+    .slice(0, OPEN_PKG_MAX_IMAGES);
+  if (jobType === JOB_EXCHANGE) {
+    const out = pick(outgoing);
+    if (out.length) return out;
+  }
+  return pick(returns);
+}
+
 // ─── §RE-UPLOAD::buildPayloadParts ───
 // كل اللي الـ payload محتاجه من الدورة في مكان واحد، عشان التحقق تحت وبنّاء
 // الـ payload مايختلفوش عليه أبدًا.
@@ -3532,6 +3562,8 @@ function buildPayloadParts(order, jobType) {
   return {
     ...money,
     returnItems: returns,
+    // 🔴 صور الدورة نفسها — مش صور الأوردر كله (#57833). §BOSTA::openPackageImages
+    imageUrls: cycleImageUrls(returns, outgoing, jobType),
     returnCount: countItems(returns),
     returnDescription: describeItems(returns),
     outgoingCount: countItems(outgoing),
@@ -3797,14 +3829,14 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   let urefAttempt = 1;
   const createWithRef = async (m, doc) => {
     let pl = buildRePayload(order, planUsed, m, job.jobType, parts2);
-    let r = await createDeliveryWithImages(env, token, order, pl, doc);
+    let r = await createDeliveryWithImages(env, token, order, pl, doc, parts2.imageUrls);
     while (!r.ok && String(r.errorCode) === '11000'
            && hasPriorS2Upload(order, job) && urefAttempt < MAX_REOPEN_SUFFIX) {
       urefAttempt += 1;
       parts2.uref = nextReopenedUref(baseUref, urefAttempt);
       row.uref = parts2.uref;
       pl = buildRePayload(order, planUsed, m, job.jobType, parts2);
-      r = await createDeliveryWithImages(env, token, order, pl, doc);
+      r = await createDeliveryWithImages(env, token, order, pl, doc, parts2.imageUrls);
     }
     return r;
   };
