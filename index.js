@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.22.0';
+const WORKER_VERSION = '2.23.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -687,9 +687,9 @@ async function noteUnregisteredLogValues(db, entries) {
 // «copy verbatim» (`worker-builder` Step 7-ج بيتطلب الحقن هنا بالحرف).
 async function writeLog(db, entry) {
   const unregistered = !isRegisteredLogValue(entry.tool, entry.type);
-  const extra = unregistered
+  const extra = withViaExtra(db, unregistered
     ? { ...(entry.extra || {}), _unregistered: true }
-    : entry.extra;
+    : entry.extra);
 
   await db.prepare(`
     INSERT INTO logs
@@ -727,9 +727,9 @@ async function writeLogsBatch(db, entries) {
     await db.batch(group.map((entry) => {
       const unregistered = !isRegisteredLogValue(entry.tool, entry.type);
       if (unregistered) unregisteredEntries.push(entry);
-      const extra = unregistered
+      const extra = withViaExtra(db, unregistered
         ? { ...(entry.extra || {}), _unregistered: true }
-        : entry.extra;
+        : entry.extra);
       return db.prepare(`
         INSERT INTO logs
           (timestamp, tool, type, employee, order_id, order_name,
@@ -4155,6 +4155,38 @@ function normalizeOrderPayload(orders) {
   return out;
 }
 
+// ─── §AUTH::secrets (v2.23.0) ───
+const AUTH_SECRETS = [
+  { envKey: 'WORKER_SECRET',           via: 'delivery_cod_ops' },
+  { envKey: 'WORKER_SECRET_WAREHOUSE', via: 'warehouse_ops' },
+];
+function authSecrets(env) {
+  return AUTH_SECRETS
+    .map(a => ({ ...a, value: typeof env[a.envKey] === 'string' ? env[a.envKey].trim() : '' }))
+    .filter(a => a.value !== '');
+}
+// مقارنة بزمن ثابت — بترجّع اسم الهب أو null.
+function matchAuthSecret(authHeader, secrets) {
+  if (!authHeader) return null;
+  let hit = null;
+  for (const sec of secrets) {
+    const expected = `Bearer ${sec.value}`;
+    let diff = expected.length ^ authHeader.length;
+    for (let i = 0; i < expected.length; i++)
+      diff |= expected.charCodeAt(i) ^ (authHeader.charCodeAt(i) || 0);
+    if (diff === 0 && !hit) hit = sec.via;
+  }
+  return hit;
+}
+// غلاف D1 لكل طلب: نفس `prepare`/`batch` + علامة `__via` بيقراها `writeLog`.
+function withVia(db, via) {
+  return { prepare: (sql) => db.prepare(sql), batch: (stmts) => db.batch(stmts), __via: via };
+}
+function withViaExtra(db, extra) {
+  const via = db && db.__via;
+  return via ? { ...(extra || {}), via } : extra;
+}
+
 // ══════════════════════════════════════════════════════════════
 // §HANDLER
 // ══════════════════════════════════════════════════════════════
@@ -4177,7 +4209,11 @@ export default {
     //    والكشف محدود بحالة «Worker مالوش سر أصلًا» — وهي الحالة اللي كانت
     //    بتفتح كل الـ endpoints قبل الحارس ده.
     const DIAG_ACTIONS = new Set(['diag', 'get_config']);
-    const secretMissing = typeof env.WORKER_SECRET !== 'string' || env.WORKER_SECRET.trim() === '';
+    // 🔴 سرّين مقبولين (v2.23.0 · طلب أحمد 22-10-2026) — الأداة في هبّين:
+    //    `WORKER_SECRET` = مجموعة `delivery_cod_ops` · `WORKER_SECRET_WAREHOUSE` = مجموعة `warehouse_ops`.
+    //    التاني اختياري (غيابه = السلوك القديم)، وسر فاضي مابيتحسبش (نفس حارس `"Bearer undefined"`).
+    const secrets = authSecrets(env);
+    const secretMissing = !secrets.length;
 
     if (secretMissing && !DIAG_ACTIONS.has(action))
       return new Response(JSON.stringify({
@@ -4186,11 +4222,13 @@ export default {
       }), { status: 500, headers: getCORS(request) });
 
     if (!secretMissing) {
-      const auth = request.headers.get('Authorization');
-      if (!auth || auth !== `Bearer ${env.WORKER_SECRET}`)
+      const via = matchAuthSecret(request.headers.get('Authorization'), secrets);
+      if (!via)
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
           status: 401, headers: getCORS(request),
         });
+      // كل كتابة في D1 بتعدّي من writeLog/writeLogsBatch وبتقرا `db.__via` — غلاف لكل طلب (مش متغيّر عام).
+      env = { ...env, DB: withVia(env.DB, via) };
     }
 
     try {
@@ -4271,6 +4309,13 @@ export default {
           detail: env.WORKER_SECRET
             ? `مضبوط (${env.WORKER_SECRET.length} حرف) · بصمة ${await secretFingerprint(env.WORKER_SECRET)}`
             : 'ناقص',
+        });
+        checks.push({
+          ok: true,
+          label: 'WORKER_SECRET_WAREHOUSE (هب المخزن)',
+          detail: (typeof env.WORKER_SECRET_WAREHOUSE === 'string' && env.WORKER_SECRET_WAREHOUSE.trim())
+            ? `مضبوط (${env.WORKER_SECRET_WAREHOUSE.trim().length} حرف) · بصمة ${await secretFingerprint(env.WORKER_SECRET_WAREHOUSE.trim())}`
+            : 'مش مضبوط — هب المخزن هيرجّع 401 (اختياري لهب الشحن)',
         });
         checks.push({ ok: !!env.SHOP_DOMAIN, label: 'SHOP_DOMAIN', detail: env.SHOP_DOMAIN || 'ناقص — من [vars] في wrangler.toml' });
         checks.push({ ok: !!env.BOSTA_API_KEY, label: 'BOSTA_API_KEY', detail: env.BOSTA_API_KEY ? `مضبوط (${env.BOSTA_API_KEY.length} حرف)` : 'ناقص' });
