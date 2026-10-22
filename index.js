@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.24.1';
+const WORKER_VERSION = '2.24.2';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2917,6 +2917,11 @@ async function uploadOpenPackageImage(env, imageUrl) {
 //    وده اللي الموظف عايزه على CRP (أوردر 6275546855 vs 8060246611).
 //    `imageUrl` = مسار الملف بعد `bosta-files/default/` (مش الرابط الكامل).
 const RETURN_PROOF_GCS_PREFIX = '/bosta-files/default/';
+// 🔴 `GET /deliveries/signedUrl` بيطلب `?type=` (400 · errorCode 777 · "type is required" —
+//    مقيس 22-10-2026 على #57833). القيم من قايمة أدلة الاسترجاع (`bosta-api-helper` 8a):
+//    `crp_sig` · `return_prf` · `damaged_items_proof`. `return_prf` = إثبات الطرد الراجع.
+//    ⚠️ استنتاج من الاسم مش مقيس — لو رجّع 400 تاني، الرسالة فيها السبب (v2.24.1).
+const RETURN_PROOF_SIGNED_URL_TYPE = 'return_prf';
 
 async function uploadReturnProofImage(env, imageUrl) {
   const img = await fetch(imageUrl);
@@ -2924,7 +2929,7 @@ async function uploadReturnProofImage(env, imageUrl) {
   const bytes = await img.arrayBuffer();
   const ctype = img.headers?.get?.('content-type') || 'image/png';
 
-  const sResp = await fetch(`${BOSTA_BASE}/deliveries/signedUrl`, { method: 'GET', headers: bostaHeaders(env) });
+  const sResp = await fetch(`${BOSTA_BASE}/deliveries/signedUrl?type=${RETURN_PROOF_SIGNED_URL_TYPE}`, { method: 'GET', headers: bostaHeaders(env) });
   const sBody = await sResp.json().catch(() => null);
   const signedUrl = sBody?.data?.signedUrl;
   if (!sResp.ok || !signedUrl) {

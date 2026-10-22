@@ -40,7 +40,9 @@ function mk({ withImage = true, putStatus = 200, retryFails = false, proofNotEno
     if (u.startsWith('https://cdn.shopify.com/p')) return reply(200, {});
     if (u.endsWith('/delivery-images/signed-url')) return reply(200, { data: { signedUrl: 'https://storage.googleapis.com/x?sig=1', path: 'imgs/' + (++seq) } });
     // 🔴 مسار صورة الـ Return الحقيقي (مقيس من الداشبورد 22-10-2026)
-    if (u.endsWith('/deliveries/signedUrl')) return reply(200, { data: { signedUrl: `https://storage.googleapis.com/bosta-files/default/BIZ/${++seq}.png?X-Goog-Signature=abc` } });
+    // 🔴 بوسطة بترفض الطلب من غير type (400 · 777 · type is required) — مقيس 22-10-2026
+    if (u.split('?')[0].endsWith('/deliveries/signedUrl') && !/[?&]type=return_prf(&|$)/.test(u)) return reply(400, { success: false, errorCode: 777, message: 'type is required' });
+    if (u.split('?')[0].endsWith('/deliveries/signedUrl')) return reply(200, { data: { signedUrl: `https://storage.googleapis.com/bosta-files/default/BIZ/${++seq}.png?X-Goog-Signature=abc` } });
     if (u.startsWith('https://storage.googleapis.com/')) return reply(putStatus, {});
     if (u.includes('/deliveries')) {
       const b = JSON.parse(opts.body);
@@ -65,7 +67,7 @@ const posts = (log) => log.filter(c => c.u.includes('/deliveries') && !c.u.inclu
     ok('أوردر بمنتجين → صورتين في extraData.businessProofOfReturnedPackages', b1.extraData?.businessProofOfReturnedPackages?.length === 2, b1.extraData);
     ok('imageUrl = المسار بعد bosta-files/default/ (من غير الرابط ولا التوقيع)', /^BIZ\/\d+\.png$/.test(b1.extraData.businessProofOfReturnedPackages[0].imageUrl), b1.extraData);
     ok('⛔ مفيش deliveryImages على CRP (دي بتظهر في New shipment details)', b1.deliveryImages === undefined, b1.deliveryImages);
-    ok('الرفع بـ GET /deliveries/signedUrl مش POST delivery-images/signed-url', log.some(c => c.u.endsWith('/deliveries/signedUrl') && c.method === 'GET') && !log.some(c => c.u.includes('delivery-images')));
+    ok('الرفع بـ GET /deliveries/signedUrl مش POST delivery-images/signed-url', log.some(c => c.u.split('?')[0].endsWith('/deliveries/signedUrl') && c.method === 'GET') && !log.some(c => c.u.includes('delivery-images')));
     ok('⛔ allowToOpenPackage فضلت true', JSON.parse(p[1].body).allowToOpenPackage === true);
     ok('الأول من غير صور (مفيش رفع استباقي)', !JSON.parse(p[0].body).deliveryImages);
     const put = log.find(c => c.u.startsWith('https://storage.googleapis.com/'));
@@ -124,21 +126,27 @@ const posts = (log) => log.filter(c => c.u.includes('/deliveries') && !c.u.inclu
     ok('⛔ allowToOpenPackage فضلت true', b3.allowToOpenPackage === true); }
 
   console.log('\n⑧ CRP: رابط signedUrl بشكل مختلف → خطأ واضح مش path وهمي');
-  { const f0 = mk().f; const f = async (url, o = {}) => String(url).endsWith('/deliveries/signedUrl') ? reply(200, { data: { signedUrl: 'https://storage.googleapis.com/other-bucket/x.png?s=1' } }) : f0(url, o);
+  { const f0 = mk().f; const f = async (url, o = {}) => String(url).split('?')[0].endsWith('/deliveries/signedUrl') ? reply(200, { data: { signedUrl: 'https://storage.googleapis.com/other-bucket/x.png?s=1' } }) : f0(url, o);
     const api = load(f);
     const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
     ok('فشل برسالة واضحة', !r.ok && /مسار الملف/.test(r.imageError || ''), r.imageError); }
 
   console.log('\n⑨ CRP: signedUrl رجّع 400 → رسالة الخطأ فيها errorCode وسبب بوسطة');
-  { const f0 = mk().f; const f = async (url, o = {}) => String(url).endsWith('/deliveries/signedUrl') ? reply(400, { success: false, errorCode: 1234, message: 'fileType is required' }) : f0(url, o);
+  { const f0 = mk().f; const f = async (url, o = {}) => String(url).split('?')[0].endsWith('/deliveries/signedUrl') ? reply(400, { success: false, errorCode: 1234, message: 'fileType is required' }) : f0(url, o);
     const api = load(f);
     const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
     ok('فشل', !r.ok, r);
     ok('الرسالة فيها HTTP 400 وerrorCode والسبب', /HTTP 400/.test(r.imageError || '') && /1234/.test(r.imageError) && /fileType is required/.test(r.imageError), r.imageError); }
-  { const f0 = mk().f; const f = async (url, o = {}) => String(url).endsWith('/deliveries/signedUrl') ? { ok: false, status: 502, json: async () => { throw new Error('not json'); } } : f0(url, o);
+  { const f0 = mk().f; const f = async (url, o = {}) => String(url).split('?')[0].endsWith('/deliveries/signedUrl') ? { ok: false, status: 502, json: async () => { throw new Error('not json'); } } : f0(url, o);
     const api = load(f);
     const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
     ok('رد مش JSON → الرسالة لسه سليمة بالـ HTTP بس', /HTTP 502\)/.test(r.imageError || ''), r.imageError); }
+
+  console.log('\n⑩ CRP: signedUrl بيتنده بـ ?type=return_prf (777 · type is required على #57833)');
+  { const { f, log } = mk(); const api = load(f);
+    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
+    ok('نجح', r.ok, r.imageError);
+    ok('الطلب فيه type=return_prf', log.some(c => /\/deliveries\/signedUrl\?type=return_prf$/.test(c.u)), log.map(c => c.u)); }
 
   console.log(`\n${pass} عدّى · ${fail} فشل`);
   process.exit(fail ? 1 : 0);
