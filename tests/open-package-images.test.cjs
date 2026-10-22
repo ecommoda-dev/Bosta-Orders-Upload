@@ -129,6 +129,17 @@ const posts = (log) => log.filter(c => c.u.includes('/deliveries') && !c.u.inclu
     const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
     ok('فشل برسالة واضحة', !r.ok && /مسار الملف/.test(r.imageError || ''), r.imageError); }
 
+  console.log('\n⑨ CRP: signedUrl رجّع 400 → رسالة الخطأ فيها errorCode وسبب بوسطة');
+  { const f0 = mk().f; const f = async (url, o = {}) => String(url).endsWith('/deliveries/signedUrl') ? reply(400, { success: false, errorCode: 1234, message: 'fileType is required' }) : f0(url, o);
+    const api = load(f);
+    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
+    ok('فشل', !r.ok, r);
+    ok('الرسالة فيها HTTP 400 وerrorCode والسبب', /HTTP 400/.test(r.imageError || '') && /1234/.test(r.imageError) && /fileType is required/.test(r.imageError), r.imageError); }
+  { const f0 = mk().f; const f = async (url, o = {}) => String(url).endsWith('/deliveries/signedUrl') ? { ok: false, status: 502, json: async () => { throw new Error('not json'); } } : f0(url, o);
+    const api = load(f);
+    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
+    ok('رد مش JSON → الرسالة لسه سليمة بالـ HTTP بس', /HTTP 502\)/.test(r.imageError || ''), r.imageError); }
+
   console.log(`\n${pass} عدّى · ${fail} فشل`);
   process.exit(fail ? 1 : 0);
 })();
