@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.24.0';
+const WORKER_VERSION = '2.24.1';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2927,7 +2927,13 @@ async function uploadReturnProofImage(env, imageUrl) {
   const sResp = await fetch(`${BOSTA_BASE}/deliveries/signedUrl`, { method: 'GET', headers: bostaHeaders(env) });
   const sBody = await sResp.json().catch(() => null);
   const signedUrl = sBody?.data?.signedUrl;
-  if (!sResp.ok || !signedUrl) throw new Error(`بوسطة ما رجّعتش رابط رفع صورة الراجع (HTTP ${sResp.status})`);
+  if (!sResp.ok || !signedUrl) {
+    // 🔴 جسم الرد من بوسطة ضروري للتشخيص: 400 من غير سبب مايتصلحش (الـ endpoint مقيس
+    //    من الداشبورد وممكن يكون محتاج query params مش عارفينها).
+    const why = [sBody?.errorCode != null ? `errorCode ${sBody.errorCode}` : '', sBody?.message || sBody?.error || '']
+      .filter(Boolean).join(' · ').slice(0, 300);
+    throw new Error(`بوسطة ما رجّعتش رابط رفع صورة الراجع (HTTP ${sResp.status}${why ? ` — ${why}` : ''})`);
+  }
 
   let key = null;
   try {
