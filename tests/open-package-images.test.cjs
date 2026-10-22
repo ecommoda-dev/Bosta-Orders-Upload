@@ -11,7 +11,7 @@ let pass = 0, fail = 0;
 const ok = (l, c, x) => { if (c) { pass++; console.log(`  ✅ ${l}`); } else { fail++; console.log(`  ❌ ${l}  →  ${JSON.stringify(x)}`); } };
 const reply = (status, body) => ({ ok: status >= 200 && status < 300, status, text: async () => JSON.stringify(body), json: async () => body,
   headers: { get: () => 'image/png' }, arrayBuffer: async () => new ArrayBuffer(8) });
-const load = (f) => new Function('fetch', 'caches', src + '\nreturn { uploadOneRE, ensureNormalized, getJob };')(f, { default: { match: async () => null, put: async () => {} } });
+const load = (f) => new Function('fetch', 'caches', src + '\nreturn { uploadOneRE, ensureNormalized, getJob, createDeliveryWithImages };')(f, { default: { match: async () => null, put: async () => {} } });
 
 const D = (id, name, nameAr) => ({ id, name, nameAr, zone: 'Z', zoneAr: '', dropOff: true });
 const catalog = { cities: [{ cityId: 'FceDyHXwpSYYF9zGW', cityName: 'Cairo', cityAr: 'القاهرة', districts: [D('c1', 'Nasr City', 'مدينة نصر')] }] };
@@ -25,7 +25,7 @@ const env = { BOSTA_API_KEY: 'k', SHOP_DOMAIN: 's.myshopify.com' };
 const JOB = load(async () => reply(200, {})).getJob('return');
 
 let seq = 0;
-function mk({ withImage = true, putStatus = 200, retryFails = false } = {}) {
+function mk({ withImage = true, putStatus = 200, retryFails = false, proofNotEnough = false } = {}) {
   const log = [];
   const f = async (url, opts = {}) => {
     const u = String(url); log.push({ u, method: opts.method, body: opts.body });
@@ -39,10 +39,13 @@ function mk({ withImage = true, putStatus = 200, retryFails = false } = {}) {
     }
     if (u.startsWith('https://cdn.shopify.com/p')) return reply(200, {});
     if (u.endsWith('/delivery-images/signed-url')) return reply(200, { data: { signedUrl: 'https://storage.googleapis.com/x?sig=1', path: 'imgs/' + (++seq) } });
+    // 🔴 مسار صورة الـ Return الحقيقي (مقيس من الداشبورد 22-10-2026)
+    if (u.endsWith('/deliveries/signedUrl')) return reply(200, { data: { signedUrl: `https://storage.googleapis.com/bosta-files/default/BIZ/${++seq}.png?X-Goog-Signature=abc` } });
     if (u.startsWith('https://storage.googleapis.com/')) return reply(putStatus, {});
     if (u.includes('/deliveries')) {
       const b = JSON.parse(opts.body);
-      if (!b.deliveryImages || retryFails) return reply(400, { success: false, errorCode: 2150, message: 'Product images are required when allowToOpenPackage is enabled.' });
+      const good = b.type === 25 ? (b.extraData?.businessProofOfReturnedPackages?.length && !proofNotEnough) || b.deliveryImages : b.deliveryImages;
+      if (!good || retryFails) return reply(400, { success: false, errorCode: 2150, message: 'Product images are required when allowToOpenPackage is enabled.' });
       return reply(201, { success: true, data: { trackingNumber: '777', _id: 'b1' } });
     }
     return reply(200, {});
@@ -58,8 +61,11 @@ const posts = (log) => log.filter(c => c.u.includes('/deliveries') && !c.u.inclu
     const p = posts(log);
     ok('الرفع نجح وفيه رقم تتبع', row.status === 'success' && row.trackingNumber === '777', row);
     ok('نداءين إنشاء بس (الأول رفضه 2150 والتاني بالصورة)', p.length === 2, p.length);
-    ok('أوردر بمنتجين → صورتين في deliveryImages (مش واحدة)', JSON.parse(p[1].body).deliveryImages?.[0]?.images?.length === 2, JSON.parse(p[1].body).deliveryImages);
-    ok('النوع ALLOW_TO_OPEN_THE_PACKAGE', JSON.parse(p[1].body).deliveryImages[0].type === 'ALLOW_TO_OPEN_THE_PACKAGE');
+    const b1 = JSON.parse(p[1].body);
+    ok('أوردر بمنتجين → صورتين في extraData.businessProofOfReturnedPackages', b1.extraData?.businessProofOfReturnedPackages?.length === 2, b1.extraData);
+    ok('imageUrl = المسار بعد bosta-files/default/ (من غير الرابط ولا التوقيع)', /^BIZ\/\d+\.png$/.test(b1.extraData.businessProofOfReturnedPackages[0].imageUrl), b1.extraData);
+    ok('⛔ مفيش deliveryImages على CRP (دي بتظهر في New shipment details)', b1.deliveryImages === undefined, b1.deliveryImages);
+    ok('الرفع بـ GET /deliveries/signedUrl مش POST delivery-images/signed-url', log.some(c => c.u.endsWith('/deliveries/signedUrl') && c.method === 'GET') && !log.some(c => c.u.includes('delivery-images')));
     ok('⛔ allowToOpenPackage فضلت true', JSON.parse(p[1].body).allowToOpenPackage === true);
     ok('الأول من غير صور (مفيش رفع استباقي)', !JSON.parse(p[0].body).deliveryImages);
     const put = log.find(c => c.u.startsWith('https://storage.googleapis.com/'));
@@ -82,7 +88,7 @@ const posts = (log) => log.filter(c => c.u.includes('/deliveries') && !c.u.inclu
   { const { f, log } = mk({ retryFails: true }); const api = load(f); api.ensureNormalized(catalog);
     const row = await api.uploadOneRE(env, 'tok', order(), catalog, JOB, null);
     ok('error', row.status === 'error', row);
-    ok('نداءين بالظبط، مفيش حلقة', posts(log).length === 2, posts(log).length); }
+    ok('تلات نداءات بالظبط (أصلي ← بالإثبات ← بالاتنين)، مفيش حلقة', posts(log).length === 3, posts(log).length); }
 
   console.log('\n⑤ #57833 — الصورة صورة المرتجع (Salomon) مش القطعة المحتفظ بيها (Columbia)');
   { const { f, log } = mk(); const api = load(f); api.ensureNormalized(catalog);
@@ -95,7 +101,33 @@ const posts = (log) => log.filter(c => c.u.includes('/deliveries') && !c.u.inclu
     ok('اتنزّلت صورة Salomon بس', dl.length === 1 && dl[0].includes('p-salomon'), dl);
     ok('⛔ صورة Columbia ما اتنزّلتش', !dl.some(u => u.includes('columbia')), dl);
     ok('ومفيش استعلام صور الأوردر العامة', !log.some(c => c.u.includes('/admin/api/') && /OrderImages/.test(c.body || '')));
-    ok('صورة واحدة في deliveryImages', JSON.parse(posts(log)[1].body).deliveryImages[0].images.length === 1); }
+    ok('صورة واحدة في businessProofOfReturnedPackages', JSON.parse(posts(log)[1].body).extraData.businessProofOfReturnedPackages.length === 1); }
+
+  console.log('\n⑥ type 30/10 لسه على deliveryImages (مفيش تغيير)');
+  for (const t of [10, 30]) {
+    const { f, log } = mk(); const api = load(f);
+    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: t, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
+    const p = posts(log);
+    ok(`type ${t}: نجح بعد نداءين`, r.ok && p.length === 2, { ok: r.ok, n: p.length });
+    ok(`type ${t}: deliveryImages من غير extraData`, JSON.parse(p[1].body).deliveryImages?.[0]?.images?.length === 1 && !JSON.parse(p[1].body).extraData);
+    ok(`type ${t}: استخدم delivery-images/signed-url`, log.some(c => c.u.endsWith('/delivery-images/signed-url'))); }
+
+  console.log('\n⑦ CRP: لو بوسطة لسه رجّعت 2150 بعد الإثبات → مرة أخيرة بالاتنين + علامة imageFallback');
+  { const { f, log } = mk({ proofNotEnough: true }); const api = load(f);
+    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
+    const p = posts(log);
+    ok('نجح', r.ok, r);
+    ok('تلات نداءات', p.length === 3, p.length);
+    const b3 = JSON.parse(p[2].body);
+    ok('الأخير فيه الاتنين', !!b3.deliveryImages && b3.extraData.businessProofOfReturnedPackages.length === 1);
+    ok('imageFallback ظاهر', r.imageFallback === 'deliveryImages', r.imageFallback);
+    ok('⛔ allowToOpenPackage فضلت true', b3.allowToOpenPackage === true); }
+
+  console.log('\n⑧ CRP: رابط signedUrl بشكل مختلف → خطأ واضح مش path وهمي');
+  { const f0 = mk().f; const f = async (url, o = {}) => String(url).endsWith('/deliveries/signedUrl') ? reply(200, { data: { signedUrl: 'https://storage.googleapis.com/other-bucket/x.png?s=1' } }) : f0(url, o);
+    const api = load(f);
+    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
+    ok('فشل برسالة واضحة', !r.ok && /مسار الملف/.test(r.imageError || ''), r.imageError); }
 
   console.log(`\n${pass} عدّى · ${fail} فشل`);
   process.exit(fail ? 1 : 0);

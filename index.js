@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.23.0';
+const WORKER_VERSION = '2.24.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2905,11 +2905,54 @@ async function uploadOpenPackageImage(env, imageUrl) {
   return path;
 }
 
+// ─── §BOSTA::returnProofImages (v2.24.0) ───
+// 🔴 صورة الـ Return (type 25) مكانها **`extraData.businessProofOfReturnedPackages`**
+//    مش `deliveryImages`. مقيس حيًا 22-10-2026 بالتقاط طلب الداشبورد (من غير إنشاء):
+//      GET  /deliveries/signedUrl            ← data.signedUrl (GCS: bosta-files/default/<businessId>/<ts>.png)
+//      PUT  <signedUrl>                      ← الملف نفسه
+//      POST /deliveries  {type:25, …, extraData:{businessProofOfReturnedPackages:[{imageUrl:"<businessId>/<ts>.png"}]}}
+//    والداشبورد **مابيبعتش** `deliveryImages` ولا `allowToOpenPackage` على الـ Return.
+//    `deliveryImages` بتتعرض في الداشبورد تحت «New shipment details» (صورة الطرد الخارج
+//    من المخزن)، و`businessProofOfReturnedPackages` تحت «Returned shipment details» —
+//    وده اللي الموظف عايزه على CRP (أوردر 6275546855 vs 8060246611).
+//    `imageUrl` = مسار الملف بعد `bosta-files/default/` (مش الرابط الكامل).
+const RETURN_PROOF_GCS_PREFIX = '/bosta-files/default/';
+
+async function uploadReturnProofImage(env, imageUrl) {
+  const img = await fetch(imageUrl);
+  if (!img.ok) throw new Error(`تنزيل صورة المنتج من شوبيفاي فشل (HTTP ${img.status})`);
+  const bytes = await img.arrayBuffer();
+  const ctype = img.headers?.get?.('content-type') || 'image/png';
+
+  const sResp = await fetch(`${BOSTA_BASE}/deliveries/signedUrl`, { method: 'GET', headers: bostaHeaders(env) });
+  const sBody = await sResp.json().catch(() => null);
+  const signedUrl = sBody?.data?.signedUrl;
+  if (!sResp.ok || !signedUrl) throw new Error(`بوسطة ما رجّعتش رابط رفع صورة الراجع (HTTP ${sResp.status})`);
+
+  let key = null;
+  try {
+    const p = new URL(signedUrl).pathname;
+    if (p.startsWith(RETURN_PROOF_GCS_PREFIX)) key = decodeURIComponent(p.slice(RETURN_PROOF_GCS_PREFIX.length));
+  } catch { /* بيتعامل معاه تحت */ }
+  if (!key) throw new Error('شكل رابط رفع صورة الراجع من بوسطة اتغيّر — مسار الملف مش واضح');
+
+  // الرابط الموقّع على الـ host بس — من غير Authorization. لو التوقيع شامل Content-Type
+  // مختلف (403) نعيد من غير الهيدر مرة واحدة.
+  let put = await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': ctype }, body: bytes });
+  if (put.status === 403) put = await fetch(signedUrl, { method: 'PUT', body: bytes });
+  if (!put.ok) throw new Error(`رفع الصورة لبوسطة فشل (HTTP ${put.status})`);
+  return key;
+}
+
 // بديل `createDelivery` في كل مسارات الرفع: نفس النتيجة، ومعاها إعادة محاولة
 // واحدة بالصورة لو الرد `2150`. أي فشل في مسار الصورة بيرجّع رد الـ 2150 الأصلي.
 // 🔴 `cycleImages` (مصفوفة، حتى لو فاضية) = مسار R/E: الصور من قطع الدورة بس ومفيش
 //    رجوع لصور الأوردر العامة — صورة غلط عند المندوب أسوأ من فشل واضح. `undefined`
 //    = الشحن العادي (كل قطع الأوردر الحالية).
+// 🔴 type 25 (CRP): الصورة بتتبعت في `extraData.businessProofOfReturnedPackages`
+//    (§BOSTA::returnProofImages) مش `deliveryImages`. لو بوسطة لسه رجّعت 2150 بعدها
+//    (مش مقيس — الداشبورد مابيبعتش `allowToOpenPackage`) بنعيد مرة أخيرة بالاتنين
+//    عشان الأوردر مايفشلش، وبنعلّم الرد بـ `imageFallback` عشان يبان.
 async function createDeliveryWithImages(env, token, order, payload, documented, cycleImages) {
   const res = await createDelivery(env, payload, documented);
   if (res.ok || res.errorCode !== '2150') return res;
@@ -2922,6 +2965,32 @@ async function createDeliveryWithImages(env, token, order, payload, documented, 
         ? 'مفيش صورة لقطع الدورة على شوبيفاي — ضيف صورة للمنتج الراجع'
         : 'مفيش صورة لأي منتج في الأوردر على شوبيفاي' };
     }
+
+    if (payload.type === BOSTA_TYPE_BY_JOB[JOB_RETURN]) {
+      const keys = [];
+      let lastErr = null;
+      for (const u of imageUrls) {
+        try { keys.push(await uploadReturnProofImage(env, u)); } catch (e) { lastErr = e; }
+      }
+      if (!keys.length) throw lastErr || new Error('رفع الصور فشل');
+      const withProof = {
+        ...payload,
+        extraData: { ...(payload.extraData || {}), businessProofOfReturnedPackages: keys.map((imageUrl) => ({ imageUrl })) },
+      };
+      const r2 = await createDelivery(env, withProof, documented);
+      if (r2.ok || r2.errorCode !== '2150') return r2;
+      // آخر محاولة: الاتنين مع بعض (الصورة هتظهر كمان في New shipment details)
+      const paths = [];
+      for (const u of imageUrls) {
+        try { paths.push(await uploadOpenPackageImage(env, u)); } catch (e) { lastErr = e; }
+      }
+      if (!paths.length) return { ...r2, imageError: lastErr?.message || 'رفع الصور فشل' };
+      const r3 = await createDelivery(env, {
+        ...withProof, deliveryImages: [{ type: OPEN_PKG_IMAGE_TYPE, images: paths }],
+      }, documented);
+      return r3.ok ? { ...r3, imageFallback: 'deliveryImages' } : r3;
+    }
+
     // صورة فاشلة مابتوقفش الباقي — المهم يوصل لبوسطة صورة واحدة على الأقل
     const paths = [];
     let lastErr = null;
