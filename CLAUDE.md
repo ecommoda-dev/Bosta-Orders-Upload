@@ -8,7 +8,7 @@
 (25) و**استبدال** (30). بتعرض الأوردرات المؤهَّلة لكل نوع، والموظف بيرفعها جماعيًا،
 والأداة بتكتب النتيجة على شوبيفاي وبتسجّلها في D1.
 **مين بيستخدمها:** العمليات · المخزن
-**الإصدار:** Worker `v2.23.0` — 🔴 **الريبو ده بقى Worker بس من v3.0.0، مفيش
+**الإصدار:** Worker `v2.24.0` — 🔴 **الريبو ده بقى Worker بس من v3.0.0، مفيش
 رقم واجهة هنا خالص** (راجع البلوك تحت)
 
 > **v2.0.0 = الدمج.** `Bosta-Return-Exchange-Exporter` v6.0.0 اتنقلت هنا بالكامل.
@@ -1553,3 +1553,13 @@ git show <sha>:index.js
 - 🔴 **خطوات يدوية (حاجزة لهب المخزن):** نشر v2.23.0 → `WORKER_SECRET_WAREHOUSE` = قيمة `warehouse_ops` → **Promote**. وتسجيل الـ Worker في المجموعتين في `ecommoda-constants` → `secret-groups.md` — **تدوير أي مجموعة لازم يشمله**.
 - ⚠️ **الأثر الأمني:** أي جهاز معاه سر `warehouse_ops` يقدر ينشئ شحنات بوسطة بفلوس (مقصود — أي موظف مخزن). العزل بين المجموعتين لباقي الـ Workers ما اتغيّرش.
 - ⚠️ ما اتجرّبش على بوسطة/شوبيفاي حقيقيين — الاختبار على D1 مزيّف.
+
+---
+
+## v2.24.0 (22-10-2026 · طلب أحمد) — صورة الـ Return في «Returned shipment details»
+- 🔴 **العَرَض:** أوردر CRP (type 25) بيترفع بالأداة (`6275546855`) صورته بتظهر تحت **New shipment details**، وأوردر نفس النوع من الداشبورد (`8060246611`) صورته تحت **Returned shipment details**.
+- 🔴 **السبب (مقيس 22-10-2026 بالتقاط طلب الداشبورد بـ hook بيمنع الإرسال — مفيش شحنة اتعملت):** الداشبورد بيرفع الصورة `GET /deliveries/signedUrl` ← `PUT` على GCS (`bosta-files/default/<businessId>/<ts>.png`) وبيبعتها في **`extraData.businessProofOfReturnedPackages:[{imageUrl:"<businessId>/<ts>.png"}]`**، **ومابيبعتش `deliveryImages` ولا `allowToOpenPackage`**. الأداة كانت بترفع بـ`POST /deliveries/delivery-images/signed-url` وتبعت `deliveryImages` — وده الحقل اللي بوسطة بتعرضه تحت New shipment details.
+- الإصلاح: `uploadReturnProofImage` + فرع type 25 في `createDeliveryWithImages` (§BOSTA::returnProofImages). type 10 و30 **ما اتغيّروش** (لسه `deliveryImages`).
+- ⚠️ **غير مقيس:** هل بوسطة بتقبل `businessProofOfReturnedPackages` لوحدها لما `allowToOpenPackage:true` (الداشبورد بيبعتها من غير الفلاج). لو رجّعت `2150` تاني بعدها، الأداة بتعيد مرة أخيرة بالاتنين وبتعلّم الرد بـ`imageFallback:'deliveryImages'` — الصورة وقتها هتظهر كمان في New shipment details. ⛔ مفيش تحويل صامت لـ`allowToOpenPackage:false` (قرار 04-10-2026 قايم).
+- ⚠️ **الاستبدال (30):** الداشبورد على Exchange ما اتقاسش — لسه على `deliveryImages`.
+- ✅ `tests/open-package-images.test.cjs` اتحدّث (٣٣ بند).
