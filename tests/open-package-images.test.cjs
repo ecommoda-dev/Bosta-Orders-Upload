@@ -44,7 +44,7 @@ function mk({ withImage = true, putStatus = 200, retryFails = false, proofNotEno
     if (u.endsWith('/delivery-images/signed-url')) return reply(200, { data: { signedUrl: 'https://storage.googleapis.com/x?sig=1', path: 'imgs/' + (++seq) } });
     // 🔴 مسار صورة الـ Return الحقيقي (مقيس من الداشبورد 22-10-2026)
     // 🔴 بوسطة بترفض الطلب من غير type (400 · 777 · type is required) — مقيس 22-10-2026
-    if (u.split('?')[0].endsWith('/deliveries/signedUrl') && !/[?&]type=return_prf(&|$)/.test(u)) return reply(400, { success: false, errorCode: 777, message: 'type is required' });
+    if (u.split('?')[0].endsWith('/deliveries/signedUrl') && !/[?&]type=businessProofOfReturnedPackages(&|$)/.test(u)) return reply(400, { success: false, errorCode: 777, message: 'type is required' });
     if (u.split('?')[0].endsWith('/deliveries/signedUrl')) return reply(200, { data: { signedUrl: `https://storage.googleapis.com/bosta-files/default/BIZ/${++seq}.png?X-Goog-Signature=abc` } });
     if (u.startsWith('https://storage.googleapis.com/')) return reply(putStatus, {});
     if (u.includes('/deliveries')) {
@@ -166,21 +166,45 @@ const posts = (log) => log.filter(c => c.u.includes('/deliveries') && !c.u.inclu
     const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25 }, true, ['https://cdn.shopify.com/p.png']);
     ok('رد مش JSON → الملحوظة لسه سليمة بالـ HTTP بس', /HTTP 502\)/.test(r.imageNote || ''), r.imageNote); }
 
-  console.log('\n⑩ CRP: signedUrl بيتنده بـ ?type=return_prf (777 · type is required على #57833)');
+  console.log('\n⑩ signedUrl بيتنده بـ ?type=businessProofOfReturnedPackages (نفس قيمة الداشبورد — مقيس 24-10)');
   { const { f, log } = mk(); const api = load(f); api.ensureNormalized(catalog);
     const row = await api.uploadOneRE(env, 'tok', order(), catalog, JOB, null);
     ok('نجح', row.status === 'success', row.error);
-    ok('الطلب فيه type=return_prf', log.some(c => /\/deliveries\/signedUrl\?type=return_prf$/.test(c.u)), log.map(c => c.u)); }
+    ok('الطلب فيه type=businessProofOfReturnedPackages', log.some(c => /\/deliveries\/signedUrl\?type=businessProofOfReturnedPackages$/.test(c.u)), log.map(c => c.u));
+    ok('⛔ مفيش return_prf', !log.some(c => /return_prf/.test(c.u))); }
 
-  console.log('\n⑪ الاستبدال: الفلاج لسه true على نفس مسار الرفع (قرار 13-09)');
+  // ─── الاستبدال (v2.26.0) ───
+  const exOrder = () => { const o = order(['https://cdn.shopify.com/ret1.png', 'https://cdn.shopify.com/ret2.png']);
+    o.outgoingItems = [{ label: 'SKU-B', qty: 1, unitPrice: 2400, imageUrl: 'https://cdn.shopify.com/out1.png' }];
+    return o; };
+
+  console.log('\n⑪ الاستبدال: صورة الراجع قبل الإنشاء (proof) + الفلاج true + صورة الخارج على 2150');
   { const { f, log } = mk(); const api = load(f); api.ensureNormalized(catalog);
     const JOBX = api.getJob('exchange');
-    const o = order(); o.outgoingItems = [{ label: 'SKU-B', qty: 1, unitPrice: 2400, imageUrl: 'https://cdn.shopify.com/p.png' }];
-    o.currentCycle.exchangeLineItems = { edges: [li('B1', 'https://cdn.shopify.com/p.png')] };
-    const row = await api.uploadOneRE(env, 'tok', o, catalog, JOBX, null);
+    const row = await api.uploadOneRE(env, 'tok', exOrder(), catalog, JOBX, null);
     const p = posts(log);
-    if (p.length) ok('أول جسم استبدال فيه allowToOpenPackage:true', JSON.parse(p[0].body).allowToOpenPackage === true, JSON.parse(p[0].body));
-    else ok('الاستبدال وصل لبوسطة', false, row); }
+    ok('نجح', row.status === 'success' && row.trackingNumber === '777', row);
+    ok('نداءين إنشاء (الأول 2150 ثم بـ deliveryImages)', p.length === 2, p.length);
+    const b1 = JSON.parse(p[0].body), b2 = JSON.parse(p[1].body);
+    ok('الأول: الراجع في extraData (صورتين) ومن غير deliveryImages', b1.extraData?.businessProofOfReturnedPackages?.length === 2 && b1.deliveryImages === undefined, b1);
+    ok('⛔ الفلاج true زي ما هو (قرار 13-09)', b1.allowToOpenPackage === true && b2.allowToOpenPackage === true);
+    ok('التاني: deliveryImages (الخارج) + الراجع لسه موجود', b2.deliveryImages?.[0]?.images?.length === 1 && b2.extraData?.businessProofOfReturnedPackages?.length === 2, b2);
+    const dl = log.filter(c => c.u.startsWith('https://cdn.shopify.com/')).map(c => c.u);
+    ok('deliveryImages من صورة الخارج، وproof من الراجع', dl.some(u => u.includes('out1')) && dl.filter(u => u.includes('ret')).length === 2, dl);
+    ok('proof اتجاب بـ ?type=businessProofOfReturnedPackages', log.some(c => /\/deliveries\/signedUrl\?type=businessProofOfReturnedPackages$/.test(c.u)));
+    ok('proofImage = proof ومفيش ملحوظة', row.proofImage === 'proof' && !(row.advisories || []).some(a => /صورة/.test(a)), { pi: row.proofImage, adv: row.advisories }); }
+
+  console.log('\n⑫ الاستبدال: رفع صورة الراجع فشل → الشحنة تتعمل بصورة الخارج بس + ملحوظة');
+  { const { f, log } = mk();
+    const f2 = async (url, o = {}) => String(url).split('?')[0].endsWith('/deliveries/signedUrl') ? reply(400, { success: false, errorCode: 1234, message: 'boom' }) : f(url, o);
+    const api2 = load(f2); api2.ensureNormalized(catalog);
+    const row = await api2.uploadOneRE(env, 'tok', exOrder(), catalog, api2.getJob('exchange'), null);
+    const p = posts(log);
+    ok('success (الشحنة مش بتقع بسبب صورة الراجع)', row.status === 'success', row);
+    ok('⛔ من غير extraData في أي طلب (ما اتبعتش path وهمي)', p.length > 0 && p.every(c => JSON.parse(c.body).extraData === undefined), p.map(c => JSON.parse(c.body).extraData));
+    ok('صورة الخارج اتبعتت (deliveryImages)', JSON.parse(p[p.length - 1].body).deliveryImages?.[0]?.images?.length === 1);
+    ok('ملحوظة advisory فيها السبب', (row.advisories || []).some(a => /من غير صورة الراجع/.test(a) && /boom/.test(a)), row.advisories);
+    ok('proofImage = none', row.proofImage === 'none'); }
 
   console.log(`\n${pass} عدّى · ${fail} فشل`);
   process.exit(fail ? 1 : 0);
