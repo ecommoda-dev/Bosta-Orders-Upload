@@ -149,7 +149,10 @@ console.log('\n⑦ اللي مش بيتبعت عن قصد');
   const o = order();
   const p = api.buildRePayload(o, plan, 'district', 'return', { ...api.buildPayloadParts(o, 'return'), uref: '#53517-R1' });
   ok('flexShippingInfo مش بيتبعت — بوسطة بتحطها Not Applicable على R/E', p.flexShippingInfo === undefined);
-  ok('allowToOpenPackage = true (مطابق للإكسيل، ب-٨ لسه مفتوح)', p.allowToOpenPackage === true);
+  ok('🔴 CRP: مفيش allowToOpenPackage في الجسم (زي الداشبورد — v2.25.0)', !('allowToOpenPackage' in p), Object.keys(p));
+  const ox = order({ outgoing: [{ label: 'SKU-B', qty: 1, unitPrice: 2400 }], returned: [['SKU-A', 1, 2600]] });
+  const px = api.buildRePayload(ox, plan, 'district', 'exchange', { ...api.buildPayloadParts(ox, 'exchange'), uref: '#53517-EX1' });
+  ok('الاستبدال: allowToOpenPackage = true (قرار 13-09 — مابيتغيّرش)', px.allowToOpenPackage === true);
   eq('الملاحظة بتتحوّل لسطر واحد', p.notes, 'أوردر استرجاع / لا يوجد مصاريف شحن');
 }
 

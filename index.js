@@ -179,7 +179,7 @@ const TOOL_NAME      = 'bosta_orders_upload';    // s1 — الشحن العاد
 const TOOL_NAME_RE   = 'bosta_exchange_export';  // الاسترجاع/الاستبدال — القيمة التاريخية، ٥٦٦ صف من 05-05-2026
 // تاب السجل بيقرا الاتنين — من غير ده الدمج بيقطع تاريخ الموظف نُصّين.
 const LOG_TOOLS      = [TOOL_NAME, TOOL_NAME_RE];
-const WORKER_VERSION = '2.24.2';
+const WORKER_VERSION = '2.25.0';
 const API_VERSION    = '2026-01';
 
 // ─── §CONSTANTS::jobs ───
@@ -2955,16 +2955,61 @@ async function uploadReturnProofImage(env, imageUrl) {
   return key;
 }
 
+// ─── §BOSTA::createReturnDelivery (v2.25.0) ───
+// 🔴 CRP (type 25): صورة الراجع بتترفع **قبل** الإنشاء وبتتبعت في
+//    `extraData.businessProofOfReturnedPackages` — زي الداشبورد بالظبط، ومن غير
+//    `allowToOpenPackage` (§BUILD::buildRePayload). من غير الفلاج بوسطة **مابترفضش**
+//    (مقيس 24-10-2026: الفلاج `false` أو الغايب = 201 والصورة تحت «Returned shipment
+//    details» بس)، فالمسار القديم «ارفض بـ 2150 ثم ارفع» مابقاش بيشتغل لوحده — لازم
+//    الرفع الاستباقي وإلا الشحنة تتعمل من غير أي صورة.
+//    ⚠️ مفيش صورة (أو الرفع فشل) = الشحنة **بتتعمل من غير صورة** بملحوظة `imageNote`
+//    (قرار أحمد 24-10-2026) — بوسطة مابتطلبهاش من غير الفلاج.
+//    🛟 لو بوسطة رجّعت `2150` برضه (غيّرت السلوك): إعادة أخيرة بالاتنين
+//    (`deliveryImages` كمان) وعلامة `imageFallback` — الصورة وقتها هتظهر في المكانين.
+async function createReturnDelivery(env, payload, documented, imageUrls) {
+  const keys = [];
+  let lastErr = null;
+  for (const u of imageUrls) {
+    try { keys.push(await uploadReturnProofImage(env, u)); } catch (e) { lastErr = e; }
+  }
+  const body = keys.length
+    ? { ...payload, extraData: { ...(payload.extraData || {}),
+        businessProofOfReturnedPackages: keys.map((imageUrl) => ({ imageUrl })) } }
+    : payload;
+  const imageNote = keys.length ? null
+    : imageUrls.length
+      ? `الشحنة اتعملت من غير صورة الراجع — رفع الصورة لبوسطة فشل (${lastErr?.message || '—'})`
+      : 'الشحنة اتعملت من غير صورة الراجع — مفيش صورة لقطع الدورة على شوبيفاي';
+
+  const res = await createDelivery(env, body, documented);
+  if (res.ok) return imageNote ? { ...res, imageNote } : res;
+  if (res.errorCode !== '2150') return res;
+
+  // 🛟 بوسطة طلبت `deliveryImages` رغم غياب الفلاج.
+  if (!imageUrls.length) {
+    return { ...res, imageError: 'مفيش صورة لقطع الدورة على شوبيفاي — ضيف صورة للمنتج الراجع' };
+  }
+  const paths = [];
+  for (const u of imageUrls) {
+    try { paths.push(await uploadOpenPackageImage(env, u)); } catch (e) { lastErr = e; }
+  }
+  if (!paths.length) return { ...res, imageError: lastErr?.message || 'رفع الصور فشل' };
+  const r3 = await createDelivery(env, {
+    ...body, deliveryImages: [{ type: OPEN_PKG_IMAGE_TYPE, images: paths }],
+  }, documented);
+  return r3.ok ? { ...r3, imageFallback: 'deliveryImages' } : r3;
+}
+
 // بديل `createDelivery` في كل مسارات الرفع: نفس النتيجة، ومعاها إعادة محاولة
 // واحدة بالصورة لو الرد `2150`. أي فشل في مسار الصورة بيرجّع رد الـ 2150 الأصلي.
 // 🔴 `cycleImages` (مصفوفة، حتى لو فاضية) = مسار R/E: الصور من قطع الدورة بس ومفيش
 //    رجوع لصور الأوردر العامة — صورة غلط عند المندوب أسوأ من فشل واضح. `undefined`
 //    = الشحن العادي (كل قطع الأوردر الحالية).
-// 🔴 type 25 (CRP): الصورة بتتبعت في `extraData.businessProofOfReturnedPackages`
-//    (§BOSTA::returnProofImages) مش `deliveryImages`. لو بوسطة لسه رجّعت 2150 بعدها
-//    (مش مقيس — الداشبورد مابيبعتش `allowToOpenPackage`) بنعيد مرة أخيرة بالاتنين
-//    عشان الأوردر مايفشلش، وبنعلّم الرد بـ `imageFallback` عشان يبان.
+// 🔴 type 25 (CRP) مسار تاني خالص: `createReturnDelivery` (رفع استباقي من غير الفلاج).
 async function createDeliveryWithImages(env, token, order, payload, documented, cycleImages) {
+  if (payload.type === BOSTA_TYPE_BY_JOB[JOB_RETURN]) {
+    return createReturnDelivery(env, payload, documented, Array.isArray(cycleImages) ? cycleImages : []);
+  }
   const res = await createDelivery(env, payload, documented);
   if (res.ok || res.errorCode !== '2150') return res;
   try {
@@ -2975,31 +3020,6 @@ async function createDeliveryWithImages(env, token, order, payload, documented, 
       return { ...res, imageError: Array.isArray(cycleImages)
         ? 'مفيش صورة لقطع الدورة على شوبيفاي — ضيف صورة للمنتج الراجع'
         : 'مفيش صورة لأي منتج في الأوردر على شوبيفاي' };
-    }
-
-    if (payload.type === BOSTA_TYPE_BY_JOB[JOB_RETURN]) {
-      const keys = [];
-      let lastErr = null;
-      for (const u of imageUrls) {
-        try { keys.push(await uploadReturnProofImage(env, u)); } catch (e) { lastErr = e; }
-      }
-      if (!keys.length) throw lastErr || new Error('رفع الصور فشل');
-      const withProof = {
-        ...payload,
-        extraData: { ...(payload.extraData || {}), businessProofOfReturnedPackages: keys.map((imageUrl) => ({ imageUrl })) },
-      };
-      const r2 = await createDelivery(env, withProof, documented);
-      if (r2.ok || r2.errorCode !== '2150') return r2;
-      // آخر محاولة: الاتنين مع بعض (الصورة هتظهر كمان في New shipment details)
-      const paths = [];
-      for (const u of imageUrls) {
-        try { paths.push(await uploadOpenPackageImage(env, u)); } catch (e) { lastErr = e; }
-      }
-      if (!paths.length) return { ...r2, imageError: lastErr?.message || 'رفع الصور فشل' };
-      const r3 = await createDelivery(env, {
-        ...withProof, deliveryImages: [{ type: OPEN_PKG_IMAGE_TYPE, images: paths }],
-      }, documented);
-      return r3.ok ? { ...r3, imageFallback: 'deliveryImages' } : r3;
     }
 
     // صورة فاشلة مابتوقفش الباقي — المهم يوصل لبوسطة صورة واحدة على الأقل
@@ -3704,8 +3724,15 @@ function buildRePayload(order, plan, mode, jobType, parts) {
     businessLocationId: BOSTA_LOCATION_ID,
     businessReference: cleanText(order.name),        // ق-١ — بالحرف، بالهاش
     uniqueBusinessReference: parts.uref,             // ق-٢ — لكل دورة، مخفي عن أي بحث
-    allowToOpenPackage: ALLOW_OPEN_PKG,
   };
+
+  // 🔴 CRP (25) **من غير** `allowToOpenPackage` — زي الداشبورد بالظبط (v2.25.0 · مقيس
+  //    24-10-2026 على ٤ شحنات تجريبية). بوسطة بتفرض صورة في `deliveryImages` لما الفلاج
+  //    `true` (رفض `2150` لو الصورة في `businessProofOfReturnedPackages` بس)، و`deliveryImages`
+  //    بتتعرض تحت «New shipment details» — يعني الفلاج `true` + صورة الراجع في المكان
+  //    الصح **مستحيلين مع بعض**. الغياب = `false` عند بوسطة (اتسجّل `false` في الـ GET).
+  //    الاستبدال (30) والشحن العادي (10) فلاجهم `true` زي ما هو (قرار 13-09-2026).
+  if (jobType !== JOB_RETURN) payload.allowToOpenPackage = ALLOW_OPEN_PKG;
 
   if (jobType === JOB_EXCHANGE) {
     payload.dropOffAddress = address;
@@ -3975,6 +4002,17 @@ async function uploadOneRE(env, token, order, catalog, job, override) {
   actions.push(`رفع شحنة ${job.label} على بوسطة (${DEGREE_LABEL[row.addressDegree] || 'بالمحافظة'})`);
   row.trackingNumber = res.trackingNumber;
   row.bostaId        = res.bostaId;
+
+  // 🖼️ صورة الراجع (CRP · v2.25.0) — ملحوظة على عملية تمّت، مش نقص: الشحنة موجودة
+  //    كاملة. `proofImage` بيتكتب في D1 (`extra.proof_image`) عشان نقيس كام شحنة راحت
+  //    بدون صورة وكام احتاجت الاحتياطي.
+  if (job.jobType === JOB_RETURN) {
+    row.proofImage = res.imageFallback ? 'both' : res.imageNote ? 'none' : 'proof';
+    if (res.imageNote) row.advisories.push(res.imageNote);
+    if (res.imageFallback) {
+      row.advisories.push('بوسطة طلبت صورة في deliveryImages كمان — الصورة ظاهرة تحت New shipment details وReturned shipment details');
+    }
+  }
 
   // ✂ القص **معلَن ومقصود** — حد بوسطة (`errorCode 3008`)، والشحنة اتعملت
   //    بالمبلغ المقصوص بنجاح. ملحوظة للتسوية المكتبية، مش نقص في العملية.
@@ -4897,6 +4935,8 @@ export default {
               city_overridden: !!r.cityOverridden,
               province_sync: r.provinceSync || null,
               customer_address_sync: r.customerAddressSync || null,
+              // 🖼️ CRP بس: `proof` (Returned بس) · `both` (احتياطي 2150) · `none` (من غير صورة)
+              proof_image: r.proofImage || null,
               // نفس حقول §UPLOAD::logRow بالحرف — الوضعين بيتقروا مع بعض
               district_overridden: !!r.districtOverridden,
               degree_forced: r.degreeForced,

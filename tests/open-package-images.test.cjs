@@ -2,7 +2,10 @@
 // مسار 2150 — node tests/open-package-images.test.cjs
 // بوسطة رجّعت 400 · 2150 «Product images are required when allowToOpenPackage
 // is enabled» → رفع صورة المنتج وإعادة الإرسال مرة واحدة (`bosta-api-helper` 8.13).
-// ⛔ ومفيش تحويل صامت لـ allowToOpenPackage:false.
+// ⛔ ومفيش تحويل صامت لـ allowToOpenPackage:false على الشحن العادي والاستبدال.
+// 🔴 CRP (25) مسار تاني (v2.25.0): من غير allowToOpenPackage + رفع صورة الراجع **قبل**
+//    الإنشاء في extraData.businessProofOfReturnedPackages (مقيس 24-10-2026) — الصورة
+//    تظهر تحت «Returned shipment details» بس. 2150 بقى احتياطي نادر.
 // ══════════════════════════════════════════════════════════════
 const fs = require('fs');
 const path = require('path');
@@ -46,8 +49,11 @@ function mk({ withImage = true, putStatus = 200, retryFails = false, proofNotEno
     if (u.startsWith('https://storage.googleapis.com/')) return reply(putStatus, {});
     if (u.includes('/deliveries')) {
       const b = JSON.parse(opts.body);
-      const good = b.type === 25 ? (b.extraData?.businessProofOfReturnedPackages?.length && !proofNotEnough) || b.deliveryImages : b.deliveryImages;
-      if (!good || retryFails) return reply(400, { success: false, errorCode: 2150, message: 'Product images are required when allowToOpenPackage is enabled.' });
+      // 🔴 سلوك بوسطة المقيس 24-10-2026: CRP + allowToOpenPackage:true من غير deliveryImages = 2150،
+      //    والفلاج false/غايب = 201 (الصورة في extraData.businessProofOfReturnedPackages بتتقبل).
+      //    `proofNotEnough` = بوسطة غيّرت السلوك وبقت تطلب deliveryImages على CRP كمان.
+      const needsDI = b.type === 25 ? (b.allowToOpenPackage === true || proofNotEnough) : true;
+      if ((needsDI && !b.deliveryImages) || retryFails) return reply(400, { success: false, errorCode: 2150, message: 'Product images are required when allowToOpenPackage is enabled.' });
       return reply(201, { success: true, data: { trackingNumber: '777', _id: 'b1' } });
     }
     return reply(200, {});
@@ -57,40 +63,47 @@ function mk({ withImage = true, putStatus = 200, retryFails = false, proofNotEno
 const posts = (log) => log.filter(c => c.u.includes('/deliveries') && !c.u.includes('delivery-images') && c.method === 'POST');
 
 (async () => {
-  console.log('\n① 2150 ← صورة ← إعادة إرسال ناجحة');
+  console.log('\n① CRP: الصورة بتترفع قبل الإنشاء، من غير allowToOpenPackage، ونداء إنشاء واحد');
   { const { f, log } = mk(); const api = load(f); api.ensureNormalized(catalog);
     const row = await api.uploadOneRE(env, 'tok', order(), catalog, JOB, null);
     const p = posts(log);
     ok('الرفع نجح وفيه رقم تتبع', row.status === 'success' && row.trackingNumber === '777', row);
-    ok('نداءين إنشاء بس (الأول رفضه 2150 والتاني بالصورة)', p.length === 2, p.length);
-    const b1 = JSON.parse(p[1].body);
+    ok('نداء إنشاء واحد بس (مفيش 2150 ولا إعادة)', p.length === 1, p.length);
+    const b1 = JSON.parse(p[0].body);
     ok('أوردر بمنتجين → صورتين في extraData.businessProofOfReturnedPackages', b1.extraData?.businessProofOfReturnedPackages?.length === 2, b1.extraData);
     ok('imageUrl = المسار بعد bosta-files/default/ (من غير الرابط ولا التوقيع)', /^BIZ\/\d+\.png$/.test(b1.extraData.businessProofOfReturnedPackages[0].imageUrl), b1.extraData);
     ok('⛔ مفيش deliveryImages على CRP (دي بتظهر في New shipment details)', b1.deliveryImages === undefined, b1.deliveryImages);
+    ok('🔴 مفيش allowToOpenPackage في جسم CRP خالص (زي الداشبورد)', !('allowToOpenPackage' in b1), Object.keys(b1));
     ok('الرفع بـ GET /deliveries/signedUrl مش POST delivery-images/signed-url', log.some(c => c.u.split('?')[0].endsWith('/deliveries/signedUrl') && c.method === 'GET') && !log.some(c => c.u.includes('delivery-images')));
-    ok('⛔ allowToOpenPackage فضلت true', JSON.parse(p[1].body).allowToOpenPackage === true);
-    ok('الأول من غير صور (مفيش رفع استباقي)', !JSON.parse(p[0].body).deliveryImages);
     const put = log.find(c => c.u.startsWith('https://storage.googleapis.com/'));
-    ok('PUT على الرابط الموقّع', put && put.method === 'PUT'); }
+    ok('PUT على الرابط الموقّع', put && put.method === 'PUT');
+    ok('الرفع الاستباقي قبل الإنشاء', log.findIndex(c => c.u.startsWith('https://storage.googleapis.com/')) < log.findIndex(c => c.u.includes('/deliveries') && c.method === 'POST' && !c.u.includes('signed')));
+    ok('proofImage = proof (بيتسجّل في D1)', row.proofImage === 'proof', row.proofImage);
+    ok('مفيش ملحوظة صورة', !(row.advisories || []).some(a => /صورة/.test(a)), row.advisories); }
 
-  console.log('\n② مفيش صورة على شوبيفاي → خطأ واضح، ومفيش إعادة إرسال');
+  console.log('\n② CRP: مفيش صورة على شوبيفاي → الشحنة بتتعمل من غير صورة + ملحوظة (قرار أحمد 24-10-2026)');
   { const { f, log } = mk({ withImage: false }); const api = load(f); api.ensureNormalized(catalog);
     const row = await api.uploadOneRE(env, 'tok', order([null]), catalog, JOB, null);
-    ok('error', row.status === 'error' && !row.trackingNumber, row);
-    ok('الرسالة بتقول 2150 وسبب الصورة', /صورة للمنتج/.test(row.error) && /مفيش صورة/.test(row.error), row.error);
-    ok('نداء إنشاء واحد بس', posts(log).length === 1); }
+    ok('success وفيه رقم تتبع', row.status === 'success' && row.trackingNumber === '777', row);
+    ok('نداء إنشاء واحد بس', posts(log).length === 1);
+    ok('من غير extraData', JSON.parse(posts(log)[0].body).extraData === undefined);
+    ok('ملحوظة (advisory) مش تحذير', (row.advisories || []).some(a => /من غير صورة الراجع/.test(a) && /مفيش صورة/.test(a)) && !(row.warnings || []).length, { adv: row.advisories, warn: row.warnings });
+    ok('proofImage = none', row.proofImage === 'none', row.proofImage); }
 
-  console.log('\n③ PUT الصورة فشل → ما يتبعتش path وهمي');
+  console.log('\n③ CRP: PUT الصورة فشل → ما يتبعتش path وهمي، والشحنة تتعمل بملحوظة');
   { const { f, log } = mk({ putStatus: 403 }); const api = load(f); api.ensureNormalized(catalog);
     const row = await api.uploadOneRE(env, 'tok', order(), catalog, JOB, null);
-    ok('error', row.status === 'error', row);
-    ok('نداء إنشاء واحد بس — ما اتبعتش path من غير رفع ناجح', posts(log).length === 1, posts(log).length); }
+    ok('success', row.status === 'success', row);
+    ok('نداء إنشاء واحد بس', posts(log).length === 1, posts(log).length);
+    ok('⛔ ما اتبعتش path وهمي (من غير extraData)', JSON.parse(posts(log)[0].body).extraData === undefined);
+    ok('الملحوظة بتقول رفع الصورة فشل (HTTP 403)', (row.advisories || []).some(a => /رفع الصورة لبوسطة فشل/.test(a) && /403/.test(a)), row.advisories);
+    ok('proofImage = none', row.proofImage === 'none'); }
 
-  console.log('\n④ إعادة المحاولة مرة واحدة بس');
+  console.log('\n④ CRP: بوسطة لسه 2150 دايمًا → إعادة واحدة بالاتنين وبس، مفيش حلقة');
   { const { f, log } = mk({ retryFails: true }); const api = load(f); api.ensureNormalized(catalog);
     const row = await api.uploadOneRE(env, 'tok', order(), catalog, JOB, null);
     ok('error', row.status === 'error', row);
-    ok('تلات نداءات بالظبط (أصلي ← بالإثبات ← بالاتنين)، مفيش حلقة', posts(log).length === 3, posts(log).length); }
+    ok('نداءين بالظبط (بالإثبات ← بالاتنين)، مفيش حلقة', posts(log).length === 2, posts(log).length); }
 
   console.log('\n⑤ #57833 — الصورة صورة المرتجع (Salomon) مش القطعة المحتفظ بيها (Columbia)');
   { const { f, log } = mk(); const api = load(f); api.ensureNormalized(catalog);
@@ -103,50 +116,71 @@ const posts = (log) => log.filter(c => c.u.includes('/deliveries') && !c.u.inclu
     ok('اتنزّلت صورة Salomon بس', dl.length === 1 && dl[0].includes('p-salomon'), dl);
     ok('⛔ صورة Columbia ما اتنزّلتش', !dl.some(u => u.includes('columbia')), dl);
     ok('ومفيش استعلام صور الأوردر العامة', !log.some(c => c.u.includes('/admin/api/') && /OrderImages/.test(c.body || '')));
-    ok('صورة واحدة في businessProofOfReturnedPackages', JSON.parse(posts(log)[1].body).extraData.businessProofOfReturnedPackages.length === 1); }
+    ok('صورة واحدة في businessProofOfReturnedPackages', JSON.parse(posts(log)[0].body).extraData.businessProofOfReturnedPackages.length === 1); }
 
-  console.log('\n⑥ type 30/10 لسه على deliveryImages (مفيش تغيير)');
+  console.log('\n⑥ type 30/10 لسه على deliveryImages والفلاج true (مفيش تغيير)');
   for (const t of [10, 30]) {
     const { f, log } = mk(); const api = load(f);
     const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: t, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
     const p = posts(log);
     ok(`type ${t}: نجح بعد نداءين`, r.ok && p.length === 2, { ok: r.ok, n: p.length });
     ok(`type ${t}: deliveryImages من غير extraData`, JSON.parse(p[1].body).deliveryImages?.[0]?.images?.length === 1 && !JSON.parse(p[1].body).extraData);
+    ok(`type ${t}: allowToOpenPackage فضلت true`, JSON.parse(p[1].body).allowToOpenPackage === true);
     ok(`type ${t}: استخدم delivery-images/signed-url`, log.some(c => c.u.endsWith('/delivery-images/signed-url'))); }
 
-  console.log('\n⑦ CRP: لو بوسطة لسه رجّعت 2150 بعد الإثبات → مرة أخيرة بالاتنين + علامة imageFallback');
+  console.log('\n⑦ CRP: بوسطة بقت تطلب deliveryImages حتى من غير الفلاج → مرة أخيرة بالاتنين + imageFallback');
   { const { f, log } = mk({ proofNotEnough: true }); const api = load(f);
-    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
+    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25 }, true, ['https://cdn.shopify.com/p.png']);
     const p = posts(log);
     ok('نجح', r.ok, r);
-    ok('تلات نداءات', p.length === 3, p.length);
-    const b3 = JSON.parse(p[2].body);
-    ok('الأخير فيه الاتنين', !!b3.deliveryImages && b3.extraData.businessProofOfReturnedPackages.length === 1);
+    ok('نداءين (بالإثبات ← بالاتنين)', p.length === 2, p.length);
+    const b2 = JSON.parse(p[1].body);
+    ok('الأخير فيه الاتنين', !!b2.deliveryImages && b2.extraData.businessProofOfReturnedPackages.length === 1);
     ok('imageFallback ظاهر', r.imageFallback === 'deliveryImages', r.imageFallback);
-    ok('⛔ allowToOpenPackage فضلت true', b3.allowToOpenPackage === true); }
+    ok('⛔ ومفيش allowToOpenPackage اتضاف', !('allowToOpenPackage' in b2)); }
 
-  console.log('\n⑧ CRP: رابط signedUrl بشكل مختلف → خطأ واضح مش path وهمي');
+  console.log('\n⑦ب CRP بفلاج true (شحنة A في تجربة 24-10) → 2150 ثم الاحتياطي، ملحوظة بتبان في الصف');
+  { const { f, log } = mk({ proofNotEnough: true }); const api = load(f); api.ensureNormalized(catalog);
+    const o = order();
+    // بنحاكي بوسطة اللي بقت تطلب deliveryImages: الصف لازم يطلع ملحوظة imageFallback
+    const row = await api.uploadOneRE(env, 'tok', o, catalog, JOB, null);
+    ok('success', row.status === 'success', row);
+    ok('proofImage = both', row.proofImage === 'both', row.proofImage);
+    ok('ملحوظة إن الصورة في المكانين', (row.advisories || []).some(a => /New shipment details/.test(a) && /Returned shipment details/.test(a)), row.advisories);
+    ok('والصف لسه أخضر (مفيش warnings)', !(row.warnings || []).length, row.warnings); }
+
+  console.log('\n⑧ CRP: رابط signedUrl بشكل مختلف → ما يتبعتش path وهمي، والشحنة تتعمل بملحوظة واضحة');
   { const f0 = mk().f; const f = async (url, o = {}) => String(url).split('?')[0].endsWith('/deliveries/signedUrl') ? reply(200, { data: { signedUrl: 'https://storage.googleapis.com/other-bucket/x.png?s=1' } }) : f0(url, o);
     const api = load(f);
-    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
-    ok('فشل برسالة واضحة', !r.ok && /مسار الملف/.test(r.imageError || ''), r.imageError); }
+    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25 }, true, ['https://cdn.shopify.com/p.png']);
+    ok('الشحنة اتعملت من غير صورة', r.ok && /مسار الملف/.test(r.imageNote || ''), r); }
 
-  console.log('\n⑨ CRP: signedUrl رجّع 400 → رسالة الخطأ فيها errorCode وسبب بوسطة');
+  console.log('\n⑨ CRP: signedUrl رجّع 400 → ملحوظة فيها errorCode وسبب بوسطة (v2.24.1)');
   { const f0 = mk().f; const f = async (url, o = {}) => String(url).split('?')[0].endsWith('/deliveries/signedUrl') ? reply(400, { success: false, errorCode: 1234, message: 'fileType is required' }) : f0(url, o);
     const api = load(f);
-    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
-    ok('فشل', !r.ok, r);
-    ok('الرسالة فيها HTTP 400 وerrorCode والسبب', /HTTP 400/.test(r.imageError || '') && /1234/.test(r.imageError) && /fileType is required/.test(r.imageError), r.imageError); }
+    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25 }, true, ['https://cdn.shopify.com/p.png']);
+    ok('الشحنة اتعملت', r.ok, r);
+    ok('الملحوظة فيها HTTP 400 وerrorCode والسبب', /HTTP 400/.test(r.imageNote || '') && /1234/.test(r.imageNote) && /fileType is required/.test(r.imageNote), r.imageNote); }
   { const f0 = mk().f; const f = async (url, o = {}) => String(url).split('?')[0].endsWith('/deliveries/signedUrl') ? { ok: false, status: 502, json: async () => { throw new Error('not json'); } } : f0(url, o);
     const api = load(f);
-    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
-    ok('رد مش JSON → الرسالة لسه سليمة بالـ HTTP بس', /HTTP 502\)/.test(r.imageError || ''), r.imageError); }
+    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25 }, true, ['https://cdn.shopify.com/p.png']);
+    ok('رد مش JSON → الملحوظة لسه سليمة بالـ HTTP بس', /HTTP 502\)/.test(r.imageNote || ''), r.imageNote); }
 
   console.log('\n⑩ CRP: signedUrl بيتنده بـ ?type=return_prf (777 · type is required على #57833)');
-  { const { f, log } = mk(); const api = load(f);
-    const r = await api.createDeliveryWithImages(env, 'tok', { id: 'gid://shopify/Order/1' }, { type: 25, allowToOpenPackage: true }, true, ['https://cdn.shopify.com/p.png']);
-    ok('نجح', r.ok, r.imageError);
+  { const { f, log } = mk(); const api = load(f); api.ensureNormalized(catalog);
+    const row = await api.uploadOneRE(env, 'tok', order(), catalog, JOB, null);
+    ok('نجح', row.status === 'success', row.error);
     ok('الطلب فيه type=return_prf', log.some(c => /\/deliveries\/signedUrl\?type=return_prf$/.test(c.u)), log.map(c => c.u)); }
+
+  console.log('\n⑪ الاستبدال: الفلاج لسه true على نفس مسار الرفع (قرار 13-09)');
+  { const { f, log } = mk(); const api = load(f); api.ensureNormalized(catalog);
+    const JOBX = api.getJob('exchange');
+    const o = order(); o.outgoingItems = [{ label: 'SKU-B', qty: 1, unitPrice: 2400, imageUrl: 'https://cdn.shopify.com/p.png' }];
+    o.currentCycle.exchangeLineItems = { edges: [li('B1', 'https://cdn.shopify.com/p.png')] };
+    const row = await api.uploadOneRE(env, 'tok', o, catalog, JOBX, null);
+    const p = posts(log);
+    if (p.length) ok('أول جسم استبدال فيه allowToOpenPackage:true', JSON.parse(p[0].body).allowToOpenPackage === true, JSON.parse(p[0].body));
+    else ok('الاستبدال وصل لبوسطة', false, row); }
 
   console.log(`\n${pass} عدّى · ${fail} فشل`);
   process.exit(fail ? 1 : 0);
