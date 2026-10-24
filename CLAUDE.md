@@ -8,7 +8,7 @@
 (25) و**استبدال** (30). بتعرض الأوردرات المؤهَّلة لكل نوع، والموظف بيرفعها جماعيًا،
 والأداة بتكتب النتيجة على شوبيفاي وبتسجّلها في D1.
 **مين بيستخدمها:** العمليات · المخزن
-**الإصدار:** Worker `v2.25.0` — 🔴 **الريبو ده بقى Worker بس من v3.0.0، مفيش
+**الإصدار:** Worker `v2.26.0` — 🔴 **الريبو ده بقى Worker بس من v3.0.0، مفيش
 رقم واجهة هنا خالص** (راجع البلوك تحت)
 
 > **v2.0.0 = الدمج.** `Bosta-Return-Exchange-Exporter` v6.0.0 اتنقلت هنا بالكامل.
@@ -71,7 +71,7 @@
 | الـ `cod` | `Math.abs` | **بإشارته** | **بإشارته** |
 | `uniqueBusinessReference` | `12345` | `#12345-R{n}` | `#12345-EX{n}` |
 | بيكتب بعد الشحنة | `courier` · `bosta_tracking_number_s1` · تاج `Bosta_Uploaded_S1` | `bosta_tracking_number_s2` · تاج `Bosta_Uploaded_S2` · **`status_2_r_e = In-Return`** | `bosta_tracking_number_s2` · تاج `Bosta_Uploaded_S2` |
-| `allowToOpenPackage` | ✅ `true` | ❌ **مابيتبعتش** (v2.25.0) — صورة الراجع في `extraData.businessProofOfReturnedPackages` تتحمّل **قبل** الإنشاء | ✅ `true` |
+| `allowToOpenPackage` | ✅ `true` | ❌ **مابيتبعتش** (v2.25.0) — صورة الراجع في `extraData.businessProofOfReturnedPackages` تتحمّل **قبل** الإنشاء | ✅ `true` (+ صورة الراجع في `businessProofOfReturnedPackages` قبل الإنشاء، وصورة الخارج في `deliveryImages` على 2150 — v2.26.0) |
 | بوليصة بتتطبع؟ | ✅ | ❌ **لأ** — بوسطة بتروح تجيب المرتجع من العميل | ✅ (فيه طرد خارج) |
 | بيحرّك الحالة؟ | ❌ لأ — النقلة عند **الطباعة** | ✅ **`In-Return`** (v2.3.0) — **مفيش طباعة**، فالرفع آخر خطوة | ❌ لأ (v2.0.1) — النقلة عند **الطباعة** |
 | الصف بيفضل في القايمة بعد الرفع؟ | ✅ (بادج «🔁 مرفوع») | ❌ **بيخرج** — الفلتر بيقرا الحالة | ✅ (بادج «🔁 مرفوع») |
@@ -147,9 +147,9 @@ type (R/E)  : upload_re_return · upload_re_exchange · re_upload_failed ·
 > الدرجة مفيش طريقة نقيس بعدين كام شحنة راحت بأنهي درجة — وده **قياس مطلوب في
 > أول أسبوع تشغيل**، ومعاه `extra.zone_sent` لاسم الزون.
 
-> 🖼️ **`extra.proof_image` (v2.25.0 · الاسترجاع بس)** — `proof` (الصورة اتحمّلت قبل الإنشاء
-> وظهرت تحت Returned بس) · `both` (بوسطة رجّعت `2150` فاتعاد بالاتنين والصورة في المكانين) ·
-> `none` (الشحنة اتعملت من غير صورة — مفيش صورة للدورة أو الرفع فشل). الصفوف الأقدم من
+> 🖼️ **`extra.proof_image` (v2.25.0 الاسترجاع · v2.26.0 الاستبدال كمان)** — `proof` (صورة الراجع اتحمّلت قبل
+> الإنشاء وظهرت تحت Returned) · `both` (**الاسترجاع بس**: بوسطة رجّعت `2150` فاتعاد بالاتنين والصورة في المكانين) ·
+> `none` (الشحنة اتعملت من غير صورة راجع — مفيش صورة للدورة أو الرفع فشل). الصفوف الأقدم من
 > v2.25.0 مفيهاش المفتاح. القياس المطلوب: نسبة `none` و`both` من صفوف `upload_re_return`.
 > ملحوظة `none`/`both` بتروح `advisories` (الصف أخضر) مش `warnings`. ومفتاح `extra` مش
 > محتاج تسجيل في `ecommoda-constants` §7.
@@ -1488,7 +1488,7 @@ git show <sha>:index.js
    في `tests/address-matching.test.cjs`.
 
 21. 🔴 **`#57833` (شحنة `1383053709`) صورتها في المكانين** — اتعملت قبل v2.25.0. محتاجة إلغاء (`cancel_re`) وإعادة رفع بعد نشر v2.25.0 (راجع §v2.25.0 تحت). وأي شحنة CRP تانية اترفعت من 22-10 لحد النشر نفس الحكم.
-22. 🟡 **قياس الاستبدال (30) على الداشبورد** — الأداة بتبعت `allowToOpenPackage:true` + `deliveryImages` فيه. ما اتقاسش الداشبورد بيحط الصورة فين في الاستبدال (راجع §v2.25.0 مفتوح ٢-٣).
+22. ✅ **اتقفل 24-10-2026 (v2.26.0) — الاستبدال اتقاس.** الداشبورد بيبعت صورة الراجع في `extraData.businessProofOfReturnedPackages` على Exchange زي Return. الباقي مفتوح في §v2.26.0 تحت (فلاج الاستبدال في الداشبورد `false` · مكان صورة الخارج في الداشبورد ما اتلقطش).
 
 آخر تحديث: 29-09-2026 (Worker v2.16.0 — المطابقة على حدود كلمة مع سوابق «ال»/«و»/«وال» بدل `includes` الحرفي، بحل #57158 (قليوب جوّه القليوبيه).
 
@@ -1591,6 +1591,7 @@ git show <sha>:index.js
 - 🔴 **`GET /deliveries/signedUrl` بيطلب `?type=`** — الرسالة (من v2.24.1) كشفت: `400 · errorCode 777 · "type is required"`. الكود كان بيناديه من غير بارامتر.
 - الإصلاح: `?type=return_prf` (`RETURN_PROOF_SIGNED_URL_TYPE`) — من قايمة أدلة الاسترجاع في `bosta-api-helper` 8a (`crp_sig` · `return_prf` · `damaged_items_proof`).
 - ✅ **اتقاس 24-10-2026: `?type=return_prf` اتقبل** (الرابط رجع والـ PUT نجح 2xx والشحنة اتعملت). مش معروف لو بوسطة بتتجاهل الباراميتر. الفقرة الأصلية:
+- ✅ **اتحسمت 24-10-2026 (v2.26.0): الداشبورد بيستخدم `type=businessProofOfReturnedPackages` مش `return_prf`** — اتغيّرت في الكود. الفقرة الأصلية:
 - ⚠️ **`return_prf` استنتاج من الاسم، مش مقيس.** لو بوسطة رجّعت 400 تاني («type is not valid») جرّب القيم التانية، أو التقط طلب الداشبورد الحقيقي. لسه مفيش شحنة بتتعمل لو فشل — المسار بيقف قبل الإنشاء.
 - ✅ `tests/open-package-images.test.cjs` ٣٨ بند (الـ mock بيرفض الطلب من غير `type` بنفس رد بوسطة الحقيقي).
 
@@ -1618,6 +1619,26 @@ git show <sha>:index.js
 - 🔴 **مفتوح:**
   1. **`#57833` (شحنة `1383053709`) لسه بالصورة في المكانين** — الإصلاح مش بأثر رجعي. لتصليحها: إلغاء الشحنة (`cancel_re`) ثم إعادة الرفع بعد نشر v2.25.0. (وممكن `clear_upload_marks` لو الأوردر لسه محسوب «مرفوع».)
   2. **الاستبدال (30) ما اتقاسش على الداشبورد** — لسه بيبعت الفلاج `true` و`deliveryImages`، والصورة هناك في New shipment (مقصود: فيه طرد خارج). لو الداشبورد بيحط صورة الراجع في الاستبدال كمان في Returned، ده بند قياس جديد.
-  3. **قيمة `type` في `signedUrl`:** `return_prf` اتقبلت لكن مش معروف لو الداشبورد بيبعت نفس القيمة ولا بتتجاهل (خطوة ٥ في التجربة — hook على فورم الداشبورد — ما اتنفذتش).
+  3. ✅ **اتقفل في v2.26.0:** قيمة `type` في `signedUrl` = `businessProofOfReturnedPackages` (اتلقطت من الداشبورد). الفقرة الأصلية: `return_prf` اتقبلت لكن مش معروف لو الداشبورد بيبعت نفس القيمة.
   4. **مهارة `bosta-api-helper` (برّه الريبو) محتاجة تحديث:** 8.13 (CRP من غير الفلاج · `signedUrl?type=return_prf` اتقبل · `deliveryImages` بتظهر متأخر ~٥ ثواني بعد الإنشاء في الـ GET) · 8a (`/deliveries/signedUrl` **بيستخدم** للـ CRP، التصحيح اللي قال «مش لصور المنتج» غلط للـ Return) · 8b (`extraData.businessProofOfReturnedPackages` على CRP). داخلة في `skills-sweep` المفتوح (بند ٧).
 - ⚠️ **ملحوظة قياس:** `deliveryImages` في الـ GET بترجع `null` فورًا بعد الإنشاء وبتظهر بعد ~٥ ثواني — أي تحقق آلي بقراية راجعة لازم يستنّى.
+
+---
+
+## v2.26.0 (24-10-2026 · `#57833` + استبدال `7140505345`) — صورة الراجع في الاستبدال + `signedUrl type` من الداشبورد
+- 🔴 **العَرَض (الاستبدال):** شحنة Exchange اترفعت من الأداة (`7140505345`) والصورة ظاهرة تحت **New shipment details** (الخارج — صح) لكن **Returned shipment details** مفيهاش صف Product image خالص. السبب: الأداة كانت بتبعت `deliveryImages` بس (صور القطع الخارجة، على 2150)، ومابتبعتش `businessProofOfReturnedPackages` للراجع.
+- 🔴 **القياس الحي (24-10-2026 · Claude Cowork · تقرير `crp-exchange-measure-report`):**
+  1. **الداشبورد بيبعت صورة الراجع في `extraData.businessProofOfReturnedPackages` على Return و**Exchange** الاتنين** — حقل واحد، ومفيش `deliveryImages` في أي فورم. رفعها بـ `GET /deliveries/signedUrl?type=businessProofOfReturnedPackages` (**مش** `return_prf`)، مرة لكل صورة.
+  2. الداشبورد على Return مابيبعتش `allowToOpenPackage` خالص؛ على Exchange بيبعته **`false`**.
+  3. **كارت «New shipment details» على CRP بيظهر دايمًا** (Small / 1 / وصف `-` / صورة فاضية) — **حتى على CRP الداشبورد**: بوسطة بتملا `specs` بنفسها (`packageType:"Small"` · `itemsCount:1` · `weight:1`) لما الطلب مفيهوش `specs`. **سلوك بوسطة مش عطل**، والأداة بتطابق الداشبورد → **مفيش تعديل**. (الفرق الوحيد في `returnSpecs`: الأداة `Parcel`+`SMALL`، الداشبورد `Small` — شكلي.)
+  4. **EX-A** (`deliveryImages` بس، الفلاج `true`) ← الصورة تحت New بس. **EX-B** (`deliveryImages` + `businessProofOfReturnedPackages`) ← **New و Returned، كل واحدة بصورتها الصح**. الإنشاء 201 في الاتنين و`shipmentFees` 106.
+- ✅ **القرار (تنفيذ على نتيجة القياس — الفلاج `true` على الاستبدال ما اتغيّرش، قرار 13-09):** الاستبدال بيبعت **الاتنين** زي EX-B: صورة الراجع بتترفع **قبل** الإنشاء في `extraData.businessProofOfReturnedPackages` وتتبعت في الطلبين، وصورة الخارج في `deliveryImages` على 2150 زي الأول (`createDeliveryWithImages` · وسيط `proofImages` = `parts.proofImageUrls`). مفيش صورة راجع أو رفعها فشل = الشحنة تتعمل بصورة الخارج بس + ملحوظة `imageNote` (نفس قاعدة CRP).
+- 🔴 **`signedUrl?type=` بقى `businessProofOfReturnedPackages`** (`RETURN_PROOF_SIGNED_URL_TYPE`) — القيمة اللي الداشبورد بيبعتها فعلًا، بدل `return_prf` اللي اتخمّن في v2.24.2 واشتغل برضه.
+- 🖼️ `extra.proof_image` بقى بيتكتب للاستبدال كمان (`proof` · `none`؛ `both` للاسترجاع بس).
+- ✅ `tests/open-package-images.test.cjs` ٦٥ بند (⑩ النوع الجديد · ⑪ الاستبدال: proof قبل الإنشاء + الفلاج `true` + صورة الخارج على 2150 · ⑫ فشل رفع الراجع).
+- ⚠️ **مفتوح / مش مقيس:**
+  1. **الداشبورد بيبعت `allowToOpenPackage:false` على Exchange** والأداة لسه `true` (قرار 13-09 + EGP 7 رسم). لو أحمد عايز يطابق الداشبورد: الاستبدال يتبعت `false` وتتشال صورة الخارج من `deliveryImages` (مش مطلوبة من غير الفلاج) — قرار أحمد، مش اتغيّر.
+  2. **مكان صورة المنتج الخارج على الداشبورد ما اتلقطش** — الفورم ما بعتش أي حقل لها. الأداة بتحطها في `deliveryImages` (تحت New shipment) لأن الفلاج `true` بيفرضها.
+  3. `shipmentFees` مختلفة بين الشحنات (94 · 106 · 126.5 · 136) ومش مفسَّرة — مش جزء من القياس. وCRP اللي من الأداة (`4820178919`) رجّع `allowToOpenPackage:false` ومفيش رسم open package.
+  4. `8060246611` (CRP الداشبورد) اتلغت، فالمقارنة بقراءة 22-10 مش بقراءة مباشرة.
+  5. **مهارة `bosta-api-helper` (برّه الريبو):** 8a — `/deliveries/signedUrl` بيقبل `type=businessProofOfReturnedPackages` · 8.13/8b — Return وExchange الاتنين صورة الراجع في `extraData.businessProofOfReturnedPackages`، والكارت New shipment على CRP سلوك بوسطة. داخلة في `skills-sweep` (بند ٧).
