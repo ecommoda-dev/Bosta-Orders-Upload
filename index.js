@@ -1545,6 +1545,28 @@ function resolveOutgoingItems(order, cycle, jobType) {
   return { items: [], source: 'none' };
 }
 
+// 🟡 قطع الاستبدال اللي في الأوردر ومش في الدورة (#65434).
+// لما CS تضيف قطعة بـ«تعديل أوردر» بعد فتح الاستبدال، القطعة بتبقى سطر عادي لسه
+// ما اتشحنش، ومش جوّه `exchangeLineItems` — فـ`resolveOutgoingItems` (الدورة
+// أساس، الاسترداد fallback مش merge) بتتجاهلها: الوصف وعدد القطع والصور بتطلع
+// ناقصة، بينما `cod` متحسوب من `totalOutstandingSet` للأوردر كله.
+// ⚠️ تحذير بس (flag it, never move it) — مفيش دمج، عشان قاعدة «مش merge» لسه
+// صح: الدمج بيعدّ القطعة مرتين لو مقارنتها غلط. المقارنة هنا بالـ label والكمية.
+function unlistedUnfulfilledItems(order, outgoingItems) {
+  const listed = new Map();
+  for (const row of outgoingItems || []) {
+    listed.set(row.label, (listed.get(row.label) || 0) + (row.qty || 1));
+  }
+  const missing = [];
+  for (const row of itemsFromUnfulfilledLines(order)) {
+    const have = listed.get(row.label) || 0;
+    const extra = row.qty - have;
+    if (have) listed.set(row.label, Math.max(0, have - row.qty));
+    if (extra > 0) missing.push({ label: row.label, qty: extra });
+  }
+  return missing;
+}
+
 // ─── §SHOPIFY-RE::analyzeReturnCycles ───
 // Rule 13 / Rule 14 — كل كود شايل: إيه الغلط، القيمة الغلط، والإجراء اللي
 // بيحلّها. الأكواد الحاجبة بتوقف الصف؛ الباقي تحذير: بيحرّك صفر صف وبيغيّر
@@ -1613,6 +1635,17 @@ function analyzeReturnCycles(order, jobType) {
         value: outgoing.items.map((row) => `${row.label} x${row.qty}`).join(' | '),
         action: 'الدورة المفتوحة مالهاش قطع استبدال في شوبيفاي — القطع الخارجة اتقروا من سطور الأوردر اللي لسه ما اتشحنتش (غالبًا اتعدّلت بالإيد بعد فتح الاستبدال). راجع الوصف قبل الرفع، وخدمة العملاء تظبّط الاستبدال في شوبيفاي.',
       });
+    }
+
+    if (jobType === JOB_EXCHANGE && outgoing.source === 'cycle') {
+      const unlisted = unlistedUnfulfilledItems(order, outgoing.items);
+      if (unlisted.length) {
+        warnings.push({
+          code: 'EXCHANGE_UNLISTED_ITEMS',
+          value: unlisted.map((row) => `${row.label} x${row.qty}`).join(' | '),
+          action: 'في الأوردر قطع لسه ما اتشحنتش ومش في الاستبدال (غالبًا اتضافت بتعديل أوردر بعد فتح الاستبدال) — الشحنة هتتعمل من غيرها بينما مبلغ التحصيل متحسوب على الأوردر كله. خدمة العملاء تضيفها للاستبدال في شوبيفاي قبل الرفع.',
+        });
+      }
     }
 
     // 🔴 حاجب (كان تحذير لحد v5.5.0) — قرار أحمد 09-09-2026. صف بوسطة من غير
